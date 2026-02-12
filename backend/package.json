@@ -1,0 +1,27 @@
+{
+  "name": "youtube-transcript-backend",
+  "version": "1.0.0",
+  "description": "Backend for YouTube Transcript Extractor with AI Processing",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "keywords": [
+    "youtube",
+    "transcript",
+    "ai",
+    "groq"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "groq-sdk": "^0.3.2",
+    "youtube-transcript": "^1.2.1",
+    "ytdl-core": "^4.11.5"
+  }
+}
