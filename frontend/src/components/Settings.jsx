@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { FaKey, FaSave, FaTimes, FaCog } from 'react-icons/fa';
+import API_URL from '../config';
 
 function Settings({ onClose }) {
   const [groqApiKey, setGroqApiKey] = useState('');
@@ -18,7 +19,7 @@ function Settings({ onClose }) {
     localStorage.setItem('transcriptApiKey', transcriptApiKey);
 
     try {
-      const response = await fetch('http://localhost:5000/api/settings/update', {
+      const response = await fetch(`${API_URL}/api/settings/update`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

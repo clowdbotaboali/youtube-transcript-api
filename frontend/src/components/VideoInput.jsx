@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { FaYoutube, FaSpinner } from 'react-icons/fa';
+import API_URL from '../config';
 
 function VideoInput({ onTranscriptExtracted, loading, setLoading, initialUrl, onUrlChange }) {
   const [url, setUrl] = useState('');
@@ -25,7 +26,7 @@ function VideoInput({ onTranscriptExtracted, loading, setLoading, initialUrl, on
     try {
       const transcriptApiKey = localStorage.getItem('transcriptApiKey') || '';
       
-      const response = await fetch('http://localhost:5000/api/transcript/extract', {
+      const response = await fetch(`${API_URL}/api/transcript/extract`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { FaPaperPlane, FaRobot, FaUser, FaTrash, FaComments, FaLink, FaCheck, FaExternalLinkAlt } from 'react-icons/fa';
+import API_URL from '../config';
 
 function ChatAssistant({ transcript, videoId }) {
   const [messages, setMessages] = useState([
@@ -39,7 +40,7 @@ function ChatAssistant({ transcript, videoId }) {
     setLoading(true);
 
     try {
-      const response = await fetch('http://localhost:5000/api/chat/chat', {
+      const response = await fetch(`${API_URL}/api/chat/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -93,7 +94,7 @@ function ChatAssistant({ transcript, videoId }) {
   const handleClear = async () => {
     if (conversationId) {
       try {
-        await fetch('http://localhost:5000/api/chat/clear', {
+        await fetch(`${API_URL}/api/chat/clear`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'

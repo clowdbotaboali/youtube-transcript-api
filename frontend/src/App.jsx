@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import API_URL from './config';;
 import { FaCog } from 'react-icons/fa';
 import VideoInput from './components/VideoInput';
 import TranscriptDisplay from './components/TranscriptDisplay';
@@ -27,7 +27,7 @@ function App() {
 
     setProcessLoading(true);
     try {
-      const response = await fetch('http://localhost:5000/api/ai/process', {
+      const response = await fetch(`${API_URL}/api/ai/process`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -56,7 +56,7 @@ function App() {
 
   const handleSave = async (saveData) => {
     try {
-      const response = await fetch('http://localhost:5000/api/history/save', {
+      const response = await fetch(`${API_URL}/api/history/save`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
