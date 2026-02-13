@@ -6,13 +6,20 @@ dotenv.config();
 
 const router = express.Router();
 
+function normalizeApiKey(rawKey = '') {
+  return String(rawKey)
+    .trim()
+    .replace(/^Bearer\s+/i, '')
+    .replace(/^['"]|['"]$/g, '');
+}
+
 // Store conversation history per session
 const conversations = new Map();
 
 router.post('/chat', async (req, res) => {
   try {
     const { message, transcript, conversationId } = req.body;
-    const groqApiKey = req.headers['x-groq-api-key'] || process.env.GROQ_API_KEY;
+    const groqApiKey = normalizeApiKey(req.headers['x-groq-api-key'] || process.env.GROQ_API_KEY);
 
     if (!groqApiKey) {
       return res.status(400).json({

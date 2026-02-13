@@ -40,7 +40,10 @@ function ChatAssistant({ transcript, videoId, apiUrl = defaultApiUrl }) {
     setLoading(true);
 
     try {
-      const groqApiKey = localStorage.getItem('groqApiKey') || '';
+      const groqApiKey = (localStorage.getItem('groqApiKey') || '')
+        .trim()
+        .replace(/^Bearer\s+/i, '')
+        .replace(/^['"]|['"]$/g, '');
       const response = await fetch(`${apiUrl}/api/chat/chat`, {
         method: 'POST',
         headers: {

@@ -3,10 +3,17 @@ import { processWithGroq } from '../utils/groqClient.js';
 
 const router = express.Router();
 
+function normalizeApiKey(rawKey = '') {
+  return String(rawKey)
+    .trim()
+    .replace(/^Bearer\s+/i, '')
+    .replace(/^['"]|['"]$/g, '');
+}
+
 router.post('/process', async (req, res) => {
   try {
     const { transcript, type } = req.body;
-    const groqApiKey = req.headers['x-groq-api-key'] || '';
+    const groqApiKey = normalizeApiKey(req.headers['x-groq-api-key'] || '');
     
     if (!transcript) {
       return res.status(400).json({

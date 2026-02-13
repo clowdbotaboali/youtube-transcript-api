@@ -54,7 +54,10 @@ function App() {
 
     setProcessLoading(true);
     try {
-      const groqApiKey = localStorage.getItem('groqApiKey') || '';
+      const groqApiKey = (localStorage.getItem('groqApiKey') || '')
+        .trim()
+        .replace(/^Bearer\s+/i, '')
+        .replace(/^['"]|['"]$/g, '');
       const response = await fetch(`${apiUrl}/api/ai/process`, {
         method: 'POST',
         headers: {
