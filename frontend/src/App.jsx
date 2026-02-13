@@ -206,7 +206,7 @@ function App() {
         </div>
 
         <footer className="text-center mt-6 text-gray-600 text-xs sm:text-sm">
-          <p>مشروع استخراج نصوص YouTube - للاستخدام الشخصي</p>
+          <p>مشروع استخراج نصوص YouTube - البياع للبرمجيات</p>
         </footer>
       </div>
 
