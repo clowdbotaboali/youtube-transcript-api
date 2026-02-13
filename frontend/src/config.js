@@ -1,5 +1,6 @@
 // API Configuration
-// For Vercel deployment, API is served from the same domain
-const API_URL = import.meta.env.VITE_API_URL || '';
+// For Fly.io deployment, change to your Fly app URL
+// Example: https://youtube-transcript-api.fly.dev
+const API_URL = import.meta.env.VITE_API_URL || 'https://youtube-transcript-api.fly.dev';
 
 export default API_URL;

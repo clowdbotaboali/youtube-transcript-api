@@ -20,7 +20,7 @@ git commit -m "Initial commit"
 2. اضغط "New" → "Web Service"
 3. اختر مستودع GitHub الخاص بك
 4. الإعدادات:
-   - Name: `youtube-transcript-backend`
+   - Name: `youtube-transcript-api`
    - Region: `Frankfurt`
    - Branch: `main`
    - Build Command: `npm ci`
@@ -41,7 +41,43 @@ git commit -m "Initial commit"
 ### 5. الحصول على رابط API
 بعد النشر، سيكون Backend على رابط مثل:
 ```
-https://youtube-transcript-backend.onrender.com
+https://youtube-transcript-api.onrender.com
+```
+
+---
+
+# النشر على Fly.io
+
+## المتطلبات
+- تثبيت Fly CLI: `npm install -g flyctl`
+- حساب على [Fly.io](https://fly.io)
+
+## خطوات النشر
+
+### 1. تسجيل الدخول
+```bash
+fly auth login
+```
+
+### 2. إنشاء App
+```bash
+cd backend
+fly apps create youtube-transcript-api
+```
+
+### 3. إضافة المتغيرات البيئية
+```bash
+fly secrets set GROQ_API_KEY=your_key_here --app youtube-transcript-api
+```
+
+### 4. النشر
+```bash
+fly deploy
+```
+
+### 5. إنشاء Domain مخصص (اختياري)
+```bash
+fly certs add youtube-transcript-api.fly.dev
 ```
 
 ---
@@ -50,14 +86,14 @@ https://youtube-transcript-backend.onrender.com
 
 ### استخراج الترانسكريبت
 ```bash
-curl -X POST https://youtube-transcript-backend.onrender.com/api/transcript/extract \
+curl -X POST https://youtube-transcript-api.fly.dev/api/transcript/extract \
   -H "Content-Type: application/json" \
   -d '{"url": "https://www.youtube.com/watch?v=VIDEO_ID"}'
 ```
 
 ### المعالجة بالذكاء الاصطناعي
 ```bash
-curl -X POST https://youtube-transcript-backend.onrender.com/api/ai/process \
+curl -X POST https://youtube-transcript-api.fly.dev/api/ai/process \
   -H "Content-Type: application/json" \
   -d '{
     "transcript": "النص المستخرج",
@@ -68,6 +104,14 @@ curl -X POST https://youtube-transcript-backend.onrender.com/api/ai/process \
 ---
 
 ## ملاحظات
+
+### Render
 - الإصدار المجاني من Render يوقف الخدمة بعد فترة من عدم النشاط
 - للاستخدام المستمر،可以考虑 الترقية إلى paid plan
 - الـ Disk يحفظ قاعدة البيانات والملفات
+
+### Fly.io
+- مجاني: 3 تطبيقات
+- لا يوقف الخدمة تلقائياً
+- أسرع من Render
+- يدعم HTTPS تلقائياً

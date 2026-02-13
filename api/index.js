@@ -42,7 +42,6 @@ export default async function handler(req, res) {
   const queryParams = parseQuery(url);
   let body = {};
   
-  // Try to get body from request body
   if (req.body) {
     try {
       if (typeof req.body === 'string') {
@@ -56,7 +55,6 @@ export default async function handler(req, res) {
   const videoUrl = body.url || queryParams.url;
   
   try {
-    // Extract transcript
     if (url.includes('/api/transcript/extract')) {
       if (!videoUrl) {
         return res.status(400).json({ success: false, error: 'يرجى تقديم رابط فيديو YouTube' });
@@ -67,38 +65,51 @@ export default async function handler(req, res) {
         return res.status(400).json({ success: false, error: 'رابط YouTube غير صالح' });
       }
 
+      console.log('Fetching transcript for:', videoId);
       let transcript = null;
       let method = 'unknown';
 
-      // Try Arabic first
+      // Try Arabic
       try {
+        console.log('Trying Arabic...');
         const data = await YoutubeTranscript.fetchTranscript(videoId, { lang: 'ar' });
+        console.log('Arabic result:', data?.length);
         if (data && data.length > 0) {
           transcript = data.map(item => item.text).join(' ');
           method = 'youtube-transcript-ar';
         }
-      } catch (e) {}
+      } catch (e) {
+        console.log('Arabic error:', e.message);
+      }
 
       // Try English
       if (!transcript) {
+        console.log('Trying English...');
         try {
           const data = await YoutubeTranscript.fetchTranscript(videoId, { lang: 'en' });
+          console.log('English result:', data?.length);
           if (data && data.length > 0) {
             transcript = data.map(item => item.text).join(' ');
             method = 'youtube-transcript-en';
           }
-        } catch (e) {}
+        } catch (e) {
+          console.log('English error:', e.message);
+        }
       }
 
       // Try default
       if (!transcript) {
+        console.log('Trying default...');
         try {
           const data = await YoutubeTranscript.fetchTranscript(videoId);
+          console.log('Default result:', data?.length);
           if (data && data.length > 0) {
             transcript = data.map(item => item.text).join(' ');
             method = 'youtube-transcript-default';
           }
-        } catch (e) {}
+        } catch (e) {
+          console.log('Default error:', e.message);
+        }
       }
 
       if (!transcript) {
@@ -117,7 +128,6 @@ export default async function handler(req, res) {
       });
     }
 
-    // AI Process
     if (url.includes('/api/ai/process')) {
       const { transcript: transcriptText, type } = body || queryParams;
       
@@ -156,7 +166,6 @@ export default async function handler(req, res) {
       });
     }
 
-    // Chat
     if (url.includes('/api/chat/chat')) {
       const { message, transcript: transcriptText } = body || queryParams;
       
@@ -172,7 +181,6 @@ export default async function handler(req, res) {
       return res.json({ success: true, response: completion.choices[0].message.content });
     }
 
-    // Settings keys
     if (url.includes('/api/settings/keys')) {
       return res.json({ success: true });
     }
