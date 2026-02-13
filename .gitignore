@@ -39,3 +39,4 @@ frontend/.cache/
 # Backend specific
 backend/dist/
 backend/.cache/
+.vercel
