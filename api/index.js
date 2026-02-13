@@ -1,16 +1,9 @@
-import express from 'express';
-import cors from 'cors';
 import { Groq } from 'groq-sdk';
 import { YoutubeTranscript } from 'youtube-transcript';
-import ytdl from 'ytdl-core';
 
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY
 });
-
-const app = express();
-app.use(cors());
-app.use(express.json({ limit: '50mb' }));
 
 function extractVideoId(url) {
   const patterns = [
@@ -26,126 +19,167 @@ function extractVideoId(url) {
   return null;
 }
 
-async function fetchTranscriptWithYtdl(videoId) {
-  try {
-    const info = await ytdl.getInfo(videoId);
-    const captionTracks = info.player_response?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
-    if (!captionTracks || captionTracks.length === 0) return null;
-    
-    let selectedTrack = captionTracks.find(track => 
-      track.languageCode === 'ar' || track.languageCode === 'ar-SA'
-    ) || captionTracks.find(track => 
-      track.languageCode === 'en' || track.languageCode === 'en-US'
-    ) || captionTracks[0];
-
-    const captionUrl = selectedTrack.baseUrl;
-    const response = await fetch(captionUrl);
-    const xmlText = await response.text();
-    
-    const textMatches = xmlText.matchAll(/<text[^>]*>([^<]+)<\/text>/g);
-    const transcript = Array.from(textMatches)
-      .map(match => match[1])
-      .join(' ')
-      .replace(/&/g, '&')
-      .replace(/</g, '<')
-      .replace(/>/g, '>')
-      .replace(/"/g, '"')
-      .replace(/'/g, "'");
-    
-    return transcript;
-  } catch (error) {
-    return null;
-  }
+function parseQuery(url) {
+  const query = {};
+  const urlObj = new URL(url, 'https://example.com');
+  urlObj.searchParams.forEach((value, key) => {
+    query[key] = value;
+  });
+  return query;
 }
 
-app.post('/api/transcript/extract', async (req, res) => {
-  try {
-    const { url } = req.body;
-    const videoId = extractVideoId(url);
-    if (!videoId) {
-      return res.status(400).json({ success: false, error: 'رابط YouTube غير صالح' });
-    }
+export default async function handler(req, res) {
+  // CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-    let transcript = null;
-    transcript = await fetchTranscriptWithYtdl(videoId);
-    
-    if (!transcript) {
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
+  const url = req.url || '';
+  const queryParams = parseQuery(url);
+  let body = {};
+  
+  // Try to get body from request body
+  if (req.body) {
+    try {
+      if (typeof req.body === 'string') {
+        body = JSON.parse(req.body);
+      } else if (typeof req.body === 'object') {
+        body = req.body;
+      }
+    } catch (e) {}
+  }
+  
+  const videoUrl = body.url || queryParams.url;
+  
+  try {
+    // Extract transcript
+    if (url.includes('/api/transcript/extract')) {
+      if (!videoUrl) {
+        return res.status(400).json({ success: false, error: 'يرجى تقديم رابط فيديو YouTube' });
+      }
+
+      const videoId = extractVideoId(videoUrl);
+      if (!videoId) {
+        return res.status(400).json({ success: false, error: 'رابط YouTube غير صالح' });
+      }
+
+      let transcript = null;
+      let method = 'unknown';
+
+      // Try Arabic first
       try {
-        const transcriptData = await YoutubeTranscript.fetchTranscript(videoId);
-        if (transcriptData && transcriptData.length > 0) {
-          transcript = transcriptData.map(item => item.text).join(' ');
+        const data = await YoutubeTranscript.fetchTranscript(videoId, { lang: 'ar' });
+        if (data && data.length > 0) {
+          transcript = data.map(item => item.text).join(' ');
+          method = 'youtube-transcript-ar';
         }
       } catch (e) {}
-    }
 
-    if (!transcript) {
-      return res.status(404).json({ 
-        success: false, 
-        error: 'لا يوجد نص مكتوب متاح لهذا الفيديو' 
+      // Try English
+      if (!transcript) {
+        try {
+          const data = await YoutubeTranscript.fetchTranscript(videoId, { lang: 'en' });
+          if (data && data.length > 0) {
+            transcript = data.map(item => item.text).join(' ');
+            method = 'youtube-transcript-en';
+          }
+        } catch (e) {}
+      }
+
+      // Try default
+      if (!transcript) {
+        try {
+          const data = await YoutubeTranscript.fetchTranscript(videoId);
+          if (data && data.length > 0) {
+            transcript = data.map(item => item.text).join(' ');
+            method = 'youtube-transcript-default';
+          }
+        } catch (e) {}
+      }
+
+      if (!transcript) {
+        return res.status(404).json({ 
+          success: false, 
+          error: 'لا يوجد نص مكتوب متاح لهذا الفيديو' 
+        });
+      }
+
+      return res.json({ 
+        success: true, 
+        videoId, 
+        transcript: transcript.trim(), 
+        wordCount: transcript.trim().split(/\s+/).length,
+        method
       });
     }
 
-    res.json({ success: true, videoId, transcript: transcript.trim(), wordCount: transcript.trim().split(/\s+/).length });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
+    // AI Process
+    if (url.includes('/api/ai/process')) {
+      const { transcript: transcriptText, type } = body || queryParams;
+      
+      if (!transcriptText) {
+        return res.status(400).json({ success: false, error: 'يرجى تقديم نص' });
+      }
 
-app.post('/api/ai/process', async (req, res) => {
-  try {
-    const { transcript, type } = req.body;
-    let systemPrompt = '';
-    
-    switch (type) {
-      case 'summary':
-        systemPrompt = 'لخص هذا النص بشكل شامل ومفصل:';
-        break;
-      case 'steps':
-        systemPrompt = 'استخرج الخطوات من هذا النص مع شرح مفصل لكل خطوة:';
-        break;
-      case 'resources':
-        systemPrompt = 'استخرج جميع الروابط والبرامج والموارد المذكورة في هذا النص:';
-        break;
-      default:
-        systemPrompt = 'قدم تقرير شامل يتضمن:\n1. ملخص المحتوى\n2. الخطوات الرئيسية\n3. البرامج والروابط المذكورة\n4. أي معلومات مفيدة أخرى';
+      let systemPrompt = '';
+      switch (type) {
+        case 'summary':
+          systemPrompt = 'لخص هذا النص بشكل شامل ومفصل:';
+          break;
+        case 'steps':
+          systemPrompt = 'استخرج الخطوات من هذا النص مع شرح مفصل لكل خطوة:';
+          break;
+        case 'resources':
+          systemPrompt = 'استخرج جميع الروابط والبرامج والموارد المذكورة في هذا النص:';
+          break;
+        default:
+          systemPrompt = 'قدم تقرير شامل يتضمن:\n1. ملخص المحتوى\n2. الخطوات الرئيسية\n3. البرامج والروابط المذكورة\n4. أي معلومات مفيدة أخرى';
+      }
+
+      const completion = await groq.chat.completions.create({
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: transcriptText }
+        ],
+        model: 'llama-3.3-70b-versatile',
+        temperature: 0.7,
+      });
+
+      return res.json({ 
+        success: true, 
+        result: completion.choices[0].message.content, 
+        type 
+      });
     }
 
-    const completion = await groq.chat.completions.create({
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: transcript }
-      ],
-      model: 'llama-3.3-70b-versatile',
-      temperature: 0.7,
-    });
+    // Chat
+    if (url.includes('/api/chat/chat')) {
+      const { message, transcript: transcriptText } = body || queryParams;
+      
+      const completion = await groq.chat.completions.create({
+        messages: [
+          { role: 'system', content: 'أنت مساعد ذكي تساعد في فهم نصوص فيديوهات YouTube. أجب بالعربية.' },
+          { role: 'user', content: `النص: ${transcriptText}\n\nالسؤال: ${message}` }
+        ],
+        model: 'llama-3.3-70b-versatile',
+        temperature: 0.7,
+      });
 
-    res.json({ success: true, result: completion.choices[0].message.content, type });
+      return res.json({ success: true, response: completion.choices[0].message.content });
+    }
+
+    // Settings keys
+    if (url.includes('/api/settings/keys')) {
+      return res.json({ success: true });
+    }
+
+    return res.status(404).json({ success: false, error: 'Not found' });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    console.error('Error:', error);
+    return res.status(500).json({ success: false, error: error.message });
   }
-});
-
-app.post('/api/chat/chat', async (req, res) => {
-  try {
-    const { message, transcript } = req.body;
-    
-    const completion = await groq.chat.completions.create({
-      messages: [
-        { role: 'system', content: 'أنت مساعد ذكي تساعد في فهم نصوص فيديوهات YouTube. أجب بالعربية.' },
-        { role: 'user', content: `النص: ${transcript}\n\nالسؤال: ${message}` }
-      ],
-      model: 'llama-3.3-70b-versatile',
-      temperature: 0.7,
-    });
-
-    res.json({ success: true, response: completion.choices[0].message.content });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-app.get('/api/settings/keys', (req, res) => {
-  res.json({ success: true });
-});
-
-export default app;
+}
