@@ -1,11 +1,38 @@
 import { useEffect, useState } from 'react';
 
 const LOCAL_API_URL = 'http://localhost:5000';
+const WINDOWS_NGROK_COMMANDS = [
+  {
+    id: 'ngrok-install',
+    label: '1) تثبيت ngrok (مرة واحدة)',
+    command: 'winget install Ngrok.Ngrok'
+  },
+  {
+    id: 'ngrok-token',
+    label: '2) ربط حساب ngrok (مرة واحدة)',
+    command: 'ngrok config add-authtoken <YOUR_NGROK_TOKEN>'
+  },
+  {
+    id: 'ngrok-start',
+    label: '3) فتح نفق HTTPS للباك المحلي',
+    command: 'ngrok http 5000'
+  }
+];
+
+const ANDROID_COMMANDS = [
+  { id: 'a1', command: 'pkg update -y' },
+  { id: 'a2', command: 'pkg install -y nodejs git' },
+  { id: 'a3', command: 'git clone https://github.com/clowdbotaboali/youtube-transcript-api.git' },
+  { id: 'a4', command: 'cd youtube-transcript-api/backend' },
+  { id: 'a5', command: 'npm install' },
+  { id: 'a6', command: 'npm run dev' }
+];
 
 function LocalServerGuide({ apiUrl, onApiUrlChange }) {
   const [activeTab, setActiveTab] = useState('windows');
   const [localStatus, setLocalStatus] = useState('idle');
   const [checking, setChecking] = useState(false);
+  const [copiedId, setCopiedId] = useState('');
   const [serverUrlInput, setServerUrlInput] = useState(
     localStorage.getItem('serverUrl') || LOCAL_API_URL
   );
@@ -58,6 +85,23 @@ function LocalServerGuide({ apiUrl, onApiUrlChange }) {
     localStorage.removeItem('serverUrl');
     setServerUrlInput(LOCAL_API_URL);
     onApiUrlChange(null);
+  };
+
+  const copyCommand = async (id, value) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(''), 1200);
+    } catch {
+      const textArea = document.createElement('textarea');
+      textArea.value = value;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(''), 1200);
+    }
   };
 
   return (
@@ -113,11 +157,30 @@ function LocalServerGuide({ apiUrl, onApiUrlChange }) {
           </div>
           <div className="mt-3 border-t pt-3">
             <p className="font-semibold mb-2">لو الواجهة مفتوحة على Vercel (HTTPS)</p>
-            <p className="mb-2">شغل نفق HTTPS للخادم المحلي عبر ngrok:</p>
-            <pre className="bg-white border rounded p-3 overflow-x-auto text-xs sm:text-sm">
-ngrok http 5000
-            </pre>
-            <p className="mt-2">ثم انسخ رابط ngrok (https) وضعه في خانة رابط الخادم بالأسفل.</p>
+            <ol className="list-decimal mr-5 space-y-2 mb-3">
+              <li>نفذ أوامر ngrok التالية بالترتيب (مرة واحدة للتثبيت والربط).</li>
+              <li>بعد تشغيل النفق انسخ رابط `Forwarding` الذي يبدأ بـ `https://`.</li>
+              <li>الصق الرابط في خانة رابط الخادم بالأسفل ثم اضغط تفعيل Local Server.</li>
+            </ol>
+            <div className="space-y-2">
+              {WINDOWS_NGROK_COMMANDS.map((item) => (
+                <div key={item.id}>
+                  <p className="text-xs text-gray-600 mb-1">{item.label}</p>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 bg-white border rounded px-3 py-2 text-xs sm:text-sm overflow-x-auto">
+                      {item.command}
+                    </code>
+                    <button
+                      type="button"
+                      onClick={() => copyCommand(item.id, item.command)}
+                      className="px-3 py-2 rounded bg-blue-100 hover:bg-blue-200 text-blue-700 text-xs font-semibold"
+                    >
+                      {copiedId === item.id ? 'تم النسخ' : 'نسخ'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
@@ -127,16 +190,24 @@ ngrok http 5000
           <p className="font-semibold">خطوات Termux:</p>
           <ol className="list-decimal mr-5 space-y-2">
             <li>ثبت Termux من F-Droid.</li>
-            <li>نفذ الاوامر التالية:</li>
+            <li>نفذ الأوامر التالية بالترتيب. كل أمر له زر نسخ مستقل:</li>
           </ol>
-          <pre className="bg-white border rounded p-3 overflow-x-auto text-xs sm:text-sm">
-pkg update -y
-pkg install -y nodejs git
-git clone https://github.com/clowdbotaboali/youtube-transcript-api.git
-cd youtube-transcript-api/backend
-npm install
-npm run dev
-          </pre>
+          <div className="space-y-2">
+            {ANDROID_COMMANDS.map((item) => (
+              <div key={item.id} className="flex items-center gap-2">
+                <code className="flex-1 bg-white border rounded px-3 py-2 text-xs sm:text-sm overflow-x-auto">
+                  {item.command}
+                </code>
+                <button
+                  type="button"
+                  onClick={() => copyCommand(item.id, item.command)}
+                  className="px-3 py-2 rounded bg-blue-100 hover:bg-blue-200 text-blue-700 text-xs font-semibold"
+                >
+                  {copiedId === item.id ? 'تم النسخ' : 'نسخ'}
+                </button>
+              </div>
+            ))}
+          </div>
           <p>
             بعد تشغيل السيرفر داخل نفس الموبايل، استخدم الوضع المحلي ثم اختبر الاتصال.
           </p>
