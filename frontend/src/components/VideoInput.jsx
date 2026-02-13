@@ -48,7 +48,18 @@ function VideoInput({ onTranscriptExtracted, loading, setLoading, initialUrl, on
         body: JSON.stringify({ url: url.trim() })
       });
 
-      const data = await response.json();
+      const raw = await response.text();
+      let data = {};
+      try {
+        data = raw ? JSON.parse(raw) : {};
+      } catch {
+        data = {};
+      }
+
+      if (!response.ok) {
+        setError(data.error || raw || 'حدث خطأ أثناء استخراج النص');
+        return;
+      }
 
       if (data.success) {
         if (isLowQualityTranscript(data.transcript, data.wordCount)) {

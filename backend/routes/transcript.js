@@ -1,9 +1,12 @@
 import express from 'express';
 import { YoutubeTranscript } from 'youtube-transcript';
-import ytdl from 'ytdl-core';
+import ytdl from '@distube/ytdl-core';
 import { apiKeys } from './settings.js';
 
 const router = express.Router();
+const USER_AGENT =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+const YTDL_AGENT = ytdl.createAgent();
 
 function analyzeTranscriptQuality(rawText = '') {
   const text = String(rawText).trim();
@@ -49,7 +52,7 @@ function extractVideoId(url) {
   return null;
 }
 
-async function fetchWithTranscriptAPI(videoId, apiKey) {
+async function fetchWithTranscriptAPI(videoUrl, apiKey) {
   if (!apiKey || apiKey.trim() === '') {
     console.log('❌ TranscriptAPI key not provided');
     return null;
@@ -58,10 +61,13 @@ async function fetchWithTranscriptAPI(videoId, apiKey) {
   try {
     console.log('🔄 Trying TranscriptAPI.com...');
     
-    const response = await fetch(`https://transcriptapi.com/api/v2/youtube/transcript?video_url=${videoId}`, {
+    const encodedUrl = encodeURIComponent(videoUrl);
+    const response = await fetch(`https://transcriptapi.com/api/v2/youtube/transcript?video_url=${encodedUrl}`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${apiKey}`
+        'Authorization': `Bearer ${apiKey}`,
+        'User-Agent': USER_AGENT,
+        'Accept': 'application/json'
       }
     });
 
@@ -88,7 +94,7 @@ async function fetchWithTranscriptAPI(videoId, apiKey) {
 
 async function fetchTranscriptWithYtdl(videoId) {
   try {
-    const info = await ytdl.getInfo(videoId);
+    const info = await ytdl.getInfo(videoId, { agent: YTDL_AGENT });
     
     const captionTracks = info.player_response?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
     
@@ -110,8 +116,20 @@ async function fetchTranscriptWithYtdl(videoId) {
     let bestScore = -1;
 
     for (const track of uniqueTracks) {
-      const response = await fetch(track.baseUrl);
+      const response = await fetch(track.baseUrl, {
+        dispatcher: YTDL_AGENT.dispatcher,
+        headers: {
+          'User-Agent': USER_AGENT,
+          'Accept-Language': 'en-US,en;q=0.9'
+        }
+      });
+      if (!response.ok) {
+        continue;
+      }
       const xmlText = await response.text();
+      if (!xmlText) {
+        continue;
+      }
       const textMatches = xmlText.matchAll(/<text[^>]*>([^<]+)<\/text>/g);
       const transcript = Array.from(textMatches)
         .map(match => match[1])
@@ -168,7 +186,7 @@ router.post('/extract', async (req, res) => {
     if (transcriptApiKey) {
       try {
         console.log('Method 1: Trying TranscriptAPI.com...');
-        transcript = await fetchWithTranscriptAPI(videoId, transcriptApiKey);
+        transcript = await fetchWithTranscriptAPI(url, transcriptApiKey);
         if (transcript) {
           if (isUsableTranscript(transcript)) {
             method = 'TranscriptAPI.com';
