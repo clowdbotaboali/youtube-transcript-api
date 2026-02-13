@@ -46,11 +46,10 @@ function LocalServerGuide({ apiUrl, onApiUrlChange }) {
   };
 
   return (
-    <section className="bg-white rounded-lg shadow-sm p-4 sm:p-6 mb-6 border-2 border-amber-300">
-      <div className="bg-amber-50 border border-amber-300 text-amber-900 rounded-lg p-4 mb-4">
-        <h2 className="text-lg sm:text-xl font-bold mb-2">تنبيه مهم قبل الاستخدام</h2>
+    <section className="bg-white rounded-lg shadow-sm p-4 sm:p-5 mb-4 border border-gray-200">
+      <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-lg p-3 mb-4">
         <p className="text-sm sm:text-base">
-          بسبب قيود بعض مزودي API حسب المنطقة، شغل الخادم المحلي اولا ثم اختر وضع Local Server.
+          اذا واجهت رفض من مزود الخدمة حسب المنطقة، فعل الخادم المحلي ثم اختر Local Server.
         </p>
       </div>
 
@@ -85,7 +84,7 @@ function LocalServerGuide({ apiUrl, onApiUrlChange }) {
           <ol className="list-decimal mr-5 space-y-2">
             <li>حمل ملف التشغيل المحلي للباك اند.</li>
             <li>افتح الملف `start-backend.cmd` على جهازك.</li>
-            <li>اترك نافذة الطرفية مفتوحة حتى يظهر: `http://localhost:5000`.</li>
+            <li>اترك نافذة الطرفية مفتوحة حتى يظهر: http://localhost:5000.</li>
             <li>اضغط فحص الاتصال ثم فعل Local Server.</li>
           </ol>
           <div className="flex flex-wrap gap-2">
@@ -145,7 +144,7 @@ npm run dev
         </button>
       </div>
 
-      <div className="mt-3 text-sm">
+      <div className="mt-3 text-sm text-gray-700">
         <p>
           الحالة الحالية: <span className="font-semibold">{apiUrl}</span>
         </p>

@@ -17,18 +17,31 @@ function App() {
   const [extractLoading, setExtractLoading] = useState(false);
   const [processLoading, setProcessLoading] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showLocalGuide, setShowLocalGuide] = useState(false);
   const [selectedUrl, setSelectedUrl] = useState('');
   const [apiUrl, setApiUrl] = useState(defaultApiUrl);
 
   useEffect(() => {
     const savedUrl = localStorage.getItem('serverUrl');
+    const savedGuideState = localStorage.getItem('showLocalGuide');
     if (savedUrl) {
       setApiUrl(savedUrl);
+    }
+    if (savedGuideState === 'true') {
+      setShowLocalGuide(true);
     }
   }, []);
 
   const handleApiUrlChange = (nextApiUrl) => {
     setApiUrl(nextApiUrl || defaultApiUrl);
+  };
+
+  const toggleLocalGuide = () => {
+    setShowLocalGuide((prev) => {
+      const next = !prev;
+      localStorage.setItem('showLocalGuide', String(next));
+      return next;
+    });
   };
 
   const handleTranscriptExtracted = (data) => {
@@ -116,7 +129,20 @@ function App() {
           <div className="hidden sm:block w-24"></div>
         </header>
 
-        <LocalServerGuide apiUrl={apiUrl} onApiUrlChange={handleApiUrlChange} />
+        <div className="mb-3 sm:mb-4">
+          <button
+            type="button"
+            onClick={toggleLocalGuide}
+            className="inline-flex items-center gap-2 text-xs sm:text-sm px-3 py-1.5 rounded-full border border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100 transition"
+          >
+            <span>{showLocalGuide ? 'اخفاء' : 'اظهار'}</span>
+            <span>دليل تشغيل الخادم المحلي</span>
+          </button>
+        </div>
+
+        {showLocalGuide && (
+          <LocalServerGuide apiUrl={apiUrl} onApiUrlChange={handleApiUrlChange} />
+        )}
 
         <VideoInput
           onTranscriptExtracted={handleTranscriptExtracted}
