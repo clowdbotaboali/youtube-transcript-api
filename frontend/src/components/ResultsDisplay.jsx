@@ -109,8 +109,11 @@ function ResultsDisplay({ result, type, videoId, videoTitle, transcript, onSave 
                 </div>
               </div>
 
-              <div className="bg-gray-50 rounded-lg p-6 max-h-[700px] overflow-y-auto prose prose-slate max-w-none">
-                <div className="text-gray-800 whitespace-pre-wrap leading-relaxed text-right">
+              <div className="bg-gray-50 rounded-lg p-4 sm:p-6 max-h-none overflow-visible md:max-h-[700px] md:overflow-y-auto overflow-x-hidden prose prose-slate max-w-none">
+                <div
+                  className="text-gray-800 whitespace-pre-wrap break-words leading-relaxed text-right"
+                  style={{ wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}
+                >
                   {result}
                 </div>
               </div>
@@ -162,8 +165,11 @@ function ResultsDisplay({ result, type, videoId, videoTitle, transcript, onSave 
             </div>
           </div>
 
-          <div className="bg-gray-50 rounded-lg p-6 max-h-[600px] overflow-y-auto prose prose-slate max-w-none">
-            <div className="text-gray-800 whitespace-pre-wrap leading-relaxed text-right">
+          <div className="bg-gray-50 rounded-lg p-4 sm:p-6 max-h-none overflow-visible md:max-h-[600px] md:overflow-y-auto overflow-x-hidden prose prose-slate max-w-none">
+            <div
+              className="text-gray-800 whitespace-pre-wrap break-words leading-relaxed text-right"
+              style={{ wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}
+            >
               {result}
             </div>
           </div>

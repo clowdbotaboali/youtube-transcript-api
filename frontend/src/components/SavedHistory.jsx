@@ -129,7 +129,10 @@ function SavedHistory({ apiUrl = defaultApiUrl }) {
               <div className="mb-4">
                 <h4 className="font-semibold text-gray-700 mb-2">النص الأصلي:</h4>
                 <div className="bg-gray-50 p-4 rounded-lg max-h-48 overflow-y-auto">
-                  <p className="text-gray-700 text-sm whitespace-pre-wrap">
+                  <p
+                    className="text-gray-700 text-sm whitespace-pre-wrap break-words"
+                    style={{ wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}
+                  >
                     {selectedItem.transcript}
                   </p>
                 </div>
@@ -137,7 +140,10 @@ function SavedHistory({ apiUrl = defaultApiUrl }) {
               <div>
                 <h4 className="font-semibold text-gray-700 mb-2">النتيجة:</h4>
                 <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
+                  <p
+                    className="text-gray-700 whitespace-pre-wrap break-words leading-relaxed"
+                    style={{ wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}
+                  >
                     {selectedItem.result}
                   </p>
                 </div>
