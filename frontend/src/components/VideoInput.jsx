@@ -5,6 +5,20 @@ function VideoInput({ onTranscriptExtracted, loading, setLoading, initialUrl, on
   const [url, setUrl] = useState('');
   const [error, setError] = useState('');
 
+  const isLowQualityTranscript = (text = '', wordCount = 0) => {
+    const normalized = String(text || '')
+      .replace(/\[[^\]]*]/g, ' ')
+      .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    const words = normalized ? normalized.split(/\s+/).filter(Boolean) : [];
+    const unique = new Set(words.map((w) => w.toLowerCase())).size;
+    const count = Number(wordCount) || words.length;
+
+    return count < 20 || unique < 10;
+  };
+
   useEffect(() => {
     if (initialUrl) {
       setUrl(initialUrl);
@@ -37,6 +51,10 @@ function VideoInput({ onTranscriptExtracted, loading, setLoading, initialUrl, on
       const data = await response.json();
 
       if (data.success) {
+        if (isLowQualityTranscript(data.transcript, data.wordCount)) {
+          setError('تم العثور على نص قصير/غير مفيد (مثل [Music]). جرّب فيديو آخر يحتوي شرحًا كلاميًا واضحًا.');
+          return;
+        }
         onTranscriptExtracted(data);
         setUrl('');
       } else {
