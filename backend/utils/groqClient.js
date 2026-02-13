@@ -3,10 +3,6 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY
-});
-
 const prompts = {
   summary: (transcript) => `قم بتلخيص النص التالي باللغة العربية بشكل شامل ومفيد:
 - اذكر الموضوع الرئيسي
@@ -160,8 +156,14 @@ const prompts = {
 النص: ${transcript}`
 };
 
-export async function processWithGroq(transcript, type = 'all') {
+export async function processWithGroq(transcript, type = 'all', apiKeyOverride = '') {
   try {
+    const apiKey = apiKeyOverride || process.env.GROQ_API_KEY;
+    if (!apiKey) {
+      throw new Error('GROQ API key is missing');
+    }
+
+    const groq = new Groq({ apiKey });
     const prompt = prompts[type] ? prompts[type](transcript) : prompts.all(transcript);
     
     const completion = await groq.chat.completions.create({
@@ -186,5 +188,3 @@ export async function processWithGroq(transcript, type = 'all') {
     throw new Error('فشل في معالجة النص بالذكاء الاصطناعي: ' + error.message);
   }
 }
-
-export default groq;

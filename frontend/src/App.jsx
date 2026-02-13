@@ -54,10 +54,12 @@ function App() {
 
     setProcessLoading(true);
     try {
+      const groqApiKey = localStorage.getItem('groqApiKey') || '';
       const response = await fetch(`${apiUrl}/api/ai/process`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'X-Groq-API-Key': groqApiKey
         },
         body: JSON.stringify({
           transcript: transcriptData.transcript,

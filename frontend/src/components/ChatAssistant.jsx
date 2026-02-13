@@ -40,10 +40,12 @@ function ChatAssistant({ transcript, videoId, apiUrl = defaultApiUrl }) {
     setLoading(true);
 
     try {
+      const groqApiKey = localStorage.getItem('groqApiKey') || '';
       const response = await fetch(`${apiUrl}/api/chat/chat`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'X-Groq-API-Key': groqApiKey
         },
         body: JSON.stringify({
           message: userMessage.content,
@@ -94,7 +96,7 @@ function ChatAssistant({ transcript, videoId, apiUrl = defaultApiUrl }) {
   const handleClear = async () => {
     if (conversationId) {
       try {
-        await fetch(`${API_URL}/api/chat/clear`, {
+        await fetch(`${apiUrl}/api/chat/clear`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
