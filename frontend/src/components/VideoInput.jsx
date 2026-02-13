@@ -1,12 +1,19 @@
 import { useState, useEffect } from 'react';
 import { FaYoutube, FaSpinner } from 'react-icons/fa';
-import API_URL from '../config';
+import defaultApiUrl from '../config';
 
 function VideoInput({ onTranscriptExtracted, loading, setLoading, initialUrl, onUrlChange }) {
   const [url, setUrl] = useState('');
   const [error, setError] = useState('');
+  const [apiUrl, setApiUrl] = useState(defaultApiUrl);
 
   useEffect(() => {
+    // Get server URL from localStorage if saved
+    const savedUrl = localStorage.getItem('serverUrl');
+    if (savedUrl) {
+      setApiUrl(savedUrl);
+    }
+    
     if (initialUrl) {
       setUrl(initialUrl);
     }
@@ -26,7 +33,7 @@ function VideoInput({ onTranscriptExtracted, loading, setLoading, initialUrl, on
     try {
       const transcriptApiKey = localStorage.getItem('transcriptApiKey') || '';
       
-      const response = await fetch(`${API_URL}/api/transcript/extract`, {
+      const response = await fetch(`${apiUrl}/api/transcript/extract`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

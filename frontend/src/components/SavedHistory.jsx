@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { FaHistory, FaTrash, FaEye, FaTimes } from 'react-icons/fa';
-import API_URL from '../config';
+import defaultApiUrl from '../config';
 
-function SavedHistory() {
+function SavedHistory({ apiUrl = defaultApiUrl }) {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
@@ -14,7 +14,7 @@ function SavedHistory() {
   const loadHistory = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_URL}/api/history/list`);
+      const response = await fetch(`${apiUrl}/api/history/list`);
       const data = await response.json();
       if (data.success) {
         setHistory(data.history);
@@ -30,7 +30,7 @@ function SavedHistory() {
     if (!confirm('هل أنت متأكد من حذف هذا العنصر؟')) return;
 
     try {
-      const response = await fetch(`${API_URL}/api/history/${id}`, {
+       const response = await fetch(`${apiUrl}/api/history/${id}`, {
         method: 'DELETE'
       });
       const data = await response.json();
@@ -44,7 +44,7 @@ function SavedHistory() {
 
   const handleView = async (id) => {
     try {
-      const response = await fetch(`${API_URL}/api/history/${id}`);
+      const response = await fetch(`${apiUrl}/api/history/${id}`);
       const data = await response.json();
       if (data.success) {
         setSelectedItem(data.item);

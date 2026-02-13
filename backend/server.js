@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { networkInterfaces } from 'os';
 import transcriptRoutes from './routes/transcript.js';
 import aiRoutes from './routes/ai.js';
 import historyRoutes from './routes/history.js';
@@ -12,7 +13,11 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors());
+// Enable CORS for mobile access
+app.use(cors({
+  origin: true,
+  credentials: true
+}));
 app.use(express.json({ limit: '50mb' }));
 
 app.use('/api/transcript', transcriptRoutes);
@@ -35,5 +40,20 @@ app.get('/', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`✅ Server is running on http://localhost:${PORT}`);
+  const networkIp = getLocalIp();
+  console.log(`✅ Server is running!`);
+  console.log(`📱 Access from mobile: http://${networkIp}:${PORT}`);
+  console.log(`💻 Access from PC: http://localhost:${PORT}`);
 });
+
+function getLocalIp() {
+  const nets = networkInterfaces();
+  for (const name of Object.keys(nets)) {
+    for (const net of nets[name]) {
+      if (net.family === 'IPv4' && !net.internal) {
+        return net.address;
+      }
+    }
+  }
+  return 'localhost';
+}

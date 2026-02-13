@@ -1,66 +1,93 @@
 import { useState, useEffect } from 'react';
-import { FaKey, FaSave, FaTimes, FaCog } from 'react-icons/fa';
-import API_URL from '../config';
+import { FaKey, FaSave, FaTimes, FaCog, FaGlobe, FaExclamationTriangle } from 'react-icons/fa';
+import defaultApiUrl from '../config';
 
 function Settings({ onClose }) {
   const [groqApiKey, setGroqApiKey] = useState('');
   const [transcriptApiKey, setTranscriptApiKey] = useState('');
+  const [serverUrl, setServerUrl] = useState(defaultApiUrl);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const savedGroqKey = localStorage.getItem('groqApiKey') || '';
     const savedTranscriptKey = localStorage.getItem('transcriptApiKey') || '';
+    const savedServerUrl = localStorage.getItem('serverUrl') || defaultApiUrl;
     setGroqApiKey(savedGroqKey);
     setTranscriptApiKey(savedTranscriptKey);
+    setServerUrl(savedServerUrl);
   }, []);
 
   const handleSave = async () => {
     localStorage.setItem('groqApiKey', groqApiKey);
     localStorage.setItem('transcriptApiKey', transcriptApiKey);
+    localStorage.setItem('serverUrl', serverUrl);
+    setError('');
 
+    // Test connection to backend
     try {
-      const response = await fetch(`${API_URL}/api/settings/update`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          groqApiKey,
-          transcriptApiKey
-        })
-      });
-
+      const testUrl = serverUrl.replace(/\/$/, '');
+      const response = await fetch(`${testUrl}/api/settings/keys`);
+      
       if (response.ok) {
         setSaved(true);
-        setTimeout(() => setSaved(false), 2000);
+        setTimeout(() => setSaved(false), 3000);
+      } else {
+        setError('⚠️ تعذر الاتصال بالخادم. تأكد من صحة الرابط.');
+        setSaved(true);
+        setTimeout(() => setSaved(false), 3000);
       }
-    } catch (error) {
-      console.error('Failed to save settings:', error);
+    } catch (err) {
+      setError('⚠️ خطأ في الاتصال: ' + err.message);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-        <div className="flex items-center justify-between p-6 border-b">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+      <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col my-4">
+        <div className="flex items-center justify-between p-4 sm:p-6 border-b">
           <div className="flex items-center gap-2">
-            <FaCog className="text-blue-600 text-2xl" />
-            <h2 className="text-2xl font-bold text-gray-800">إعدادات API</h2>
+            <FaCog className="text-blue-600 text-xl sm:text-2xl" />
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800">الإعدادات</h2>
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition"
+            className="p-2 hover:bg-gray-100 rounded-lg transition flex-shrink-0"
           >
             <FaTimes className="text-gray-600" />
           </button>
         </div>
 
-        <div className="p-6 overflow-y-auto flex-1">
+        <div className="p-4 sm:p-6 overflow-y-auto flex-1">
           <div className="space-y-6">
+            {/* Server URL */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <label className="flex items-center gap-2 text-lg font-semibold text-gray-800 mb-3">
+                <FaGlobe className="text-blue-600" />
+                <span>رابط الخادم</span>
+              </label>
+              <p className="text-sm text-gray-600 mb-2">
+                أدخل رابط الـ Backend الخاص بالمشروع
+              </p>
+              <input
+                type="url"
+                value={serverUrl}
+                onChange={(e) => setServerUrl(e.target.value)}
+                placeholder="https://youtube-transcript-backend.onrender.com"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+              />
+              {error && (
+                <p className="text-red-600 text-sm mt-2">{error}</p>
+              )}
+            </div>
+
+            {/* Groq API Key */}
             <div>
               <label className="flex items-center gap-2 text-lg font-semibold text-gray-800 mb-3">
                 <FaKey className="text-blue-600" />
-                <span>Groq API Key</span>
+                <span>Groq API Key (مطلوب)</span>
               </label>
               <p className="text-sm text-gray-600 mb-2">
                 للحصول على مفتاح مجاني:{' '}
@@ -82,10 +109,11 @@ function Settings({ onClose }) {
               />
             </div>
 
+            {/* TranscriptAPI Key */}
             <div>
               <label className="flex items-center gap-2 text-lg font-semibold text-gray-800 mb-3">
                 <FaKey className="text-green-600" />
-                <span>TranscriptAPI.com Key</span>
+                <span>TranscriptAPI.com Key (اختياري)</span>
               </label>
               <p className="text-sm text-gray-600 mb-2">
                 للحصول على 100 كريديت مجاني:{' '}
@@ -106,19 +134,23 @@ function Settings({ onClose }) {
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition"
               />
               <p className="text-xs text-gray-500 mt-2">
-                💡 كل فيديو يستهلك 1 كريديت تقريباً
+                💡 بدون هذا المفتاح، يعتمد النظام على youtube-transcript المجاني
               </p>
             </div>
 
+            {/* Security Note */}
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <p className="text-sm text-yellow-800">
-                ⚠️ <strong>ملاحظة أمنية:</strong> المفاتيح تُحفظ في المتصفح فقط (localStorage) ولن تُرسل لأي مكان غير الخوادم الرسمية.
-              </p>
+              <div className="flex items-start gap-2">
+                <FaExclamationTriangle className="text-yellow-600 mt-1 flex-shrink-0" />
+                <p className="text-sm text-yellow-800">
+                  <strong>ملاحظة أمنية:</strong> المفاتيح تُحفظ في المتصفح فقط (localStorage) ولن تُرسل لأي مكان غير خوادم Groq و TranscriptAPI.
+                </p>
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="p-6 border-t bg-gray-50">
+        <div className="p-4 sm:p-6 border-t bg-gray-50">
           <button
             onClick={handleSave}
             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-200 flex items-center justify-center gap-2"

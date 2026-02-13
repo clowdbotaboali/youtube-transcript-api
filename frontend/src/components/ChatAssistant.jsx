@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { FaPaperPlane, FaRobot, FaUser, FaTrash, FaComments, FaLink, FaCheck, FaExternalLinkAlt } from 'react-icons/fa';
-import API_URL from '../config';
+import defaultApiUrl from '../config';
 
-function ChatAssistant({ transcript, videoId }) {
+function ChatAssistant({ transcript, videoId, apiUrl = defaultApiUrl }) {
   const [messages, setMessages] = useState([
     {
       id: 0,
@@ -40,7 +40,7 @@ function ChatAssistant({ transcript, videoId }) {
     setLoading(true);
 
     try {
-      const response = await fetch(`${API_URL}/api/chat/chat`, {
+      const response = await fetch(`${apiUrl}/api/chat/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
