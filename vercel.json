@@ -1,11 +1,8 @@
 {
   "version": 2,
   "framework": null,
-  "buildCommand": "npm run build --prefix frontend",
+  "buildCommand": "cd frontend && npm install && npm run build",
   "outputDirectory": "frontend/dist",
-  "env": {
-    "GROQ_API_KEY": "@groq-api-key"
-  },
   "routes": [
     {
       "src": "/api/(.*)",
@@ -24,6 +21,5 @@
     "api/index.js": {
       "maxDuration": 60
     }
-  },
-  "installCommand": "npm install"
+  }
 }
