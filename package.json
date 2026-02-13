@@ -6,7 +6,7 @@
     "build": "cd frontend && npm install && npm run build"
   },
   "dependencies": {
-    "@vercel/node": "^5.6.3",
+    "@vercel/node": "^4.0.0",
     "groq-sdk": "^0.5.0",
     "youtube-transcript": "^1.0.4"
   }

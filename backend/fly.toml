@@ -16,3 +16,6 @@ primary_region = "iad"
   cpus = 1
   memory_gb = 0.5
   cpu_kind = "shared"
+
+[env]
+  PORT = "5000"
