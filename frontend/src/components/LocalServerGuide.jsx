@@ -6,10 +6,19 @@ function LocalServerGuide({ apiUrl, onApiUrlChange }) {
   const [activeTab, setActiveTab] = useState('windows');
   const [localStatus, setLocalStatus] = useState('idle');
   const [checking, setChecking] = useState(false);
+  const [serverUrlInput, setServerUrlInput] = useState(
+    localStorage.getItem('serverUrl') || LOCAL_API_URL
+  );
 
-  const isUsingLocal = apiUrl === LOCAL_API_URL;
+  const isSecurePage = typeof window !== 'undefined' && window.location.protocol === 'https:';
+  const normalizedInput = serverUrlInput.trim().replace(/\/+$/, '');
+  const isMixedContentBlocked = isSecurePage && normalizedInput.startsWith('http://');
+  const isUsingCustomServer = !!localStorage.getItem('serverUrl');
 
   const checkLocalServer = async () => {
+    const testUrl = normalizedInput || LOCAL_API_URL;
+    if (!testUrl) return;
+
     setChecking(true);
     setLocalStatus('idle');
 
@@ -17,7 +26,7 @@ function LocalServerGuide({ apiUrl, onApiUrlChange }) {
     const timeout = setTimeout(() => controller.abort(), 3000);
 
     try {
-      const response = await fetch(`${LOCAL_API_URL}/`, { signal: controller.signal });
+      const response = await fetch(`${testUrl}/`, { signal: controller.signal });
       if (response.ok) {
         setLocalStatus('connected');
       } else {
@@ -33,15 +42,21 @@ function LocalServerGuide({ apiUrl, onApiUrlChange }) {
 
   useEffect(() => {
     checkLocalServer();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const useLocalServer = () => {
-    localStorage.setItem('serverUrl', LOCAL_API_URL);
-    onApiUrlChange(LOCAL_API_URL);
+    const urlToUse = normalizedInput || LOCAL_API_URL;
+    if (isSecurePage && urlToUse.startsWith('http://')) {
+      setLocalStatus('disconnected');
+      return;
+    }
+    localStorage.setItem('serverUrl', urlToUse);
+    onApiUrlChange(urlToUse);
   };
 
   const useRemoteServer = () => {
     localStorage.removeItem('serverUrl');
+    setServerUrlInput(LOCAL_API_URL);
     onApiUrlChange(null);
   };
 
@@ -96,6 +111,14 @@ function LocalServerGuide({ apiUrl, onApiUrlChange }) {
               تحميل start-backend.cmd
             </a>
           </div>
+          <div className="mt-3 border-t pt-3">
+            <p className="font-semibold mb-2">لو الواجهة مفتوحة على Vercel (HTTPS)</p>
+            <p className="mb-2">شغل نفق HTTPS للخادم المحلي عبر ngrok:</p>
+            <pre className="bg-white border rounded p-3 overflow-x-auto text-xs sm:text-sm">
+ngrok http 5000
+            </pre>
+            <p className="mt-2">ثم انسخ رابط ngrok (https) وضعه في خانة رابط الخادم بالأسفل.</p>
+          </div>
         </div>
       )}
 
@@ -121,12 +144,19 @@ npm run dev
       )}
 
       <div className="mt-4 flex flex-wrap gap-2">
+        <input
+          type="text"
+          value={serverUrlInput}
+          onChange={(e) => setServerUrlInput(e.target.value)}
+          placeholder="رابط الخادم (مثال: https://xxxx.ngrok-free.app)"
+          className="flex-1 min-w-[240px] px-3 py-2 rounded-lg border border-gray-300 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+        />
         <button
           type="button"
           onClick={checkLocalServer}
           className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold text-sm"
         >
-          {checking ? 'جاري الفحص...' : 'فحص اتصال localhost:5000'}
+          {checking ? 'جاري الفحص...' : 'فحص الاتصال'}
         </button>
         <button
           type="button"
@@ -144,6 +174,13 @@ npm run dev
         </button>
       </div>
 
+      {isMixedContentBlocked && (
+        <div className="mt-3 bg-red-50 border border-red-200 text-red-700 rounded-lg p-3 text-sm">
+          الصفحة تعمل عبر HTTPS، لذلك لا يمكن استخدام رابط HTTP مثل localhost مباشرة.
+          استخدم رابط HTTPS (مثل ngrok) ثم اضغط تفعيل Local Server.
+        </div>
+      )}
+
       <div className="mt-3 text-sm text-gray-700">
         <p>
           الحالة الحالية: <span className="font-semibold">{apiUrl}</span>
@@ -154,7 +191,7 @@ npm run dev
           {localStatus === 'disconnected' && <span className="text-red-700 font-semibold">غير متصل</span>}
           {localStatus === 'idle' && <span className="text-gray-700">غير مفحوص</span>}
           {' | '}
-          الوضع: <span className="font-semibold">{isUsingLocal ? 'Local' : 'Default'}</span>
+          الوضع: <span className="font-semibold">{isUsingCustomServer ? 'Custom/Local' : 'Default'}</span>
         </p>
       </div>
     </section>
