@@ -1,47 +1,23 @@
 import { useState, useEffect } from 'react';
-import { FaKey, FaSave, FaTimes, FaCog, FaGlobe, FaExclamationTriangle } from 'react-icons/fa';
-import defaultApiUrl from '../config';
+import { FaKey, FaSave, FaTimes, FaCog, FaExclamationTriangle } from 'react-icons/fa';
 
 function Settings({ onClose }) {
   const [groqApiKey, setGroqApiKey] = useState('');
   const [transcriptApiKey, setTranscriptApiKey] = useState('');
-  const [serverUrl, setServerUrl] = useState(defaultApiUrl);
   const [saved, setSaved] = useState(false);
-  const [error, setError] = useState('');
 
   useEffect(() => {
     const savedGroqKey = localStorage.getItem('groqApiKey') || '';
     const savedTranscriptKey = localStorage.getItem('transcriptApiKey') || '';
-    const savedServerUrl = localStorage.getItem('serverUrl') || defaultApiUrl;
     setGroqApiKey(savedGroqKey);
     setTranscriptApiKey(savedTranscriptKey);
-    setServerUrl(savedServerUrl);
   }, []);
 
-  const handleSave = async () => {
+  const handleSave = () => {
     localStorage.setItem('groqApiKey', groqApiKey);
     localStorage.setItem('transcriptApiKey', transcriptApiKey);
-    localStorage.setItem('serverUrl', serverUrl);
-    setError('');
-
-    // Test connection to backend
-    try {
-      const testUrl = serverUrl.replace(/\/$/, '');
-      const response = await fetch(`${testUrl}/api/settings/keys`);
-      
-      if (response.ok) {
-        setSaved(true);
-        setTimeout(() => setSaved(false), 3000);
-      } else {
-        setError('⚠️ تعذر الاتصال بالخادم. تأكد من صحة الرابط.');
-        setSaved(true);
-        setTimeout(() => setSaved(false), 3000);
-      }
-    } catch (err) {
-      setError('⚠️ خطأ في الاتصال: ' + err.message);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
-    }
+    setSaved(true);
+    setTimeout(() => setSaved(false), 3000);
   };
 
   return (
@@ -62,27 +38,6 @@ function Settings({ onClose }) {
 
         <div className="p-4 sm:p-6 overflow-y-auto flex-1">
           <div className="space-y-6">
-            {/* Server URL */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <label className="flex items-center gap-2 text-lg font-semibold text-gray-800 mb-3">
-                <FaGlobe className="text-blue-600" />
-                <span>رابط الخادم</span>
-              </label>
-              <p className="text-sm text-gray-600 mb-2">
-                أدخل رابط الـ Backend الخاص بالمشروع
-              </p>
-              <input
-                type="url"
-                value={serverUrl}
-                onChange={(e) => setServerUrl(e.target.value)}
-                placeholder="https://youtube-transcript-backend.onrender.com"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-              />
-              {error && (
-                <p className="text-red-600 text-sm mt-2">{error}</p>
-              )}
-            </div>
-
             {/* Groq API Key */}
             <div>
               <label className="flex items-center gap-2 text-lg font-semibold text-gray-800 mb-3">
