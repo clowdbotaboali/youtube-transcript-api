@@ -21,11 +21,14 @@ const WINDOWS_NGROK_COMMANDS = [
 
 const ANDROID_COMMANDS = [
   { id: 'a1', command: 'pkg update -y' },
-  { id: 'a2', command: 'pkg install -y nodejs git' },
+  { id: 'a2', command: 'pkg install -y nodejs git ngrok tmux' },
   { id: 'a3', command: 'git clone https://github.com/clowdbotaboali/youtube-transcript-api.git' },
   { id: 'a4', command: 'cd youtube-transcript-api/backend' },
   { id: 'a5', command: 'npm install' },
-  { id: 'a6', command: 'npm run dev' }
+  { id: 'a6', command: 'tmux new -s ytapi' },
+  { id: 'a7', command: 'npm run dev' },
+  { id: 'a8', command: 'tmux new-window -t ytapi' },
+  { id: 'a9', command: 'ngrok http 5000' }
 ];
 
 function LocalServerGuide({ apiUrl, onApiUrlChange }) {
@@ -187,10 +190,12 @@ function LocalServerGuide({ apiUrl, onApiUrlChange }) {
 
       {activeTab === 'android' && (
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3 text-sm">
-          <p className="font-semibold">خطوات Termux:</p>
+          <p className="font-semibold">خطوات Termux (جلسة للباك + جلسة لـ ngrok):</p>
           <ol className="list-decimal mr-5 space-y-2">
             <li>ثبت Termux من F-Droid.</li>
-            <li>نفذ الأوامر التالية بالترتيب. كل أمر له زر نسخ مستقل:</li>
+            <li>نفذ الأوامر التالية بالترتيب. كل أمر له زر نسخ مستقل.</li>
+            <li>بعد تنفيذ `tmux new -s ytapi` شغّل `npm run dev` داخل نفس الجلسة.</li>
+            <li>افتح نافذة tmux جديدة بالأمر `tmux new-window -t ytapi` ثم شغّل `ngrok http 5000`.</li>
           </ol>
           <div className="space-y-2">
             {ANDROID_COMMANDS.map((item) => (
@@ -208,9 +213,15 @@ function LocalServerGuide({ apiUrl, onApiUrlChange }) {
               </div>
             ))}
           </div>
-          <p>
-            بعد تشغيل السيرفر داخل نفس الموبايل، استخدم الوضع المحلي ثم اختبر الاتصال.
-          </p>
+          <div className="bg-white border border-blue-200 rounded p-3 space-y-2 text-xs sm:text-sm">
+            <p className="font-semibold text-blue-800">التنقل بين جلسات tmux على الموبايل:</p>
+            <p>لو عندك شريط مفاتيح Termux: استخدم `CTRL + b` ثم `n` للتنقل للنافذة التالية.</p>
+            <p>لو ماعندكش زر CTRL: اضغط `VOL DOWN + b` ثم `n` (في أغلب أجهزة Android).</p>
+            <p>بديل بدون اختصارات: اكتب `tmux next-window` للتبديل للنافذة التالية.</p>
+            <p>لإبقاء الجلسة تعمل بالخلفية: اكتب `tmux detach`.</p>
+            <p>للعودة للجلسة لاحقًا: اكتب `tmux attach -t ytapi`.</p>
+          </div>
+          <p>بعد تشغيل السيرفر وngrok داخل نفس الموبايل، انسخ رابط ngrok ثم فعّل Local Server.</p>
         </div>
       )}
 
