@@ -5,6 +5,33 @@ import { apiKeys } from './settings.js';
 
 const router = express.Router();
 
+function analyzeTranscriptQuality(rawText = '') {
+  const text = String(rawText).trim();
+  const words = text.split(/\s+/).filter(Boolean);
+  const cleaned = text
+    .replace(/\[[^\]]*]/g, ' ')
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const meaningfulWords = cleaned.split(/\s+/).filter(Boolean);
+  const uniqueMeaningfulWords = new Set(
+    meaningfulWords.map((w) => w.toLowerCase())
+  ).size;
+
+  return {
+    wordsCount: words.length,
+    meaningfulWordsCount: meaningfulWords.length,
+    uniqueMeaningfulWords,
+  };
+}
+
+function isUsableTranscript(rawText = '') {
+  const stats = analyzeTranscriptQuality(rawText);
+  if (stats.meaningfulWordsCount < 20) return false;
+  if (stats.uniqueMeaningfulWords < 10) return false;
+  return true;
+}
+
 function extractVideoId(url) {
   const patterns = [
     /(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/,
@@ -69,28 +96,42 @@ async function fetchTranscriptWithYtdl(videoId) {
       return null;
     }
 
-    let selectedTrack = captionTracks.find(track => 
-      track.languageCode === 'ar' || track.languageCode === 'ar-SA'
-    ) || captionTracks.find(track => 
-      track.languageCode === 'en' || track.languageCode === 'en-US'
-    ) || captionTracks[0];
+    const preferredTracks = [
+      ...captionTracks.filter(track => track.languageCode === 'ar' || track.languageCode === 'ar-SA'),
+      ...captionTracks.filter(track => track.languageCode === 'en' || track.languageCode === 'en-US'),
+      ...captionTracks
+    ];
 
-    const captionUrl = selectedTrack.baseUrl;
+    const uniqueTracks = Array.from(
+      new Map(preferredTracks.map((track) => [track.baseUrl, track])).values()
+    );
+
+    let bestTranscript = null;
+    let bestScore = -1;
+
+    for (const track of uniqueTracks) {
+      const response = await fetch(track.baseUrl);
+      const xmlText = await response.text();
+      const textMatches = xmlText.matchAll(/<text[^>]*>([^<]+)<\/text>/g);
+      const transcript = Array.from(textMatches)
+        .map(match => match[1])
+        .join(' ')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'");
+
+      const stats = analyzeTranscriptQuality(transcript);
+      const score = (stats.meaningfulWordsCount * 2) + stats.uniqueMeaningfulWords;
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestTranscript = transcript;
+      }
+    }
     
-    const response = await fetch(captionUrl);
-    const xmlText = await response.text();
-    
-    const textMatches = xmlText.matchAll(/<text[^>]*>([^<]+)<\/text>/g);
-    const transcript = Array.from(textMatches)
-      .map(match => match[1])
-      .join(' ')
-      .replace(/&amp;/g, '&')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&quot;/g, '"')
-      .replace(/&#39;/g, "'");
-    
-    return transcript;
+    return bestTranscript;
   } catch (error) {
     console.error('ytdl-core error:', error.message);
     return null;
@@ -129,8 +170,13 @@ router.post('/extract', async (req, res) => {
         console.log('Method 1: Trying TranscriptAPI.com...');
         transcript = await fetchWithTranscriptAPI(videoId, transcriptApiKey);
         if (transcript) {
-          method = 'TranscriptAPI.com';
-          console.log('✅ Success with TranscriptAPI.com');
+          if (isUsableTranscript(transcript)) {
+            method = 'TranscriptAPI.com';
+            console.log('✅ Success with TranscriptAPI.com');
+          } else {
+            console.log('❌ TranscriptAPI returned low-quality transcript, trying fallback...');
+            transcript = null;
+          }
         }
       } catch (error) {
         console.log('❌ TranscriptAPI failed:', error.message);
@@ -142,8 +188,13 @@ router.post('/extract', async (req, res) => {
       try {
         transcript = await fetchTranscriptWithYtdl(videoId);
         if (transcript) {
-          method = 'ytdl-core';
-          console.log('✅ Success with ytdl-core');
+          if (isUsableTranscript(transcript)) {
+            method = 'ytdl-core';
+            console.log('✅ Success with ytdl-core');
+          } else {
+            console.log('❌ ytdl-core returned low-quality transcript, trying fallback...');
+            transcript = null;
+          }
         }
       } catch (error) {
         console.log('❌ ytdl-core failed:', error.message);
@@ -156,8 +207,13 @@ router.post('/extract', async (req, res) => {
         const transcriptData = await YoutubeTranscript.fetchTranscript(videoId);
         if (transcriptData && transcriptData.length > 0) {
           transcript = transcriptData.map(item => item.text).join(' ');
-          method = 'youtube-transcript-default';
-          console.log('✅ Success with youtube-transcript (default)');
+          if (isUsableTranscript(transcript)) {
+            method = 'youtube-transcript-default';
+            console.log('✅ Success with youtube-transcript (default)');
+          } else {
+            console.log('❌ youtube-transcript (default) low-quality transcript, trying fallback...');
+            transcript = null;
+          }
         }
       } catch (error) {
         console.log('❌ youtube-transcript (default) failed:', error.message);
@@ -170,8 +226,13 @@ router.post('/extract', async (req, res) => {
         const transcriptData = await YoutubeTranscript.fetchTranscript(videoId, { lang: 'ar' });
         if (transcriptData && transcriptData.length > 0) {
           transcript = transcriptData.map(item => item.text).join(' ');
-          method = 'youtube-transcript-ar';
-          console.log('✅ Success with youtube-transcript (ar)');
+          if (isUsableTranscript(transcript)) {
+            method = 'youtube-transcript-ar';
+            console.log('✅ Success with youtube-transcript (ar)');
+          } else {
+            console.log('❌ youtube-transcript (ar) low-quality transcript, trying fallback...');
+            transcript = null;
+          }
         }
       } catch (error) {
         console.log('❌ youtube-transcript (ar) failed:', error.message);
@@ -184,8 +245,13 @@ router.post('/extract', async (req, res) => {
         const transcriptData = await YoutubeTranscript.fetchTranscript(videoId, { lang: 'en' });
         if (transcriptData && transcriptData.length > 0) {
           transcript = transcriptData.map(item => item.text).join(' ');
-          method = 'youtube-transcript-en';
-          console.log('✅ Success with youtube-transcript (en)');
+          if (isUsableTranscript(transcript)) {
+            method = 'youtube-transcript-en';
+            console.log('✅ Success with youtube-transcript (en)');
+          } else {
+            console.log('❌ youtube-transcript (en) low-quality transcript.');
+            transcript = null;
+          }
         }
       } catch (error) {
         console.log('❌ youtube-transcript (en) failed:', error.message);
