@@ -8,6 +8,7 @@ import SavedHistory from './components/SavedHistory';
 import Settings from './components/Settings';
 import ChatAssistant from './components/ChatAssistant';
 import SavedLinks from './components/SavedLinks';
+import LocalServerGuide from './components/LocalServerGuide';
 import defaultApiUrl from './config';
 
 function App() {
@@ -25,6 +26,10 @@ function App() {
       setApiUrl(savedUrl);
     }
   }, []);
+
+  const handleApiUrlChange = (nextApiUrl) => {
+    setApiUrl(nextApiUrl || defaultApiUrl);
+  };
 
   const handleTranscriptExtracted = (data) => {
     setTranscriptData(data);
@@ -111,11 +116,14 @@ function App() {
           <div className="hidden sm:block w-24"></div>
         </header>
 
+        <LocalServerGuide apiUrl={apiUrl} onApiUrlChange={handleApiUrlChange} />
+
         <VideoInput
           onTranscriptExtracted={handleTranscriptExtracted}
           loading={extractLoading}
           setLoading={setExtractLoading}
           initialUrl={selectedUrl}
+          apiUrl={apiUrl}
         />
 
         {transcriptData && (

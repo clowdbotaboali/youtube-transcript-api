@@ -1,19 +1,11 @@
 import { useState, useEffect } from 'react';
 import { FaYoutube, FaSpinner } from 'react-icons/fa';
-import defaultApiUrl from '../config';
 
-function VideoInput({ onTranscriptExtracted, loading, setLoading, initialUrl, onUrlChange }) {
+function VideoInput({ onTranscriptExtracted, loading, setLoading, initialUrl, onUrlChange, apiUrl }) {
   const [url, setUrl] = useState('');
   const [error, setError] = useState('');
-  const [apiUrl, setApiUrl] = useState(defaultApiUrl);
 
   useEffect(() => {
-    // Get server URL from localStorage if saved
-    const savedUrl = localStorage.getItem('serverUrl');
-    if (savedUrl) {
-      setApiUrl(savedUrl);
-    }
-    
     if (initialUrl) {
       setUrl(initialUrl);
     }
