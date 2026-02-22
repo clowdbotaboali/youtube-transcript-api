@@ -6,10 +6,16 @@ const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY
 });
 
-const supabase = createClient(
-  process.env.SUPABASE_URL || '',
-  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-);
+let supabaseClient = null;
+
+function getSupabase() {
+  if (supabaseClient) return supabaseClient;
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return null;
+  supabaseClient = createClient(url, key);
+  return supabaseClient;
+}
 
 function extractVideoId(url) {
   const patterns = [
@@ -27,6 +33,8 @@ function extractVideoId(url) {
 }
 
 async function getAuthedUser(req) {
+  const supabase = getSupabase();
+  if (!supabase) return null;
   const authHeader = req.headers?.authorization || '';
   const token = authHeader.startsWith('Bearer ') ? authHeader.slice('Bearer '.length).trim() : '';
   if (!token) return null;
@@ -123,6 +131,10 @@ export default async function handler(req, res) {
     }
 
     if (url.includes('/api/ai/process')) {
+      const supabase = getSupabase();
+      if (!supabase) {
+        return res.status(500).json({ success: false, error: 'Server not configured: SUPABASE env vars missing' });
+      }
       const user = await getAuthedUser(req);
       if (!user) {
         return res.status(401).json({ success: false, error: 'Authentication required' });
@@ -178,6 +190,10 @@ export default async function handler(req, res) {
     }
 
     if (url.includes('/api/history/save')) {
+      const supabase = getSupabase();
+      if (!supabase) {
+        return res.status(500).json({ success: false, error: 'Server not configured: SUPABASE env vars missing' });
+      }
       const user = await getAuthedUser(req);
       if (!user) return res.status(401).json({ success: false, error: 'Authentication required' });
 
@@ -206,6 +222,10 @@ export default async function handler(req, res) {
     }
 
     if (url.match(/\/api\/history\/[^/]+$/) && req.method === 'GET') {
+      const supabase = getSupabase();
+      if (!supabase) {
+        return res.status(500).json({ success: false, error: 'Server not configured: SUPABASE env vars missing' });
+      }
       const user = await getAuthedUser(req);
       if (!user) return res.status(401).json({ success: false, error: 'Authentication required' });
       const id = url.split('/').pop();
@@ -221,6 +241,10 @@ export default async function handler(req, res) {
     }
 
     if (url.match(/\/api\/history\/[^/]+$/) && req.method === 'DELETE') {
+      const supabase = getSupabase();
+      if (!supabase) {
+        return res.status(500).json({ success: false, error: 'Server not configured: SUPABASE env vars missing' });
+      }
       const user = await getAuthedUser(req);
       if (!user) return res.status(401).json({ success: false, error: 'Authentication required' });
       const id = url.split('/').pop();
@@ -230,6 +254,10 @@ export default async function handler(req, res) {
     }
 
     if (url.includes('/api/history') && req.method === 'GET') {
+      const supabase = getSupabase();
+      if (!supabase) {
+        return res.status(500).json({ success: false, error: 'Server not configured: SUPABASE env vars missing' });
+      }
       const user = await getAuthedUser(req);
       if (!user) return res.status(401).json({ success: false, error: 'Authentication required' });
       const { data, error } = await supabase
@@ -242,6 +270,10 @@ export default async function handler(req, res) {
     }
 
     if (url.includes('/api/billing/create-topup-request')) {
+      const supabase = getSupabase();
+      if (!supabase) {
+        return res.status(500).json({ success: false, error: 'Server not configured: SUPABASE env vars missing' });
+      }
       const user = await getAuthedUser(req);
       if (!user) return res.status(401).json({ success: false, error: 'Authentication required' });
 
@@ -271,6 +303,10 @@ export default async function handler(req, res) {
     }
 
     if (url.includes('/api/billing/my-requests')) {
+      const supabase = getSupabase();
+      if (!supabase) {
+        return res.status(500).json({ success: false, error: 'Server not configured: SUPABASE env vars missing' });
+      }
       const user = await getAuthedUser(req);
       if (!user) return res.status(401).json({ success: false, error: 'Authentication required' });
       const { data, error } = await supabase
