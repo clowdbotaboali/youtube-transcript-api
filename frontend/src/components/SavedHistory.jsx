@@ -1,37 +1,50 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { FaHistory, FaTrash, FaEye, FaTimes } from 'react-icons/fa';
 import defaultApiUrl from '../config';
+import { getAuthHeaders } from '../utils/authHeaders';
 
-function SavedHistory({ apiUrl = defaultApiUrl }) {
+function SavedHistory({ apiUrl = defaultApiUrl, user }) {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
 
-  useEffect(() => {
-    loadHistory();
-  }, []);
-
-  const loadHistory = async () => {
+  const loadHistory = useCallback(async () => {
+    if (!user) return;
     setLoading(true);
     try {
-      const response = await fetch(`${apiUrl}/api/history/list`);
+      const response = await fetch(`${apiUrl}/api/history`, {
+        headers: {
+          ...(await getAuthHeaders())
+        }
+      });
       const data = await response.json();
       if (data.success) {
-        setHistory(data.history);
+        setHistory(data.data);
       }
     } catch (error) {
       console.error('Failed to load history:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [apiUrl, user]);
+
+  useEffect(() => {
+    if (user) {
+      loadHistory();
+    } else {
+      setHistory([]);
+    }
+  }, [user, loadHistory]);
 
   const handleDelete = async (id) => {
     if (!confirm('هل أنت متأكد من حذف هذا العنصر؟')) return;
 
     try {
-       const response = await fetch(`${apiUrl}/api/history/${id}`, {
-        method: 'DELETE'
+      const response = await fetch(`${apiUrl}/api/history/${id}`, {
+        method: 'DELETE',
+        headers: {
+          ...(await getAuthHeaders())
+        }
       });
       const data = await response.json();
       if (data.success) {
@@ -41,10 +54,13 @@ function SavedHistory({ apiUrl = defaultApiUrl }) {
       console.error('Failed to delete item:', error);
     }
   };
-
   const handleView = async (id) => {
     try {
-      const response = await fetch(`${apiUrl}/api/history/${id}`);
+      const response = await fetch(`${apiUrl}/api/history/${id}`, {
+        headers: {
+          ...(await getAuthHeaders())
+        }
+      });
       const data = await response.json();
       if (data.success) {
         setSelectedItem(data.item);
@@ -140,14 +156,14 @@ function SavedHistory({ apiUrl = defaultApiUrl }) {
               <div>
                 <h4 className="font-semibold text-gray-700 mb-2">النتيجة:</h4>
                 <div className="bg-gray-50 p-4 rounded-lg">
-                  <p
-                    className="text-gray-700 whitespace-pre-wrap break-words leading-relaxed"
-                    style={{ wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}
-                  >
-                    {selectedItem.result}
-                  </p>
+                    <p
+                      className="text-gray-700 whitespace-pre-wrap break-words leading-relaxed"
+                      style={{ wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}
+                    >
+                      {selectedItem.ai_result}
+                    </p>
+                  </div>
                 </div>
-              </div>
             </div>
           </div>
         </div>

@@ -1,104 +1,52 @@
-import { useState, useEffect } from 'react';
-import { FaKey, FaSave, FaTimes, FaCog, FaExclamationTriangle } from 'react-icons/fa';
+import { useState } from 'react';
+import { FaSave, FaTimes, FaCog, FaShieldAlt } from 'react-icons/fa';
+import { LANG, tr } from '../utils/lang';
 
-function Settings({ onClose }) {
-  const [groqApiKey, setGroqApiKey] = useState('');
-  const [transcriptApiKey, setTranscriptApiKey] = useState('');
+function Settings({ onClose, lang = LANG.ar }) {
   const [saved, setSaved] = useState(false);
 
-  useEffect(() => {
-    const savedGroqKey = localStorage.getItem('groqApiKey') || '';
-    const savedTranscriptKey = localStorage.getItem('transcriptApiKey') || '';
-    setGroqApiKey(savedGroqKey);
-    setTranscriptApiKey(savedTranscriptKey);
-  }, []);
-
   const handleSave = () => {
-    localStorage.setItem('groqApiKey', groqApiKey);
-    localStorage.setItem('transcriptApiKey', transcriptApiKey);
+    localStorage.removeItem('groqApiKey');
+    localStorage.removeItem('transcriptApiKey');
     setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    setTimeout(() => setSaved(false), 1500);
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
       <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col my-4">
         <div className="flex items-center justify-between p-4 sm:p-6 border-b">
           <div className="flex items-center gap-2">
             <FaCog className="text-blue-600 text-xl sm:text-2xl" />
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-800">الإعدادات</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800">{tr(lang, 'الإعدادات', 'Settings')}</h2>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition flex-shrink-0"
-          >
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition flex-shrink-0">
             <FaTimes className="text-gray-600" />
           </button>
         </div>
 
         <div className="p-4 sm:p-6 overflow-y-auto flex-1">
           <div className="space-y-6">
-            {/* Groq API Key */}
-            <div>
-              <label className="flex items-center gap-2 text-lg font-semibold text-gray-800 mb-3">
-                <FaKey className="text-blue-600" />
-                <span>Groq API Key (مطلوب)</span>
-              </label>
-              <p className="text-sm text-gray-600 mb-2">
-                للحصول على مفتاح مجاني:{' '}
-                <a
-                  href="https://console.groq.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline"
-                >
-                  console.groq.com
-                </a>
-              </p>
-              <input
-                type="password"
-                value={groqApiKey}
-                onChange={(e) => setGroqApiKey(e.target.value)}
-                placeholder="gsk_..."
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-              />
-            </div>
-
-            {/* TranscriptAPI Key */}
-            <div>
-              <label className="flex items-center gap-2 text-lg font-semibold text-gray-800 mb-3">
-                <FaKey className="text-green-600" />
-                <span>TranscriptAPI.com Key (اختياري)</span>
-              </label>
-              <p className="text-sm text-gray-600 mb-2">
-                للحصول على 100 كريديت مجاني:{' '}
-                <a
-                  href="https://www.transcriptapi.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline"
-                >
-                  transcriptapi.com
-                </a>
-              </p>
-              <input
-                type="password"
-                value={transcriptApiKey}
-                onChange={(e) => setTranscriptApiKey(e.target.value)}
-                placeholder="sk_..."
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition"
-              />
-              <p className="text-xs text-gray-500 mt-2">
-                💡 بدون هذا المفتاح، يعتمد النظام على youtube-transcript المجاني
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
+              <h3 className="text-xl font-bold text-blue-800 mb-2">{tr(lang, 'إدارة الإعدادات عبر الخادم', 'Cloud-managed configuration')}</h3>
+              <p className="text-blue-700">
+                {tr(
+                  lang,
+                  'مفاتيح API تُدار بشكل آمن من الخادم. لا حاجة لإدخالها يدويًا داخل المتصفح.',
+                  'API keys are managed securely by the backend. No manual API key input is required in the browser.'
+                )}
               </p>
             </div>
 
-            {/* Security Note */}
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
               <div className="flex items-start gap-2">
-                <FaExclamationTriangle className="text-yellow-600 mt-1 flex-shrink-0" />
+                <FaShieldAlt className="text-yellow-600 mt-1 flex-shrink-0" />
                 <p className="text-sm text-yellow-800">
-                  <strong>ملاحظة أمنية:</strong> المفاتيح تُحفظ في المتصفح فقط (localStorage) ولن تُرسل لأي مكان غير خوادم Groq و TranscriptAPI.
+                  {tr(
+                    lang,
+                    'ملاحظة أمان: لا يتم عرض أي مفاتيح أو توكنات عبر مسارات الإعدادات.',
+                    'Security note: tokens and keys are not exposed by settings endpoints anymore.'
+                  )}
                 </p>
               </div>
             </div>
@@ -110,17 +58,8 @@ function Settings({ onClose }) {
             onClick={handleSave}
             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-200 flex items-center justify-center gap-2"
           >
-            {saved ? (
-              <>
-                <FaSave />
-                <span>تم الحفظ ✓</span>
-              </>
-            ) : (
-              <>
-                <FaSave />
-                <span>حفظ الإعدادات</span>
-              </>
-            )}
+            <FaSave />
+            <span>{saved ? tr(lang, 'تم الحفظ', 'Saved') : tr(lang, 'حفظ الإعدادات', 'Save settings')}</span>
           </button>
         </div>
       </div>

@@ -62,7 +62,7 @@ function LocalServerGuide({ apiUrl, onApiUrlChange }) {
       } else {
         setLocalStatus('disconnected');
       }
-    } catch (error) {
+    } catch {
       setLocalStatus('disconnected');
     } finally {
       clearTimeout(timeout);

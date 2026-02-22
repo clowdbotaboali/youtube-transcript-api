@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { FaYoutube, FaSpinner } from 'react-icons/fa';
+import { LANG, tr } from '../utils/lang';
 
-function VideoInput({ onTranscriptExtracted, loading, setLoading, initialUrl, onUrlChange, apiUrl }) {
+function VideoInput({ onTranscriptExtracted, loading, setLoading, initialUrl, onUrlChange, apiUrl, lang = LANG.ar }) {
   const [url, setUrl] = useState('');
   const [error, setError] = useState('');
 
@@ -15,36 +16,27 @@ function VideoInput({ onTranscriptExtracted, loading, setLoading, initialUrl, on
     const words = normalized ? normalized.split(/\s+/).filter(Boolean) : [];
     const unique = new Set(words.map((w) => w.toLowerCase())).size;
     const count = Number(wordCount) || words.length;
-
     return count < 20 || unique < 10;
   };
 
   useEffect(() => {
-    if (initialUrl) {
-      setUrl(initialUrl);
-    }
+    if (initialUrl) setUrl(initialUrl);
   }, [initialUrl]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    
+
     if (!url.trim()) {
-      setError('يرجى إدخال رابط فيديو YouTube');
+      setError(tr(lang, 'يرجى إدخال رابط فيديو يوتيوب', 'Please enter a YouTube URL'));
       return;
     }
 
     setLoading(true);
-    
     try {
-      const transcriptApiKey = localStorage.getItem('transcriptApiKey') || '';
-      
       const response = await fetch(`${apiUrl}/api/transcript/extract`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Transcript-API-Key': transcriptApiKey
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: url.trim() })
       });
 
@@ -57,22 +49,22 @@ function VideoInput({ onTranscriptExtracted, loading, setLoading, initialUrl, on
       }
 
       if (!response.ok) {
-        setError(data.error || raw || 'حدث خطأ أثناء استخراج النص');
+        setError(data.error || raw || tr(lang, 'حدث خطأ أثناء استخراج النص', 'Transcript extraction failed'));
         return;
       }
 
       if (data.success) {
         if (isLowQualityTranscript(data.transcript, data.wordCount)) {
-          setError('تم العثور على نص قصير/غير مفيد (مثل [Music]). جرّب فيديو آخر يحتوي شرحًا كلاميًا واضحًا.');
+          setError(tr(lang, 'تم العثور على نص قصير أو غير مفيد. جرّب فيديو أوضح.', 'Low-quality transcript detected. Try another video.'));
           return;
         }
         onTranscriptExtracted(data);
         setUrl('');
       } else {
-        setError(data.error || 'حدث خطأ أثناء استخراج النص');
+        setError(data.error || tr(lang, 'حدث خطأ أثناء استخراج النص', 'Transcript extraction failed'));
       }
-    } catch (err) {
-      setError('فشل الاتصال بالخادم. تأكد من تشغيل Backend');
+    } catch {
+      setError(tr(lang, 'فشل الاتصال بالخادم', 'Connection failed'));
     } finally {
       setLoading(false);
     }
@@ -80,25 +72,23 @@ function VideoInput({ onTranscriptExtracted, loading, setLoading, initialUrl, on
 
   const handleChange = (e) => {
     setUrl(e.target.value);
-    if (onUrlChange) {
-      onUrlChange(e.target.value);
-    }
+    if (onUrlChange) onUrlChange(e.target.value);
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+    <div className="bg-white rounded-lg shadow-sm p-6 mb-6" dir={lang === LANG.ar ? 'rtl' : 'ltr'}>
       <div className="flex items-center gap-2 mb-4">
         <FaYoutube className="text-red-600 text-3xl" />
-        <h2 className="text-2xl font-bold text-gray-800">استخراج النص من فيديو YouTube</h2>
+        <h2 className="text-2xl font-bold text-gray-800">{tr(lang, 'استخراج السكريبت من يوتيوب', 'Extract transcript from YouTube')}</h2>
       </div>
-      
+
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <input
             type="text"
             value={url}
             onChange={handleChange}
-            placeholder="أدخل رابط فيديو YouTube هنا..."
+            placeholder={tr(lang, 'أدخل رابط الفيديو هنا...', 'Paste YouTube URL here...')}
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
             disabled={loading}
           />
@@ -106,8 +96,7 @@ function VideoInput({ onTranscriptExtracted, loading, setLoading, initialUrl, on
 
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-            <p className="font-semibold mb-1">{error}</p>
-            <p className="text-sm">💡 جرب فيديوهات من قنوات كبيرة أو فيديوهات تعليمية - عادة تحتوي على نصوص</p>
+            <p className="font-semibold">{error}</p>
           </div>
         )}
 
@@ -119,22 +108,13 @@ function VideoInput({ onTranscriptExtracted, loading, setLoading, initialUrl, on
           {loading ? (
             <>
               <FaSpinner className="animate-spin" />
-              <span>جاري الاستخراج...</span>
+              <span>{tr(lang, 'جارٍ الاستخراج...', 'Extracting...')}</span>
             </>
           ) : (
-            <span>استخراج النص</span>
+            <span>{tr(lang, 'استخراج النص', 'Extract transcript')}</span>
           )}
         </button>
       </form>
-      
-      <div className="mt-4 text-xs text-gray-500 border-t pt-3">
-        <p className="mb-1">✅ الفيديوهات التي تعمل:</p>
-        <ul className="list-disc list-inside space-y-1 mr-2">
-          <li>فيديوهات عليها زر CC (Closed Captions)</li>
-          <li>فيديوهات من قنوات كبيرة (TED, Khan Academy, إلخ)</li>
-          <li>فيديوهات تعليمية ومحاضرات</li>
-        </ul>
-      </div>
     </div>
   );
 }

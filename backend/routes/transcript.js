@@ -1,7 +1,9 @@
 import express from 'express';
 import { YoutubeTranscript } from 'youtube-transcript';
 import ytdl from '@distube/ytdl-core';
-import { apiKeys } from './settings.js';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const router = express.Router();
 const USER_AGENT =
@@ -41,14 +43,14 @@ function extractVideoId(url) {
     /youtube\.com\/embed\/([^&\n?#]+)/,
     /youtube\.com\/v\/([^&\n?#]+)/
   ];
-  
+
   for (const pattern of patterns) {
     const match = url.match(pattern);
     if (match && match[1]) {
       return match[1];
     }
   }
-  
+
   return null;
 }
 
@@ -60,7 +62,7 @@ async function fetchWithTranscriptAPI(videoUrl, apiKey) {
 
   try {
     console.log('🔄 Trying TranscriptAPI.com...');
-    
+
     const encodedUrl = encodeURIComponent(videoUrl);
     const response = await fetch(`https://transcriptapi.com/api/v2/youtube/transcript?video_url=${encodedUrl}`, {
       method: 'GET',
@@ -78,13 +80,13 @@ async function fetchWithTranscriptAPI(videoUrl, apiKey) {
     }
 
     const data = await response.json();
-    
+
     if (data.transcript && Array.isArray(data.transcript)) {
       const transcript = data.transcript.map(item => item.text || '').join(' ');
       console.log('✅ Success with TranscriptAPI.com');
       return transcript;
     }
-    
+
     return null;
   } catch (error) {
     console.error('TranscriptAPI error:', error.message);
@@ -95,9 +97,9 @@ async function fetchWithTranscriptAPI(videoUrl, apiKey) {
 async function fetchTranscriptWithYtdl(videoId) {
   try {
     const info = await ytdl.getInfo(videoId, { agent: YTDL_AGENT });
-    
+
     const captionTracks = info.player_response?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
-    
+
     if (!captionTracks || captionTracks.length === 0) {
       return null;
     }
@@ -148,7 +150,7 @@ async function fetchTranscriptWithYtdl(videoId) {
         bestTranscript = transcript;
       }
     }
-    
+
     return bestTranscript;
   } catch (error) {
     console.error('ytdl-core error:', error.message);
@@ -159,8 +161,8 @@ async function fetchTranscriptWithYtdl(videoId) {
 router.post('/extract', async (req, res) => {
   try {
     const { url } = req.body;
-    const transcriptApiKey = req.headers['x-transcript-api-key'] || '';
-    
+    const transcriptApiKey = process.env.TRANSCRIPT_API_KEY || '';
+
     if (!url) {
       return res.status(400).json({
         success: false,
@@ -169,7 +171,7 @@ router.post('/extract', async (req, res) => {
     }
 
     const videoId = extractVideoId(url);
-    
+
     if (!videoId) {
       return res.status(400).json({
         success: false,
@@ -285,7 +287,7 @@ router.post('/extract', async (req, res) => {
     }
 
     console.log(`✅ Transcript extracted successfully using: ${method}\n`);
-    
+
     res.json({
       success: true,
       videoId,
@@ -296,7 +298,7 @@ router.post('/extract', async (req, res) => {
 
   } catch (error) {
     console.error('Transcript extraction error:', error);
-    
+
     res.status(500).json({
       success: false,
       error: 'حدث خطأ أثناء استخراج النص: ' + error.message

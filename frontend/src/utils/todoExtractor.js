@@ -1,22 +1,19 @@
-/**
- * استخراج المهام من نص AI وتحويلها لـ Todo List منظم
- */
-
 export function extractTodos(aiResult) {
   const todos = [];
   let currentMainTask = null;
   let mainTaskCounter = 0;
   let subTaskCounter = 0;
 
-  // تقسيم النص لسطور
-  const lines = aiResult.split('\n');
+  const lines = String(aiResult || '').split('\n');
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) continue;
 
-    // تحديد المهام الرئيسية
-    // البحث عن: ### 🔹 المرحلة X: أو #### ☐ المهمة X
-    const mainTaskMatch = line.match(/^###?\s*[🔹☐]?\s*(?:المرحلة|المهمة)\s*\d+[:.]\s*(.+)/);
+    // Matches markdown headings that include step numbering:
+    // ### Step 1: ...
+    // #### 1.2 ...
+    const mainTaskMatch = line.match(/^#{3}\s*(?:step|phase|task)?\s*\d+[:.)-]?\s*(.+)$/iu);
     if (mainTaskMatch) {
       mainTaskCounter++;
       subTaskCounter = 0;
@@ -30,9 +27,7 @@ export function extractTodos(aiResult) {
       continue;
     }
 
-    // تحديد المهام الفرعية داخل مهمة رئيسية
-    // البحث عن: #### ☐ المهمة X.Y:
-    const subTaskMatch = line.match(/^####\s*☐\s*(?:المهمة)?\s*\d+\.\d+[:.]\s*(.+)/);
+    const subTaskMatch = line.match(/^#{4}\s*(?:task)?\s*\d+\.\d+[:.)-]?\s*(.+)$/iu);
     if (subTaskMatch && currentMainTask) {
       subTaskCounter++;
       currentMainTask.subtasks.push({
@@ -43,11 +38,9 @@ export function extractTodos(aiResult) {
       continue;
     }
 
-    // خطة احتياطية: إذا كان السطر يبدأ بـ ☐ أو - [ ]
-    const checkboxMatch = line.match(/^[-*]\s*\[?\s*☐\s*\]?\s*(.+)/);
+    const checkboxMatch = line.match(/^[-*]\s*\[?\s*(?:x| )?\s*\]?\s*(.+)$/iu);
     if (checkboxMatch) {
       if (currentMainTask && currentMainTask.subtasks.length > 0) {
-        // إضافة كمهمة فرعية
         subTaskCounter++;
         currentMainTask.subtasks.push({
           id: `sub-${mainTaskCounter}-${subTaskCounter}`,
@@ -55,7 +48,6 @@ export function extractTodos(aiResult) {
           completed: false
         });
       } else {
-        // إنشاء مهمة رئيسية جديدة
         mainTaskCounter++;
         subTaskCounter = 0;
         currentMainTask = {
@@ -69,7 +61,6 @@ export function extractTodos(aiResult) {
     }
   }
 
-  // إذا لم نجد أي مهام بالطريقة المنظمة، نحاول استخراج الخطوات
   if (todos.length === 0) {
     return extractStepsAsTodos(aiResult);
   }
@@ -77,49 +68,37 @@ export function extractTodos(aiResult) {
   return todos;
 }
 
-/**
- * استخراج الخطوات كـ Todo List (fallback)
- */
 function extractStepsAsTodos(aiResult) {
   const todos = [];
-  const lines = aiResult.split('\n');
+  const lines = String(aiResult || '').split('\n');
   let currentSection = null;
   let sectionCounter = 0;
   let stepCounter = 0;
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) continue;
 
-    // البحث عن عناوين الأقسام (## القسم)
-    const sectionMatch = line.match(/^##\s+\d*\.?\s*(.+)/);
+    const sectionMatch = line.match(/^##\s+\d*\.?\s*(.+)$/u);
     if (sectionMatch) {
       const title = sectionMatch[1].trim();
-      // تجاهل الأقسام غير المفيدة
-      if (!title.includes('نظرة عامة') && 
-          !title.includes('الهدف') && 
-          !title.includes('الأدوات') && 
-          !title.includes('الروابط') &&
-          !title.includes('نصائح')) {
-        sectionCounter++;
-        stepCounter = 0;
-        currentSection = {
-          id: `section-${sectionCounter}`,
-          title: title,
-          completed: false,
-          subtasks: []
-        };
-        todos.push(currentSection);
-      }
+      sectionCounter++;
+      stepCounter = 0;
+      currentSection = {
+        id: `section-${sectionCounter}`,
+        title,
+        completed: false,
+        subtasks: []
+      };
+      todos.push(currentSection);
       continue;
     }
 
-    // البحث عن خطوات (1. أو - أو *)
-    const stepMatch = line.match(/^(?:\d+\.|[-*])\s+(?:\*\*)?(.+?)(?:\*\*)?:?$/);
+    const stepMatch = line.match(/^(?:\d+\.|[-*])\s+(?:\*\*)?(.+?)(?:\*\*)?:?$/u);
     if (stepMatch && currentSection) {
-      stepCounter++;
       const stepTitle = stepMatch[1].trim();
-      // تجاهل السطور القصيرة جداً
-      if (stepTitle.length > 10) {
+      if (stepTitle.length > 5) {
+        stepCounter++;
         currentSection.subtasks.push({
           id: `step-${sectionCounter}-${stepCounter}`,
           title: stepTitle,
@@ -129,24 +108,18 @@ function extractStepsAsTodos(aiResult) {
     }
   }
 
-  // إذا ما لقينا حاجة، نرجع قائمة فاضية
   return todos;
 }
 
-/**
- * حساب نسبة الإنجاز
- */
 export function calculateProgress(todos) {
   let total = 0;
   let completed = 0;
 
-  todos.forEach(mainTask => {
+  todos.forEach((mainTask) => {
     if (mainTask.subtasks && mainTask.subtasks.length > 0) {
-      // لو فيه مهام فرعية، نحسبها بس
       total += mainTask.subtasks.length;
-      completed += mainTask.subtasks.filter(sub => sub.completed).length;
+      completed += mainTask.subtasks.filter((sub) => sub.completed).length;
     } else {
-      // لو مافيش مهام فرعية، نحسب المهمة الرئيسية
       total += 1;
       if (mainTask.completed) completed += 1;
     }
@@ -155,46 +128,36 @@ export function calculateProgress(todos) {
   return total === 0 ? 0 : Math.round((completed / total) * 100);
 }
 
-/**
- * حفظ حالة Todo List في localStorage
- */
 export function saveTodoState(videoId, todos) {
   const key = `todo-state-${videoId}`;
   localStorage.setItem(key, JSON.stringify(todos));
 }
 
-/**
- * استرجاع حالة Todo List من localStorage
- */
 export function loadTodoState(videoId) {
   const key = `todo-state-${videoId}`;
   const saved = localStorage.getItem(key);
   return saved ? JSON.parse(saved) : null;
 }
 
-/**
- * تصدير Todo List كـ markdown
- */
-export function exportTodosAsMarkdown(todos, videoTitle = 'قائمة المهام') {
+export function exportTodosAsMarkdown(todos, videoTitle = 'Todo List') {
   let markdown = `# ${videoTitle}\n\n`;
-  markdown += `**تاريخ الإنشاء:** ${new Date().toLocaleDateString('ar-EG')}\n\n`;
+  markdown += `**Created:** ${new Date().toLocaleDateString()}\n\n`;
   markdown += `---\n\n`;
 
   todos.forEach((mainTask, mainIndex) => {
-    const checkbox = mainTask.completed ? '☑' : '☐';
+    const checkbox = mainTask.completed ? '[x]' : '[ ]';
     markdown += `## ${checkbox} ${mainIndex + 1}. ${mainTask.title}\n\n`;
 
     if (mainTask.subtasks && mainTask.subtasks.length > 0) {
       mainTask.subtasks.forEach((subTask, subIndex) => {
-        const subCheckbox = subTask.completed ? '☑' : '☐';
-        markdown += `   ${subCheckbox} ${mainIndex + 1}.${subIndex + 1}. ${subTask.title}\n`;
+        const subCheckbox = subTask.completed ? '[x]' : '[ ]';
+        markdown += `- ${subCheckbox} ${mainIndex + 1}.${subIndex + 1}. ${subTask.title}\n`;
       });
       markdown += '\n';
     }
   });
 
   markdown += `---\n\n`;
-  markdown += `**النسبة المكتملة:** ${calculateProgress(todos)}%\n`;
-
+  markdown += `**Completion:** ${calculateProgress(todos)}%\n`;
   return markdown;
 }

@@ -156,16 +156,16 @@ const prompts = {
 النص: ${transcript}`
 };
 
-export async function processWithGroq(transcript, type = 'all', apiKeyOverride = '') {
+export async function processWithGroq(transcript, type = 'all') {
   try {
-    const apiKey = apiKeyOverride || process.env.GROQ_API_KEY;
+    const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) {
       throw new Error('GROQ API key is missing');
     }
 
     const groq = new Groq({ apiKey });
     const prompt = prompts[type] ? prompts[type](transcript) : prompts.all(transcript);
-    
+
     const completion = await groq.chat.completions.create({
       messages: [
         {

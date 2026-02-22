@@ -2,7 +2,9 @@ import { useState, useRef, useEffect } from 'react';
 import { FaPaperPlane, FaRobot, FaUser, FaTrash, FaComments, FaLink, FaCheck, FaExternalLinkAlt } from 'react-icons/fa';
 import defaultApiUrl from '../config';
 
-function ChatAssistant({ transcript, videoId, apiUrl = defaultApiUrl }) {
+const urlRegex = /(https?:\/\/[^\s]+)/g;
+
+function ChatAssistant({ transcript, apiUrl = defaultApiUrl }) {
   const [messages, setMessages] = useState([
     {
       id: 0,
@@ -40,15 +42,10 @@ function ChatAssistant({ transcript, videoId, apiUrl = defaultApiUrl }) {
     setLoading(true);
 
     try {
-      const groqApiKey = (localStorage.getItem('groqApiKey') || '')
-        .trim()
-        .replace(/^Bearer\s+/i, '')
-        .replace(/^['"]|['"]$/g, '');
       const response = await fetch(`${apiUrl}/api/chat/chat`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'X-Groq-API-Key': groqApiKey
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           message: userMessage.content,
@@ -82,7 +79,7 @@ function ChatAssistant({ transcript, videoId, apiUrl = defaultApiUrl }) {
           }
         ]);
       }
-    } catch (error) {
+    } catch {
       setMessages(prev => [
         ...prev,
         {
@@ -106,7 +103,7 @@ function ChatAssistant({ transcript, videoId, apiUrl = defaultApiUrl }) {
           },
           body: JSON.stringify({ conversationId })
         });
-      } catch (error) {
+      } catch {
         console.error('Failed to clear conversation');
       }
     }
@@ -129,7 +126,6 @@ function ChatAssistant({ transcript, videoId, apiUrl = defaultApiUrl }) {
   };
 
   const extractLinks = (text) => {
-    const urlRegex = /(https?:\/\/[^\s]+)/g;
     return text.match(urlRegex) || [];
   };
 
@@ -174,29 +170,25 @@ function ChatAssistant({ transcript, videoId, apiUrl = defaultApiUrl }) {
           {messages.map((msg) => {
             const links = msg.role === 'assistant' ? extractLinks(msg.content) : [];
             const contentWithoutLinks = msg.content.replace(urlRegex, '').trim();
-            
+
             return (
               <div
                 key={msg.id}
-                className={`flex gap-2 mb-3 ${
-                  msg.role === 'user' ? 'flex-row-reverse' : ''
-                }`}
+                className={`flex gap-2 mb-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}
               >
                 <div
-                  className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs ${
-                    msg.role === 'user'
+                  className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs ${msg.role === 'user'
                       ? 'bg-blue-500 text-white'
                       : 'bg-indigo-500 text-white'
-                  }`}
+                    }`}
                 >
                   {msg.role === 'user' ? <FaUser /> : <FaRobot />}
                 </div>
                 <div
-                  className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
-                    msg.role === 'user'
+                  className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${msg.role === 'user'
                       ? 'bg-blue-500 text-white'
                       : 'bg-white border border-gray-200 text-gray-800'
-                  }`}
+                    }`}
                   dir="rtl"
                 >
                   {contentWithoutLinks && (
@@ -293,11 +285,10 @@ function ChatAssistant({ transcript, videoId, apiUrl = defaultApiUrl }) {
           <button
             onClick={handleSend}
             disabled={loading || !input.trim()}
-            className={`px-4 py-2 rounded-lg font-medium transition flex items-center gap-1 text-sm ${
-              loading || !input.trim()
+            className={`px-4 py-2 rounded-lg font-medium transition flex items-center gap-1 text-sm ${loading || !input.trim()
                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 : 'bg-indigo-600 hover:bg-indigo-700 text-white'
-            }`}
+              }`}
           >
             <FaPaperPlane />
             <span>إرسال</span>
@@ -307,7 +298,5 @@ function ChatAssistant({ transcript, videoId, apiUrl = defaultApiUrl }) {
     </div>
   );
 }
-
-const urlRegex = /(https?:\/\/[^\s]+)/g;
 
 export default ChatAssistant;

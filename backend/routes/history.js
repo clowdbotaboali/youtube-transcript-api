@@ -1,109 +1,100 @@
 import express from 'express';
-import db from '../config/db.js';
+import { supabase } from '../utils/supabase.js';
+import { requireAuth } from '../middleware/auth.js';
 
 const router = express.Router();
 
-router.post('/save', (req, res) => {
+router.use(requireAuth);
+
+router.post('/save', async (req, res) => {
   try {
-    const { videoId, videoTitle, transcript, processingType, result } = req.body;
-    
-    if (!videoId || !transcript || !processingType || !result) {
-      return res.status(400).json({
-        success: false,
-        error: 'بيانات غير كاملة'
-      });
+    const { videoId, videoTitle, transcript, processingType, result, aiResult } = req.body;
+    const userId = req.user.id;
+    const finalResult = result ?? aiResult ?? null;
+
+    if (!videoId || !transcript) {
+      return res.status(400).json({ success: false, error: 'Missing required fields' });
     }
 
-    const id = db.insert({
-      video_id: videoId,
-      video_title: videoTitle,
-      transcript,
-      processing_type: processingType,
-      result
-    });
+    const { data, error } = await supabase
+      .from('transcripts_history')
+      .insert([
+        {
+          user_id: userId,
+          video_id: videoId,
+          video_title: videoTitle || videoId,
+          transcript,
+          ai_result: finalResult,
+          processing_type: processingType
+        }
+      ])
+      .select()
+      .single();
 
-    res.json({
-      success: true,
-      id
-    });
-
+    if (error) throw error;
+    res.json({ success: true, data });
   } catch (error) {
-    console.error('Save history error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'حدث خطأ أثناء حفظ البيانات'
-    });
+    console.error('Error saving history:', error);
+    res.status(500).json({ success: false, error: 'Failed to save history' });
   }
 });
 
-router.get('/list', (req, res) => {
+router.get('/', async (req, res) => {
   try {
-    const history = db.getAll();
+    const userId = req.user.id;
+    const { data, error } = await supabase
+      .from('transcripts_history')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
 
-    res.json({
-      success: true,
-      history
-    });
-
+    if (error) throw error;
+    res.json({ success: true, data });
   } catch (error) {
-    console.error('Get history error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'حدث خطأ أثناء استرجاع السجل'
-    });
+    console.error('Error reading history:', error);
+    res.status(500).json({ success: false, error: 'Failed to load history' });
   }
 });
 
-router.get('/:id', (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
+    const userId = req.user.id;
     const { id } = req.params;
-    
-    const item = db.getById(id);
 
-    if (!item) {
-      return res.status(404).json({
-        success: false,
-        error: 'العنصر غير موجود'
-      });
+    const { data, error } = await supabase
+      .from('transcripts_history')
+      .select('*')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .single();
+
+    if (error || !data) {
+      return res.status(404).json({ success: false, error: 'History item not found' });
     }
 
-    res.json({
-      success: true,
-      item
-    });
-
+    res.json({ success: true, item: data });
   } catch (error) {
-    console.error('Get history item error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'حدث خطأ أثناء استرجاع البيانات'
-    });
+    console.error('Error loading history item:', error);
+    res.status(500).json({ success: false, error: 'Failed to load history item' });
   }
 });
 
-router.delete('/:id', (req, res) => {
+router.delete('/:id', async (req, res) => {
   try {
+    const userId = req.user.id;
     const { id } = req.params;
-    
-    const deleted = db.delete(id);
 
-    if (!deleted) {
-      return res.status(404).json({
-        success: false,
-        error: 'العنصر غير موجود'
-      });
-    }
+    const { error } = await supabase
+      .from('transcripts_history')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', userId);
 
-    res.json({
-      success: true
-    });
-
+    if (error) throw error;
+    res.json({ success: true });
   } catch (error) {
-    console.error('Delete history error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'حدث خطأ أثناء حذف البيانات'
-    });
+    console.error('Error deleting history:', error);
+    res.status(500).json({ success: false, error: 'Failed to delete history item' });
   }
 });
 

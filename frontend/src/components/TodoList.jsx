@@ -1,76 +1,65 @@
-import { useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import { FaCheckSquare, FaRegSquare, FaChevronDown, FaChevronLeft, FaDownload, FaRedo } from 'react-icons/fa';
 import { calculateProgress, saveTodoState, exportTodosAsMarkdown } from '../utils/todoExtractor';
+import { LANG, tr } from '../utils/lang';
 
-function TodoList({ todos, videoId, videoTitle }) {
+function TodoList({ todos, videoId, videoTitle, lang = LANG.ar }) {
   const [todoState, setTodoState] = useState(todos);
-  const [expandedSections, setExpandedSections] = useState({});
-  const progress = calculateProgress(todoState);
+  const [expandedSections, setExpandedSections] = useState(() =>
+    Object.fromEntries((todos || []).map((_, index) => [index, true]))
+  );
 
-  // حفظ الحالة عند أي تغيير
-  useEffect(() => {
-    if (videoId) {
-      saveTodoState(videoId, todoState);
-    }
-  }, [todoState, videoId]);
+  const progress = useMemo(() => calculateProgress(todoState), [todoState]);
 
-  // فتح جميع الأقسام افتراضياً
-  useEffect(() => {
-    const allExpanded = {};
-    todoState.forEach((task, index) => {
-      allExpanded[index] = true;
-    });
-    setExpandedSections(allExpanded);
-  }, []);
+  const updateState = (next) => {
+    setTodoState(next);
+    if (videoId) saveTodoState(videoId, next);
+  };
 
   const toggleMainTask = (mainIndex) => {
-    const newState = [...todoState];
-    const mainTask = newState[mainIndex];
+    const next = [...todoState];
+    const mainTask = next[mainIndex];
     mainTask.completed = !mainTask.completed;
-    
-    // تحديث جميع المهام الفرعية
+
     if (mainTask.subtasks && mainTask.subtasks.length > 0) {
-      mainTask.subtasks.forEach(sub => {
+      mainTask.subtasks.forEach((sub) => {
         sub.completed = mainTask.completed;
       });
     }
-    
-    setTodoState(newState);
+
+    updateState(next);
   };
 
   const toggleSubTask = (mainIndex, subIndex) => {
-    const newState = [...todoState];
-    const subTask = newState[mainIndex].subtasks[subIndex];
+    const next = [...todoState];
+    const subTask = next[mainIndex].subtasks[subIndex];
     subTask.completed = !subTask.completed;
-    
-    // تحديث حالة المهمة الرئيسية
-    const mainTask = newState[mainIndex];
-    const allSubsCompleted = mainTask.subtasks.every(sub => sub.completed);
-    mainTask.completed = allSubsCompleted;
-    
-    setTodoState(newState);
+
+    const mainTask = next[mainIndex];
+    mainTask.completed = mainTask.subtasks.every((sub) => sub.completed);
+
+    updateState(next);
   };
 
   const toggleSection = (index) => {
-    setExpandedSections(prev => ({
+    setExpandedSections((prev) => ({
       ...prev,
       [index]: !prev[index]
     }));
   };
 
   const resetProgress = () => {
-    if (window.confirm('هل تريد إعادة تعيين جميع المهام؟')) {
-      const resetState = todoState.map(task => ({
-        ...task,
-        completed: false,
-        subtasks: task.subtasks ? task.subtasks.map(sub => ({ ...sub, completed: false })) : []
-      }));
-      setTodoState(resetState);
-    }
+    if (!window.confirm(tr(lang, 'إعادة تعيين كل المهام؟', 'Reset all tasks?'))) return;
+    const resetState = todoState.map((task) => ({
+      ...task,
+      completed: false,
+      subtasks: task.subtasks ? task.subtasks.map((sub) => ({ ...sub, completed: false })) : []
+    }));
+    updateState(resetState);
   };
 
   const handleExport = () => {
-    const markdown = exportTodosAsMarkdown(todoState, videoTitle || 'خطوات الفيديو');
+    const markdown = exportTodosAsMarkdown(todoState, videoTitle || tr(lang, 'قائمة المهام', 'Todo List'));
     const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -83,44 +72,32 @@ function TodoList({ todos, videoId, videoTitle }) {
   if (!todoState || todoState.length === 0) {
     return (
       <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
-        <p className="text-yellow-800 text-sm">
-          ℹ️ لم يتم العثور على خطوات منظمة في هذا الفيديو
-        </p>
+        <p className="text-yellow-800 text-sm">{tr(lang, 'لم يتم العثور على مهام منظمة.', 'No structured tasks were detected.')}</p>
       </div>
     );
   }
 
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden">
-      {/* Header */}
       <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <FaCheckSquare className="text-2xl" />
-            <h3 className="text-xl font-bold">قائمة المهام</h3>
+            <h3 className="text-xl font-bold">{tr(lang, 'قائمة المهام', 'Task List')}</h3>
           </div>
           <div className="flex gap-2">
-            <button
-              onClick={resetProgress}
-              className="p-2 hover:bg-blue-500 rounded-lg transition"
-              title="إعادة تعيين"
-            >
+            <button onClick={resetProgress} className="p-2 hover:bg-blue-500 rounded-lg transition" title={tr(lang, 'إعادة تعيين', 'Reset')}>
               <FaRedo />
             </button>
-            <button
-              onClick={handleExport}
-              className="p-2 hover:bg-blue-500 rounded-lg transition"
-              title="تصدير"
-            >
+            <button onClick={handleExport} className="p-2 hover:bg-blue-500 rounded-lg transition" title={tr(lang, 'تصدير', 'Export')}>
               <FaDownload />
             </button>
           </div>
         </div>
 
-        {/* Progress Bar */}
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
-            <span>التقدم</span>
+            <span>{tr(lang, 'التقدم', 'Progress')}</span>
             <span className="font-bold">{progress}%</span>
           </div>
           <div className="w-full bg-blue-800 rounded-full h-3 overflow-hidden">
@@ -132,38 +109,25 @@ function TodoList({ todos, videoId, videoTitle }) {
         </div>
       </div>
 
-      {/* Todo Items */}
       <div className="p-4 space-y-3 max-h-[600px] overflow-y-auto">
         {todoState.map((mainTask, mainIndex) => (
           <div key={mainTask.id} className="border border-gray-200 rounded-lg overflow-hidden">
-            {/* Main Task */}
-            <div
-              className={`p-3 cursor-pointer transition ${
-                mainTask.completed ? 'bg-green-50' : 'bg-gray-50 hover:bg-gray-100'
-              }`}
-            >
+            <div className={`p-3 transition ${mainTask.completed ? 'bg-green-50' : 'bg-gray-50 hover:bg-gray-100'}`}>
               <div className="flex items-start gap-3">
-                <button
-                  onClick={() => toggleMainTask(mainIndex)}
-                  className="mt-1 text-2xl focus:outline-none"
-                >
+                <button onClick={() => toggleMainTask(mainIndex)} className="mt-1 text-2xl focus:outline-none">
                   {mainTask.completed ? (
                     <FaCheckSquare className="text-green-600" />
                   ) : (
                     <FaRegSquare className="text-gray-400" />
                   )}
                 </button>
-                
+
                 <div className="flex-1">
                   <div className="flex items-center justify-between">
-                    <h4
-                      className={`font-semibold text-gray-800 ${
-                        mainTask.completed ? 'line-through text-gray-500' : ''
-                      }`}
-                    >
+                    <h4 className={`font-semibold text-gray-800 ${mainTask.completed ? 'line-through text-gray-500' : ''}`}>
                       {mainIndex + 1}. {mainTask.title}
                     </h4>
-                    
+
                     {mainTask.subtasks && mainTask.subtasks.length > 0 && (
                       <button
                         onClick={(e) => {
@@ -180,20 +144,17 @@ function TodoList({ todos, videoId, videoTitle }) {
                       </button>
                     )}
                   </div>
-                  
+
                   {mainTask.subtasks && mainTask.subtasks.length > 0 && (
                     <p className="text-xs text-gray-500 mt-1">
-                      {mainTask.subtasks.filter(s => s.completed).length} / {mainTask.subtasks.length} مكتملة
+                      {mainTask.subtasks.filter((s) => s.completed).length} / {mainTask.subtasks.length} {tr(lang, 'مكتملة', 'done')}
                     </p>
                   )}
                 </div>
               </div>
             </div>
 
-            {/* Sub Tasks */}
-            {mainTask.subtasks && 
-             mainTask.subtasks.length > 0 && 
-             expandedSections[mainIndex] && (
+            {mainTask.subtasks && mainTask.subtasks.length > 0 && expandedSections[mainIndex] && (
               <div className="bg-white border-t border-gray-200">
                 {mainTask.subtasks.map((subTask, subIndex) => (
                   <div
@@ -212,12 +173,8 @@ function TodoList({ todos, videoId, videoTitle }) {
                         <FaRegSquare className="text-gray-400" />
                       )}
                     </button>
-                    
-                    <p
-                      className={`text-sm text-gray-700 flex-1 ${
-                        subTask.completed ? 'line-through text-gray-500' : ''
-                      }`}
-                    >
+
+                    <p className={`text-sm text-gray-700 flex-1 ${subTask.completed ? 'line-through text-gray-500' : ''}`}>
                       {mainIndex + 1}.{subIndex + 1}. {subTask.title}
                     </p>
                   </div>
@@ -227,17 +184,6 @@ function TodoList({ todos, videoId, videoTitle }) {
           </div>
         ))}
       </div>
-
-      {/* Footer */}
-      {progress === 100 && (
-        <div className="bg-green-50 border-t border-green-200 p-4 text-center">
-          <p className="text-green-800 font-semibold flex items-center justify-center gap-2">
-            <span className="text-2xl">🎉</span>
-            <span>رائع! أكملت جميع المهام</span>
-            <span className="text-2xl">🎉</span>
-          </p>
-        </div>
-      )}
     </div>
   );
 }
