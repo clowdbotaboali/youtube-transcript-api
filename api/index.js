@@ -1,12 +1,16 @@
 import { Groq } from 'groq-sdk';
 import { YoutubeTranscript } from 'youtube-transcript';
 import { createClient } from '@supabase/supabase-js';
+import ytdl from '@distube/ytdl-core';
 
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY
 });
 
 let supabaseClient = null;
+const USER_AGENT =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+const YTDL_AGENT = ytdl.createAgent();
 
 function getSupabase() {
   if (supabaseClient) return supabaseClient;
@@ -62,6 +66,99 @@ function applyCors(res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 }
 
+function decodeXmlEntities(text) {
+  return String(text || '')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+}
+
+function getTranscriptStats(rawText = '') {
+  const text = String(rawText).trim();
+  const cleaned = text
+    .replace(/\[[^\]]*]/g, ' ')
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const words = cleaned ? cleaned.split(/\s+/).filter(Boolean) : [];
+  const uniqueWords = new Set(words.map((w) => w.toLowerCase())).size;
+  return {
+    wordsCount: words.length,
+    uniqueWords
+  };
+}
+
+function isUsableTranscript(text = '') {
+  const stats = getTranscriptStats(text);
+  return stats.wordsCount >= 20 && stats.uniqueWords >= 10;
+}
+
+async function fetchWithTranscriptApi(videoUrl) {
+  const apiKey = process.env.TRANSCRIPT_API_KEY;
+  if (!apiKey) return null;
+  const encodedUrl = encodeURIComponent(videoUrl);
+  const response = await fetch(
+    `https://transcriptapi.com/api/v2/youtube/transcript?video_url=${encodedUrl}`,
+    {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'User-Agent': USER_AGENT,
+        Accept: 'application/json'
+      }
+    }
+  );
+  if (!response.ok) return null;
+  const data = await response.json().catch(() => null);
+  if (!data?.transcript || !Array.isArray(data.transcript)) return null;
+  return data.transcript.map((item) => item.text || '').join(' ').trim();
+}
+
+async function fetchWithYtdl(videoId) {
+  const info = await ytdl.getInfo(videoId, { agent: YTDL_AGENT });
+  const captionTracks = info?.player_response?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
+  if (!captionTracks || captionTracks.length === 0) return null;
+
+  const preferredTracks = [
+    ...captionTracks.filter((track) => track.languageCode === 'ar' || track.languageCode === 'ar-SA'),
+    ...captionTracks.filter((track) => track.languageCode === 'en' || track.languageCode === 'en-US'),
+    ...captionTracks
+  ];
+  const uniqueTracks = Array.from(new Map(preferredTracks.map((track) => [track.baseUrl, track])).values());
+
+  let bestTranscript = null;
+  let bestScore = -1;
+
+  for (const track of uniqueTracks) {
+    const response = await fetch(track.baseUrl, {
+      dispatcher: YTDL_AGENT.dispatcher,
+      headers: {
+        'User-Agent': USER_AGENT,
+        'Accept-Language': 'en-US,en;q=0.9'
+      }
+    });
+    if (!response.ok) continue;
+    const xmlText = await response.text();
+    if (!xmlText) continue;
+    const textMatches = xmlText.matchAll(/<text[^>]*>([\s\S]*?)<\/text>/g);
+    const transcript = Array.from(textMatches)
+      .map((match) => decodeXmlEntities(match[1]))
+      .join(' ')
+      .trim();
+    if (!transcript) continue;
+    const stats = getTranscriptStats(transcript);
+    const score = stats.wordsCount * 2 + stats.uniqueWords;
+    if (score > bestScore) {
+      bestScore = score;
+      bestTranscript = transcript;
+    }
+  }
+
+  return bestTranscript;
+}
+
 export default async function handler(req, res) {
   applyCors(res);
   if (req.method === 'OPTIONS') {
@@ -89,11 +186,37 @@ export default async function handler(req, res) {
 
       let transcript = null;
       let method = 'unknown';
+
       try {
-        const data = await YoutubeTranscript.fetchTranscript(videoId, { lang: 'ar' });
-        if (data?.length) {
-          transcript = data.map((item) => item.text).join(' ');
-          method = 'youtube-transcript-ar';
+        transcript = await fetchWithTranscriptApi(videoUrl);
+        if (transcript && isUsableTranscript(transcript)) {
+          method = 'transcriptapi';
+        } else {
+          transcript = null;
+        }
+      } catch {}
+
+      if (!transcript) {
+        try {
+          transcript = await fetchWithYtdl(videoId);
+          if (transcript && isUsableTranscript(transcript)) {
+            method = 'ytdl-core';
+          } else {
+            transcript = null;
+          }
+        } catch {}
+      }
+
+      try {
+        if (!transcript) {
+          const data = await YoutubeTranscript.fetchTranscript(videoId, { lang: 'ar' });
+          if (data?.length) {
+            const candidate = data.map((item) => item.text).join(' ').trim();
+            if (isUsableTranscript(candidate)) {
+              transcript = candidate;
+              method = 'youtube-transcript-ar';
+            }
+          }
         }
       } catch {}
 
@@ -101,8 +224,11 @@ export default async function handler(req, res) {
         try {
           const data = await YoutubeTranscript.fetchTranscript(videoId, { lang: 'en' });
           if (data?.length) {
-            transcript = data.map((item) => item.text).join(' ');
-            method = 'youtube-transcript-en';
+            const candidate = data.map((item) => item.text).join(' ').trim();
+            if (isUsableTranscript(candidate)) {
+              transcript = candidate;
+              method = 'youtube-transcript-en';
+            }
           }
         } catch {}
       }
@@ -111,8 +237,11 @@ export default async function handler(req, res) {
         try {
           const data = await YoutubeTranscript.fetchTranscript(videoId);
           if (data?.length) {
-            transcript = data.map((item) => item.text).join(' ');
-            method = 'youtube-transcript-default';
+            const candidate = data.map((item) => item.text).join(' ').trim();
+            if (isUsableTranscript(candidate)) {
+              transcript = candidate;
+              method = 'youtube-transcript-default';
+            }
           }
         } catch {}
       }
