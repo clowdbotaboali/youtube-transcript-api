@@ -92,7 +92,7 @@ function getTranscriptStats(rawText = '') {
 
 function isUsableTranscript(text = '') {
   const stats = getTranscriptStats(text);
-  return stats.wordsCount >= 20 && stats.uniqueWords >= 10;
+  return stats.wordsCount >= 3 && stats.uniqueWords >= 2;
 }
 
 async function fetchWithTranscriptApi(videoUrl) {
