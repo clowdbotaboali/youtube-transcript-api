@@ -42,6 +42,9 @@ const probeApiUrl = async (baseUrl) => {
 };
 
 const hasWindow = typeof window !== 'undefined';
+const CREDIT_COST_PER_SUCCESS = 1;
+const PAID_PLAN_CREDITS = 200;
+const PAID_PLAN_PRICE_USD = 5;
 
 function App() {
   const [transcriptData, setTranscriptData] = useState(null);
@@ -152,6 +155,7 @@ function App() {
     } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
       setSession(nextSession ?? null);
       if (nextSession?.user) {
+        setIsAuthModalOpen(false);
         await refreshAccount();
       } else {
         setClientPage(CLIENT_PAGES.dashboard);
@@ -172,6 +176,12 @@ function App() {
       refreshAccount();
     }
   }, [apiUrl, user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (user?.id) {
+      setIsAuthModalOpen(false);
+    }
+  }, [user?.id]);
 
   const handleApiUrlChange = (nextApiUrl) => {
     const normalized = normalizeApiUrl(nextApiUrl);
@@ -232,7 +242,8 @@ function App() {
       } else if (response.status === 403) {
         notify('error', tr(lang, 'لا توجد نقاط كافية. يرجى شحن الرصيد.', 'No credits left. Please top up.'));
       } else if (response.status === 401) {
-        setIsAuthModalOpen(true);
+        setSession(null);
+        supabase.auth.signOut().catch(() => {});
         notify('error', tr(lang, 'انتهت الجلسة. يرجى تسجيل الدخول مرة أخرى.', 'Session expired. Please sign in again.'));
       } else {
         notify('error', tr(lang, `خطأ: ${data.error || 'فشلت المعالجة'}`, `Error: ${data.error || 'Processing failed'}`));
@@ -363,6 +374,9 @@ function App() {
           lang={lang}
           userEmail={user?.email}
           credits={credits}
+          requestCost={CREDIT_COST_PER_SUCCESS}
+          paidPlanCredits={PAID_PLAN_CREDITS}
+          paidPlanPrice={PAID_PLAN_PRICE_USD}
           currentPage={clientPage}
           onPageChange={setClientPage}
           onToggleLang={toggleLang}
@@ -472,11 +486,23 @@ function App() {
               <div className="space-y-2 text-sm">
                 <p><span className="font-bold">{tr(lang, 'البريد:', 'Email:')}</span> {user?.email || '-'}</p>
                 <p><span className="font-bold">{tr(lang, 'الرصيد:', 'Credits:')}</span> {credits ?? '...'}</p>
+                <p><span className="font-bold">{tr(lang, 'تكلفة الطلب:', 'Request cost:')}</span> {CREDIT_COST_PER_SUCCESS} {tr(lang, 'نقطة لكل طلب ناجح', 'credit per successful request')}</p>
                 <p><span className="font-bold">{tr(lang, 'الحالة:', 'Session:')}</span> {tr(lang, 'متصل', 'Active')}</p>
               </div>
             </article>
             <article className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
-              <h3 className="text-lg font-black text-slate-900 mb-3">{tr(lang, 'إجراءات سريعة', 'Quick Actions')}</h3>
+              <h3 className="text-lg font-black text-slate-900 mb-3">{tr(lang, 'الخطط والأسعار', 'Plans & Pricing')}</h3>
+              <div className="grid sm:grid-cols-2 gap-3 mb-4">
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
+                  <p className="font-black text-emerald-900">{tr(lang, 'الخطة المجانية', 'Free Plan')}</p>
+                  <p className="text-xs text-emerald-800 mt-1">{tr(lang, 'ابدأ مجانًا ثم اشحن عند الحاجة.', 'Start free, then top up when needed.')}</p>
+                </div>
+                <div className="rounded-xl border border-orange-200 bg-orange-50 p-3">
+                  <p className="font-black text-orange-900">{tr(lang, 'الخطة المدفوعة', 'Paid Plan')}</p>
+                  <p className="text-xs text-orange-800 mt-1">{PAID_PLAN_CREDITS} {tr(lang, 'نقطة مقابل', 'credits for')} ${PAID_PLAN_PRICE_USD}</p>
+                </div>
+              </div>
+              <h4 className="text-sm font-black text-slate-900 mb-3">{tr(lang, 'إجراءات سريعة', 'Quick Actions')}</h4>
               <div className="flex flex-wrap gap-3">
                 <button
                   type="button"
@@ -504,16 +530,6 @@ function App() {
           </section>
         )}
       </div>
-
-      {isAuthModalOpen && (
-        <AuthModal
-          isOpen={isAuthModalOpen}
-          onClose={() => setIsAuthModalOpen(false)}
-          onAuthSuccess={authSuccessHandler}
-          lang={lang}
-          onNotify={notify}
-        />
-      )}
 
       {isPricingModalOpen && (
         <PricingModal

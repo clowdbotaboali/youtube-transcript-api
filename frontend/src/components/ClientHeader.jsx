@@ -27,6 +27,9 @@ function ClientHeader({
   lang = LANG.ar,
   userEmail,
   credits,
+  requestCost = 1,
+  paidPlanCredits = 200,
+  paidPlanPrice = 5,
   currentPage,
   onPageChange,
   onToggleLang,
@@ -44,10 +47,18 @@ function ClientHeader({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <div className="inline-flex items-center gap-2 rounded-xl border border-amber-300/30 bg-amber-500/10 px-3 py-2 text-amber-200">
-            <FaGem />
-            <span className="font-bold">{credits ?? '...'}</span>
-            <span className="text-sm">{tr(lang, 'نقطة', 'credits')}</span>
+          <div className="rounded-xl border border-amber-300/40 bg-amber-500/15 px-3 py-2 text-amber-100">
+            <div className="inline-flex items-center gap-2">
+              <FaGem />
+              <span className="font-black text-lg">{credits ?? '...'}</span>
+              <span className="text-sm">{tr(lang, 'نقطة', 'credits')}</span>
+            </div>
+            <p className="text-[11px] opacity-90 mt-1">
+              {tr(lang, 'كل طلب ناجح =', 'Each successful request =')} {requestCost} {tr(lang, 'نقطة', 'credit')}
+            </p>
+            <p className="text-[11px] opacity-90">
+              {paidPlanCredits} {tr(lang, 'نقطة', 'credits')} = ${paidPlanPrice}
+            </p>
           </div>
           <button
             type="button"

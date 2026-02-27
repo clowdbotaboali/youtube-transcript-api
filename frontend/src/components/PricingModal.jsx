@@ -1,32 +1,37 @@
 import { useState } from 'react';
-import { FaDatabase, FaBolt, FaCheck } from 'react-icons/fa';
+import { FaCheck, FaCrown, FaLeaf } from 'react-icons/fa';
 import defaultApiUrl from '../config';
 import { getAuthHeaders } from '../utils/authHeaders';
 import { LANG, tr } from '../utils/lang';
 
 const PLANS = [
   {
-    amount: 50,
-    price: 5,
-    priceCent: 500,
-    titleAr: 'باقة البداية',
-    titleEn: 'Starter Pack',
-    featuresAr: ['50 نقطة معالجة', 'دعم عبر البريد الإلكتروني', 'بدون تاريخ انتهاء'],
-    featuresEn: ['50 processing credits', 'Email support', 'No expiry'],
-    icon: FaDatabase,
-    color: 'blue'
+    id: 'free',
+    amount: 0,
+    price: 0,
+    priceCent: 0,
+    titleAr: 'الخطة المجانية',
+    titleEn: 'Free Plan',
+    featuresAr: ['ابدأ الاستخدام مجانًا', 'شحن عند الحاجة', 'كل طلب ناجح = 1 نقطة'],
+    featuresEn: ['Start for free', 'Top up when needed', 'Each successful request = 1 credit'],
+    selectable: false,
+    icon: FaLeaf,
+    border: 'border-emerald-200',
+    badge: 'bg-emerald-100 text-emerald-800'
   },
   {
+    id: 'paid_200',
     amount: 200,
-    price: 15,
-    priceCent: 1500,
-    titleAr: 'باقة المحترفين',
-    titleEn: 'Pro Pack',
-    featuresAr: ['200 نقطة معالجة', 'دعم أولوية', 'بدون تاريخ انتهاء', 'وفر 25%'],
-    featuresEn: ['200 processing credits', 'Priority support', 'No expiry', 'Save 25%'],
-    icon: FaBolt,
-    color: 'orange',
-    popular: true
+    price: 5,
+    priceCent: 500,
+    titleAr: 'الخطة المدفوعة',
+    titleEn: 'Paid Plan',
+    featuresAr: ['200 كريديت', 'كل طلب ناجح = 1 كريديت', 'دفعة واحدة'],
+    featuresEn: ['200 credits', 'Each successful request = 1 credit', 'One-time payment'],
+    selectable: true,
+    icon: FaCrown,
+    border: 'border-orange-300',
+    badge: 'bg-orange-100 text-orange-800'
   }
 ];
 
@@ -34,11 +39,6 @@ const METHODS = [
   { value: 'instapay', ar: 'إنستا باي', en: 'InstaPay' },
   { value: 'vodafone_cash', ar: 'فودافون كاش', en: 'Vodafone Cash' }
 ];
-
-const PLAN_COLORS = {
-  blue: { iconWrap: 'bg-blue-100 text-blue-600', check: 'text-blue-500', border: 'border-blue-500' },
-  orange: { iconWrap: 'bg-orange-100 text-orange-600', check: 'text-orange-500', border: 'border-orange-500' }
-};
 
 function PricingModal({ isOpen, onClose, user, apiUrl = defaultApiUrl, requireLogin, lang = LANG.ar, onNotify }) {
   const [loadingPlan, setLoadingPlan] = useState(null);
@@ -53,12 +53,13 @@ function PricingModal({ isOpen, onClose, user, apiUrl = defaultApiUrl, requireLo
   };
 
   const handleRequest = async (plan) => {
+    if (!plan.selectable) return;
     if (!user) {
       requireLogin();
       return;
     }
 
-    setLoadingPlan(plan.amount);
+    setLoadingPlan(plan.id);
     try {
       const authHeaders = await getAuthHeaders();
       const response = await fetch(`${apiUrl}/api/billing/create-topup-request`, {
@@ -76,8 +77,8 @@ function PricingModal({ isOpen, onClose, user, apiUrl = defaultApiUrl, requireLo
         })
       });
 
-      const data = await response.json();
-      if (data.success) {
+      const data = await response.json().catch(() => ({}));
+      if (response.ok && data.success) {
         notify(
           'success',
           tr(
@@ -102,19 +103,18 @@ function PricingModal({ isOpen, onClose, user, apiUrl = defaultApiUrl, requireLo
       <div className="bg-gray-50 rounded-2xl shadow-xl w-full max-w-4xl p-6 md:p-10 relative mt-10 md:mt-0" dir={lang === LANG.ar ? 'rtl' : 'ltr'}>
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-gray-500 hover:text-gray-900 bg-white rounded-full px-3 py-1 shadow-sm transition"
+          className={`absolute top-4 ${lang === LANG.ar ? 'left-4' : 'right-4'} text-gray-500 hover:text-gray-900 bg-white rounded-full px-3 py-1 shadow-sm transition`}
         >
           X
         </button>
 
         <div className="text-center max-w-2xl mx-auto mb-8">
-          <h2 className="text-3xl font-extrabold text-gray-900 mb-4">{tr(lang, 'طلب شحن الرصيد', 'Top-up Request')}</h2>
+          <h2 className="text-3xl font-extrabold text-gray-900 mb-3">{tr(lang, 'الخطط والشحن', 'Plans & Top-up')}</h2>
+          <p className="text-gray-600 mb-2">
+            {tr(lang, 'الخطة المدفوعة الحالية: 200 كريديت مقابل 5 دولار.', 'Current paid plan: 200 credits for $5.')}
+          </p>
           <p className="text-gray-600">
-            {tr(
-              lang,
-              'وسائل الدفع المتاحة مؤقتًا: إنستا باي أو فودافون كاش. بعد التحويل أضف بيانات العملية من هنا.',
-              'Temporary payment methods: InstaPay or Vodafone Cash. Submit transfer details from here after payment.'
-            )}
+            {tr(lang, 'سياسة الاستهلاك: كل طلب ناجح يخصم كريديت واحد.', 'Consumption policy: each successful request costs 1 credit.')}
           </p>
         </div>
 
@@ -122,11 +122,7 @@ function PricingModal({ isOpen, onClose, user, apiUrl = defaultApiUrl, requireLo
           <div className="grid md:grid-cols-3 gap-3">
             <div>
               <label className="block text-sm font-semibold mb-1">{tr(lang, 'وسيلة الدفع', 'Payment method')}</label>
-              <select
-                value={method}
-                onChange={(e) => setMethod(e.target.value)}
-                className="w-full border rounded-lg px-3 py-2"
-              >
+              <select value={method} onChange={(e) => setMethod(e.target.value)} className="w-full border rounded-lg px-3 py-2">
                 {METHODS.map((m) => (
                   <option key={m.value} value={m.value}>
                     {lang === LANG.ar ? m.ar : m.en}
@@ -155,57 +151,57 @@ function PricingModal({ isOpen, onClose, user, apiUrl = defaultApiUrl, requireLo
           </div>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto">
+        <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
           {PLANS.map((plan) => {
             const Icon = plan.icon;
-            const color = PLAN_COLORS[plan.color] || PLAN_COLORS.blue;
+            const isLoading = loadingPlan === plan.id;
             return (
-              <div
-                key={plan.amount}
-                className={`bg-white rounded-2xl shadow-md p-8 border-2 transition-transform duration-200 hover:-translate-y-1 relative ${
-                  plan.popular ? color.border : 'border-transparent hover:border-blue-200'
-                }`}
-              >
-                {plan.popular && (
-                  <span className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-orange-500 text-white px-3 py-1 rounded-full text-sm font-bold tracking-wide">
-                    {tr(lang, 'الأكثر طلبًا', 'Most Popular')}
+              <div key={plan.id} className={`bg-white rounded-2xl shadow-md p-6 border-2 ${plan.border}`}>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-bold text-gray-900">{lang === LANG.ar ? plan.titleAr : plan.titleEn}</h3>
+                  <span className={`text-xs font-bold px-2 py-1 rounded-full ${plan.badge}`}>
+                    {plan.selectable ? tr(lang, 'مدفوعة', 'Paid') : tr(lang, 'مجانية', 'Free')}
                   </span>
-                )}
-                <div className="flex justify-between items-start mb-6">
+                </div>
+
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-3 rounded-xl bg-slate-100 text-slate-700">
+                    <Icon className="text-xl" />
+                  </div>
                   <div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">{lang === LANG.ar ? plan.titleAr : plan.titleEn}</h3>
-                    <p className="text-gray-500 text-sm">
-                      {plan.amount} {tr(lang, 'نقطة', 'credits')}
-                    </p>
-                  </div>
-                  <div className={`p-3 rounded-xl ${color.iconWrap}`}>
-                    <Icon className="text-2xl" />
+                    <div className="text-3xl font-black text-gray-900">{plan.selectable ? `$${plan.price}` : '$0'}</div>
+                    <div className="text-sm text-gray-500">
+                      {plan.amount > 0 ? `${plan.amount} ${tr(lang, 'كريديت', 'credits')}` : tr(lang, 'استخدام مبدئي', 'starter usage')}
+                    </div>
                   </div>
                 </div>
 
-                <div className="mb-6">
-                  <span className="text-4xl font-extrabold text-gray-900">${plan.price}</span>
-                  <span className="text-gray-500 ml-2">{tr(lang, 'دفعة واحدة', 'one-time')}</span>
-                </div>
-
-                <ul className="space-y-4 mb-8">
+                <ul className="space-y-2 mb-5">
                   {(lang === LANG.ar ? plan.featuresAr : plan.featuresEn).map((feat) => (
-                    <li key={feat} className="flex items-center text-gray-700">
-                      <FaCheck className={`${color.check} mr-3 shrink-0`} />
+                    <li key={feat} className="flex items-center text-sm text-gray-700">
+                      <FaCheck className="text-emerald-500 mr-2 shrink-0" />
                       <span>{feat}</span>
                     </li>
                   ))}
                 </ul>
 
-                <button
-                  onClick={() => handleRequest(plan)}
-                  disabled={loadingPlan === plan.amount}
-                  className={`w-full py-3 rounded-xl font-bold text-white transition disabled:opacity-70 ${
-                    plan.popular ? 'bg-orange-600 hover:bg-orange-700' : 'bg-gray-900 hover:bg-gray-800'
-                  }`}
-                >
-                  {loadingPlan === plan.amount ? tr(lang, 'جاري الإرسال...', 'Submitting...') : tr(lang, 'إرسال طلب الشحن', 'Submit top-up request')}
-                </button>
+                {plan.selectable ? (
+                  <button
+                    onClick={() => handleRequest(plan)}
+                    disabled={isLoading}
+                    className="w-full py-3 rounded-xl font-bold text-white bg-orange-600 hover:bg-orange-700 transition disabled:opacity-70"
+                  >
+                    {isLoading ? tr(lang, 'جاري الإرسال...', 'Submitting...') : tr(lang, 'إرسال طلب الشحن', 'Submit top-up request')}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="w-full py-3 rounded-xl font-bold text-slate-700 bg-slate-100 border border-slate-200"
+                    disabled
+                  >
+                    {tr(lang, 'الخطة الأساسية', 'Base plan')}
+                  </button>
+                )}
               </div>
             );
           })}

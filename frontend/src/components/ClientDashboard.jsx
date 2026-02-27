@@ -1,4 +1,4 @@
-import { FaBolt, FaChartLine, FaHistory, FaMagic } from 'react-icons/fa';
+import { FaBolt, FaHistory, FaMagic } from 'react-icons/fa';
 import { LANG, tr } from '../utils/lang';
 
 function ActionCard({ title, text, cta, onClick, tone, icon }) {
@@ -26,10 +26,13 @@ function ClientDashboard({ lang = LANG.ar, credits, userEmail, onStartExtract, o
         <h2 className="text-2xl sm:text-3xl font-black text-slate-900 mb-2">
           {tr(lang, 'مرحبًا في مساحة العميل الخاصة بك', 'Welcome to your client workspace')}
         </h2>
-        <p className="text-slate-600 mb-4">{tr(lang, 'كل أدواتك الآن مفصولة بوضوح: استخراج، سجل، وحساب.', 'Your tools are now clearly separated: extraction, history, and account.')}</p>
+        <p className="text-slate-600 mb-4">
+          {tr(lang, 'كل طلب ناجح يستهلك نقطة واحدة من رصيدك الحالي.', 'Each successful request consumes one credit from your balance.')}
+        </p>
         <div className="flex flex-wrap gap-3 text-sm">
           <span className="rounded-full bg-cyan-50 text-cyan-800 border border-cyan-200 px-3 py-1.5">{tr(lang, 'الحساب', 'Account')}: {userEmail || '-'}</span>
-          <span className="rounded-full bg-amber-50 text-amber-800 border border-amber-200 px-3 py-1.5">{tr(lang, 'الرصيد', 'Credits')}: {credits ?? '...'}</span>
+          <span className="rounded-full bg-amber-50 text-amber-800 border border-amber-200 px-3 py-1.5">{tr(lang, 'الرصيد الحالي', 'Current credits')}: {credits ?? '...'}</span>
+          <span className="rounded-full bg-orange-50 text-orange-800 border border-orange-200 px-3 py-1.5">{tr(lang, 'الخطة المدفوعة', 'Paid plan')}: 200 {tr(lang, 'نقطة', 'credits')} / $5</span>
         </div>
       </section>
 
@@ -52,26 +55,12 @@ function ClientDashboard({ lang = LANG.ar, credits, userEmail, onStartExtract, o
         />
         <ActionCard
           title={tr(lang, 'إدارة الرصيد', 'Manage Credits')}
-          text={tr(lang, 'أرسل طلب شحن عبر إنستا باي أو فودافون كاش.', 'Submit a top-up request via InstaPay or Vodafone Cash.')}
+          text={tr(lang, 'الخطة المدفوعة: 200 كريديت مقابل 5 دولار، عبر إنستا باي أو فودافون كاش.', 'Paid plan: 200 credits for $5, via InstaPay or Vodafone Cash.')}
           cta={tr(lang, 'شحن الرصيد', 'Top up credits')}
           onClick={onOpenTopup}
           tone="from-amber-100 to-orange-100 border-amber-200"
           icon={<FaBolt />}
         />
-      </section>
-
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
-        <div className="flex items-center gap-3 mb-2">
-          <FaChartLine className="text-cyan-700" />
-          <h3 className="font-black text-slate-900">{tr(lang, 'حالة التجربة', 'Experience Status')}</h3>
-        </div>
-        <p className="text-sm text-slate-600">
-          {tr(
-            lang,
-            'تمت إعادة هيكلة الواجهة إلى صفحات مخصصة: صفحة عميل، صفحة استخراج، وصفحة سجل/روابط لتجربة أوضح.',
-            'The interface is now split into dedicated pages: client dashboard, extraction workspace, and history/links for clearer UX.'
-          )}
-        </p>
       </section>
     </div>
   );
