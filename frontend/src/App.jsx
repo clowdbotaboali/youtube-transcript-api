@@ -17,6 +17,27 @@ import defaultApiUrl from './config';
 import { getAuthHeaders } from './utils/authHeaders';
 import { LANG, tr } from './utils/lang';
 
+const normalizeApiUrl = (value) => String(value || '').trim().replace(/\/+$/, '');
+
+const isValidApiUrl = (value) => {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+};
+
+const probeApiUrl = async (baseUrl) => {
+  const response = await fetch(`${baseUrl}/api/settings/status`, {
+    method: 'GET',
+    cache: 'no-store'
+  });
+  if (!response.ok) {
+    throw new Error(`Probe failed: ${response.status}`);
+  }
+};
+
 function App() {
   const [transcriptData, setTranscriptData] = useState(null);
   const [aiResult, setAiResult] = useState(null);
@@ -33,10 +54,24 @@ function App() {
   const [lang, setLang] = useState(() => localStorage.getItem('appLang') || LANG.ar);
 
   useEffect(() => {
-    const savedUrl = localStorage.getItem('serverUrl');
+    const savedUrl = normalizeApiUrl(localStorage.getItem('serverUrl'));
     const savedGuideState = localStorage.getItem('showLocalGuide');
-    if (savedUrl) setApiUrl(savedUrl);
     if (savedGuideState === 'true') setShowLocalGuide(true);
+
+    (async () => {
+      if (!savedUrl) return;
+      if (!isValidApiUrl(savedUrl)) {
+        localStorage.removeItem('serverUrl');
+        return;
+      }
+      try {
+        await probeApiUrl(savedUrl);
+        setApiUrl(savedUrl);
+      } catch {
+        localStorage.removeItem('serverUrl');
+        setApiUrl(defaultApiUrl);
+      }
+    })();
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
@@ -54,7 +89,8 @@ function App() {
   }, []);
 
   const handleApiUrlChange = (nextApiUrl) => {
-    setApiUrl(nextApiUrl || defaultApiUrl);
+    const normalized = normalizeApiUrl(nextApiUrl);
+    setApiUrl(normalized || defaultApiUrl);
   };
 
   const toggleLocalGuide = () => {
