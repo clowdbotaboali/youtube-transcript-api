@@ -9,6 +9,7 @@ import historyRoutes from './routes/history.js';
 import settingsRoutes from './routes/settings.js';
 import chatRoutes from './routes/chat.js';
 import billingRoutes from './routes/billing.js';
+import meRoutes from './routes/me.js';
 
 dotenv.config();
 
@@ -44,6 +45,7 @@ app.use('/api/history', historyRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/billing', billingRoutes);
+app.use('/api/me', meRoutes);
 
 app.get('/', (req, res) => {
   res.json({

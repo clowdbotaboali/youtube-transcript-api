@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { FaCog, FaGem } from 'react-icons/fa';
+import { useEffect, useMemo, useState } from 'react';
+import { FaCog, FaGem, FaSpinner } from 'react-icons/fa';
 import VideoInput from './components/VideoInput';
 import TranscriptDisplay from './components/TranscriptDisplay';
 import ProcessingOptions from './components/ProcessingOptions';
@@ -12,6 +12,7 @@ import LocalServerGuide from './components/LocalServerGuide';
 import AuthModal from './components/AuthModal';
 import PricingModal from './components/PricingModal';
 import LandingPage from './components/LandingPage';
+import ToastStack from './components/ToastStack';
 import { supabase } from './utils/supabase';
 import defaultApiUrl from './config';
 import { getAuthHeaders } from './utils/authHeaders';
@@ -38,6 +39,8 @@ const probeApiUrl = async (baseUrl) => {
   }
 };
 
+const hasWindow = typeof window !== 'undefined';
+
 function App() {
   const [transcriptData, setTranscriptData] = useState(null);
   const [aiResult, setAiResult] = useState(null);
@@ -47,16 +50,58 @@ function App() {
   const [showLocalGuide, setShowLocalGuide] = useState(false);
   const [selectedUrl, setSelectedUrl] = useState('');
   const [apiUrl, setApiUrl] = useState(defaultApiUrl);
-  const [user, setUser] = useState(null);
+  const [session, setSession] = useState(null);
+  const [authReady, setAuthReady] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
   const [credits, setCredits] = useState(null);
   const [lang, setLang] = useState(() => localStorage.getItem('appLang') || LANG.ar);
+  const [toasts, setToasts] = useState([]);
+
+  const canUseLocalGuide =
+    import.meta.env.DEV || (hasWindow && new URLSearchParams(window.location.search).get('dev') === '1');
+
+  const user = session?.user ?? null;
+
+  const dismissToast = (id) => {
+    setToasts((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  const notify = (type, message) => {
+    if (!message) return;
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    setToasts((prev) => [...prev, { id, type, message }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((item) => item.id !== id));
+    }, 4000);
+  };
+
+  const refreshAccount = async () => {
+    try {
+      const headers = await getAuthHeaders();
+      if (!headers.Authorization) {
+        setCredits(null);
+        return;
+      }
+      const response = await fetch(`${apiUrl}/api/me`, {
+        headers,
+        cache: 'no-store'
+      });
+      const data = await response.json().catch(() => ({}));
+      if (response.ok && data.success) {
+        setCredits(Number(data.data?.credits || 0));
+      } else if (response.status === 401) {
+        setCredits(null);
+      }
+    } catch {
+      // Keep current credits value to avoid noisy UI resets on transient failures.
+    }
+  };
 
   useEffect(() => {
     const savedUrl = normalizeApiUrl(localStorage.getItem('serverUrl'));
     const savedGuideState = localStorage.getItem('showLocalGuide');
-    if (savedGuideState === 'true') setShowLocalGuide(true);
+    if (canUseLocalGuide && savedGuideState === 'true') setShowLocalGuide(true);
 
     (async () => {
       if (!savedUrl) return;
@@ -73,20 +118,42 @@ function App() {
       }
     })();
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      setCredits(session?.user?.user_metadata?.credits ?? null);
-    });
+    supabase.auth
+      .getSession()
+      .then(async ({ data: { session: initialSession } }) => {
+        setSession(initialSession ?? null);
+        setAuthReady(true);
+        if (initialSession?.user) {
+          await refreshAccount();
+        } else {
+          setCredits(null);
+        }
+      })
+      .catch(() => {
+        setAuthReady(true);
+      });
 
     const {
       data: { subscription }
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      setCredits(session?.user?.user_metadata?.credits ?? null);
+    } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
+      setSession(nextSession ?? null);
+      if (nextSession?.user) {
+        await refreshAccount();
+      } else {
+        setCredits(null);
+        setTranscriptData(null);
+        setAiResult(null);
+      }
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (user?.id) {
+      refreshAccount();
+    }
+  }, [apiUrl, user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleApiUrlChange = (nextApiUrl) => {
     const normalized = normalizeApiUrl(nextApiUrl);
@@ -94,6 +161,7 @@ function App() {
   };
 
   const toggleLocalGuide = () => {
+    if (!canUseLocalGuide) return;
     setShowLocalGuide((prev) => {
       const next = !prev;
       localStorage.setItem('showLocalGuide', String(next));
@@ -116,6 +184,7 @@ function App() {
     if (!transcriptData) return;
     if (!user) {
       setIsAuthModalOpen(true);
+      notify('info', tr(lang, '???? ?????? ????? ???????? ??????? ?????????.', 'Please sign in to use AI processing.'));
       return;
     }
 
@@ -134,22 +203,23 @@ function App() {
         })
       });
 
-      const data = await response.json();
-      if (data.success) {
+      const data = await response.json().catch(() => ({}));
+      if (response.ok && data.success) {
         setAiResult({
           result: data.result,
           type: data.type
         });
-        setCredits(data.creditsLeft);
+        setCredits(Number(data.creditsLeft ?? credits ?? 0));
       } else if (response.status === 403) {
-        alert(tr(lang, 'لا يوجد رصيد كافٍ. اشحن رصيدك.', 'No credits left. Please top up.'));
+        notify('error', tr(lang, '?? ???? ???? ????. ???? ?????.', 'No credits left. Please top up.'));
       } else if (response.status === 401) {
         setIsAuthModalOpen(true);
+        notify('error', tr(lang, '????? ??????. ???? ?????? ??? ????.', 'Session expired. Please sign in again.'));
       } else {
-        alert(tr(lang, `خطأ: ${data.error || 'فشلت المعالجة'}`, `Error: ${data.error || 'Processing failed'}`));
+        notify('error', tr(lang, `???: ${data.error || '???? ????????'}`, `Error: ${data.error || 'Processing failed'}`));
       }
     } catch {
-      alert(tr(lang, 'فشل الاتصال بالخادم', 'Connection failed'));
+      notify('error', tr(lang, '??? ??????? ???????', 'Connection failed'));
     } finally {
       setProcessLoading(false);
     }
@@ -167,12 +237,39 @@ function App() {
         body: JSON.stringify(saveData)
       });
 
-      const data = await response.json();
-      return !!data.success;
+      const data = await response.json().catch(() => ({}));
+      const success = !!(response.ok && data.success);
+      if (!success) {
+        notify('error', tr(lang, '???? ??? ???????.', 'Failed to save result.'));
+      }
+      return success;
     } catch {
+      notify('error', tr(lang, '??? ??????? ???????', 'Connection failed'));
       return false;
     }
   };
+
+  const authSuccessHandler = async (nextSession) => {
+    setSession(nextSession ?? null);
+    setIsAuthModalOpen(false);
+    if (nextSession?.user) {
+      await refreshAccount();
+      notify('success', tr(lang, '?? ????? ?????? ?????.', 'Signed in successfully.'));
+    }
+  };
+
+  const rootDir = useMemo(() => (lang === LANG.ar ? 'rtl' : 'ltr'), [lang]);
+
+  if (!authReady) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center" dir={rootDir}>
+        <div className="flex items-center gap-2 text-sm">
+          <FaSpinner className="animate-spin" />
+          <span>{tr(lang, '???? ????? ??????...', 'Preparing session...')}</span>
+        </div>
+      </div>
+    );
+  }
 
   if (!user) {
     return (
@@ -184,14 +281,14 @@ function App() {
         >
           {lang === LANG.ar ? 'EN' : 'AR'}
         </button>
+        <ToastStack items={toasts} onDismiss={dismissToast} />
         {isAuthModalOpen && (
           <AuthModal
             isOpen={isAuthModalOpen}
             onClose={() => setIsAuthModalOpen(false)}
-            onAuthSuccess={(nextUser) => {
-              setUser(nextUser);
-              setIsAuthModalOpen(false);
-            }}
+            onAuthSuccess={authSuccessHandler}
+            lang={lang}
+            onNotify={notify}
           />
         )}
       </>
@@ -199,7 +296,8 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-100" dir={rootDir}>
+      <ToastStack items={toasts} onDismiss={dismissToast} />
       <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
         <header className="flex flex-col md:flex-row md:items-center justify-between mb-4 sm:mb-6 bg-white p-4 rounded-lg shadow-sm gap-4">
           <div className="flex flex-wrap items-center gap-2">
@@ -208,19 +306,19 @@ function App() {
               className="flex items-center justify-center gap-2 px-4 py-2 hover:bg-gray-100 text-gray-700 rounded-lg transition"
             >
               <FaCog />
-              <span className="hidden sm:inline">{tr(lang, 'الإعدادات', 'Settings')}</span>
+              <span className="hidden sm:inline">{tr(lang, '?????????', 'Settings')}</span>
             </button>
 
             <div className="flex items-center gap-2 px-3 py-2 bg-yellow-50 text-yellow-700 rounded-lg border border-yellow-200">
               <FaGem />
               <span className="font-bold">{credits ?? '...'}</span>
-              <span className="text-sm">{tr(lang, 'نقطة', 'credits')}</span>
+              <span className="text-sm">{tr(lang, '????', 'credits')}</span>
             </div>
             <button
               onClick={() => setIsPricingModalOpen(true)}
               className="flex items-center justify-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition text-sm sm:text-base font-bold"
             >
-              {tr(lang, 'اشحن', 'Top up')}
+              {tr(lang, '????', 'Top up')}
             </button>
             <button
               onClick={toggleLang}
@@ -232,32 +330,36 @@ function App() {
               onClick={() => supabase.auth.signOut()}
               className="flex items-center justify-center gap-2 px-3 py-2 hover:bg-red-50 text-red-600 rounded-lg transition text-sm border border-transparent hover:border-red-100"
             >
-              {tr(lang, 'خروج', 'Logout')}
+              {tr(lang, '????', 'Logout')}
             </button>
           </div>
 
           <div className="text-center order-first sm:order-none">
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-800">{tr(lang, 'مساحة العمل', 'Transcript Workspace')}</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-800">{tr(lang, '????? ?????', 'Transcript Workspace')}</h1>
             <p className="text-gray-600 text-xs sm:text-sm hidden sm:block">
-              {tr(lang, 'استخرج النص، عالجه بالذكاء الاصطناعي، دردش، واحفظ النتائج.', 'Extract, process with AI, chat, and save your workflow.')}
+              {tr(lang, '?????? ????? ????? ??????? ?????????? ????? ????? ???????.', 'Extract, process with AI, chat, and save your workflow.')}
             </p>
           </div>
 
           <div className="hidden sm:block w-32" />
         </header>
 
-        <div className="mb-3 sm:mb-4">
-          <button
-            type="button"
-            onClick={toggleLocalGuide}
-            className="inline-flex items-center gap-2 text-xs sm:text-sm px-3 py-1.5 rounded-full border border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100 transition"
-          >
-            <span>{showLocalGuide ? tr(lang, 'إخفاء', 'Hide') : tr(lang, 'إظهار', 'Show')}</span>
-            <span>{tr(lang, 'دليل الخادم المحلي', 'Local backend guide')}</span>
-          </button>
-        </div>
+        {canUseLocalGuide && (
+          <div className="mb-3 sm:mb-4">
+            <button
+              type="button"
+              onClick={toggleLocalGuide}
+              className="inline-flex items-center gap-2 text-xs sm:text-sm px-3 py-1.5 rounded-full border border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100 transition"
+            >
+              <span>{showLocalGuide ? tr(lang, '?????', 'Hide') : tr(lang, '?????', 'Show')}</span>
+              <span>{tr(lang, '???? ?????? ??????', 'Local backend guide')}</span>
+            </button>
+          </div>
+        )}
 
-        {showLocalGuide && <LocalServerGuide apiUrl={apiUrl} onApiUrlChange={handleApiUrlChange} lang={lang} />}
+        {canUseLocalGuide && showLocalGuide && (
+          <LocalServerGuide apiUrl={apiUrl} onApiUrlChange={handleApiUrlChange} lang={lang} />
+        )}
 
         <VideoInput
           onTranscriptExtracted={handleTranscriptExtracted}
@@ -280,10 +382,7 @@ function App() {
                   />
                 </div>
                 <div className="p-3 sm:p-4 h-[400px] sm:h-[600px] flex flex-col">
-                  <ChatAssistant
-                    transcript={transcriptData.transcript}
-                    apiUrl={apiUrl}
-                  />
+                  <ChatAssistant transcript={transcriptData.transcript} apiUrl={apiUrl} />
                 </div>
               </div>
             </div>
@@ -317,10 +416,9 @@ function App() {
         <AuthModal
           isOpen={isAuthModalOpen}
           onClose={() => setIsAuthModalOpen(false)}
-          onAuthSuccess={(nextUser) => {
-            setUser(nextUser);
-            setIsAuthModalOpen(false);
-          }}
+          onAuthSuccess={authSuccessHandler}
+          lang={lang}
+          onNotify={notify}
         />
       )}
 
@@ -331,6 +429,7 @@ function App() {
           user={user}
           apiUrl={apiUrl}
           lang={lang}
+          onNotify={notify}
           requireLogin={() => {
             setIsPricingModalOpen(false);
             setIsAuthModalOpen(true);

@@ -250,6 +250,26 @@ export default async function handler(req, res) {
       return res.json({ success: true, managedInBackend: true });
     }
 
+    if (url.includes('/api/me')) {
+      const supabase = getSupabase();
+      if (!supabase) {
+        return res.status(500).json({ success: false, error: 'Server not configured: SUPABASE env vars missing' });
+      }
+      const user = await getAuthedUser(req);
+      if (!user) {
+        return res.status(401).json({ success: false, error: 'Authentication required' });
+      }
+      const userRow = await ensureUserAccountRow(supabase, user);
+      return res.json({
+        success: true,
+        data: {
+          id: userRow.id,
+          email: userRow.email,
+          credits: Number(userRow.credits || 0)
+        }
+      });
+    }
+
     if (url.includes('/api/transcript/extract')) {
       const { url: videoUrl } = body;
       if (!videoUrl) {
