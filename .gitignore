@@ -39,4 +39,5 @@ frontend/.cache/
 # Backend specific
 backend/dist/
 backend/.cache/
+backend/*-player-script.js
 .vercel
