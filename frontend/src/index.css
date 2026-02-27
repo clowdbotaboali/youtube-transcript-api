@@ -1,12 +1,67 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700;800&family=Cairo:wght@400;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --surface-bg: #f3f4f6;
+  --text-main: #0f172a;
+}
+
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: 'Space Grotesk', 'Cairo', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   margin: 0;
+  background: var(--surface-bg);
+  color: var(--text-main);
+}
+
+[dir='rtl'] body,
+body[dir='rtl'],
+[dir='rtl'] {
+  font-family: 'Cairo', 'Space Grotesk', sans-serif;
+}
+
+.reveal-up {
+  animation: revealUp 0.7s ease both;
+}
+
+.reveal-up.delay-1 {
+  animation-delay: 0.12s;
+}
+
+.reveal-up.delay-2 {
+  animation-delay: 0.2s;
+}
+
+.reveal-up.delay-3 {
+  animation-delay: 0.28s;
+}
+
+.auth-pop {
+  animation: authPop 0.22s ease-out both;
+}
+
+@keyframes revealUp {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes authPop {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }

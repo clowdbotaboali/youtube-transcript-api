@@ -29,3 +29,22 @@
 - [x] Run `npm run build --prefix frontend`.
 - [x] Commit, push, deploy to Vercel production.
 - [x] Smoke test key flows: login, transcript extract, AI process, chat.
+
+## Task 7: UX Production Test Sprint
+- [x] Prepare a repeatable production UX checklist and test script.
+- [x] Validate `Home load` on production domain.
+- [x] Validate `Extract transcript` on production.
+- [x] Validate `Chat` on production.
+- [x] Validate `AI process` unauthenticated behavior (expect 401).
+- [x] Validate `Top-up request` unauthenticated behavior (expect 401).
+- [x] Validate `Sign up` flow behavior on Supabase production.
+- [x] Validate `Sign in` failure/success UX handling.
+- [x] Validate `Forgot password` flow behavior.
+- [x] Publish test report in repository.
+
+## Task 8: Design Sprint (Landing + Auth UI)
+- [x] Redesign `LandingPage` visual direction (bold modern look, clear value proposition).
+- [x] Redesign `AuthModal` UX (layout, feedback states, bilingual readability).
+- [x] Improve global typography and visual tokens for Arabic + English.
+- [x] Validate responsive behavior for mobile and desktop.
+- [x] Run lint/build and ship to production.
