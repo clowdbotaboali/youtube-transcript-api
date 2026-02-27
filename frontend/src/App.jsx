@@ -15,6 +15,13 @@ import LandingPage from './components/LandingPage';
 import ToastStack from './components/ToastStack';
 import ClientHeader, { PAGES as CLIENT_PAGES } from './components/ClientHeader';
 import ClientDashboard from './components/ClientDashboard';
+import SiteFooter from './components/SiteFooter';
+import SeoMeta from './components/SeoMeta';
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
+import TermsPage from './pages/TermsPage';
+import RefundPolicyPage from './pages/RefundPolicyPage';
+import ContactPage from './pages/ContactPage';
+import PricingPage from './pages/PricingPage';
 import { supabase, SUPABASE_CONFIGURED } from './utils/supabase';
 import defaultApiUrl from './config';
 import { getAuthHeaders } from './utils/authHeaders';
@@ -42,6 +49,7 @@ const probeApiUrl = async (baseUrl) => {
 };
 
 const hasWindow = typeof window !== 'undefined';
+const STATIC_ROUTES = new Set(['/privacy-policy', '/terms', '/refund-policy', '/contact', '/pricing']);
 const FREE_PLAN_REQUESTS = 5;
 const CREDIT_COST_PER_SUCCESS = 1;
 const PAID_PLAN_CREDITS = 200;
@@ -64,11 +72,20 @@ function App() {
   const [clientPage, setClientPage] = useState(CLIENT_PAGES.dashboard);
   const [lang, setLang] = useState(() => localStorage.getItem('appLang') || LANG.ar);
   const [toasts, setToasts] = useState([]);
+  const [currentPath, setCurrentPath] = useState(() => (hasWindow ? window.location.pathname : '/'));
 
   const canUseLocalGuide =
     import.meta.env.DEV || (hasWindow && new URLSearchParams(window.location.search).get('dev') === '1');
 
   const user = session?.user ?? null;
+  const isStaticRoute = STATIC_ROUTES.has(currentPath);
+
+  useEffect(() => {
+    if (!hasWindow) return;
+    const handler = () => setCurrentPath(window.location.pathname);
+    window.addEventListener('popstate', handler);
+    return () => window.removeEventListener('popstate', handler);
+  }, []);
 
   const dismissToast = (id) => {
     setToasts((prev) => prev.filter((item) => item.id !== id));
@@ -316,64 +333,106 @@ function App() {
 
   const rootDir = useMemo(() => (lang === LANG.ar ? 'rtl' : 'ltr'), [lang]);
 
+  const renderStaticRoute = () => {
+    if (currentPath === '/privacy-policy') return <PrivacyPolicyPage />;
+    if (currentPath === '/terms') return <TermsPage />;
+    if (currentPath === '/refund-policy') return <RefundPolicyPage />;
+    if (currentPath === '/contact') return <ContactPage />;
+    if (currentPath === '/pricing') return <PricingPage />;
+    return null;
+  };
+
+  if (isStaticRoute) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <div className="flex-1">{renderStaticRoute()}</div>
+        <SiteFooter />
+      </div>
+    );
+  }
+
   if (!SUPABASE_CONFIGURED) {
     return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center px-4" dir={rootDir}>
-        <div className="max-w-lg w-full rounded-xl border border-slate-700 bg-slate-900/70 p-6 text-center">
-          <h1 className="text-xl font-bold mb-3">
-            {tr(lang, 'إعدادات المصادقة غير مكتملة', 'Authentication configuration is missing')}
-          </h1>
-          <p className="text-slate-300 text-sm">
-            {tr(
-              lang,
-              'أضف متغيرات VITE_SUPABASE_URL و VITE_SUPABASE_ANON_KEY في بيئة Vercel ثم أعد النشر.',
-              'Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in Vercel environment variables, then redeploy.'
-            )}
-          </p>
+      <div className="min-h-screen flex flex-col">
+        <div className="flex-1 bg-slate-950 text-slate-100 flex items-center justify-center px-4" dir={rootDir}>
+          <div className="max-w-lg w-full rounded-xl border border-slate-700 bg-slate-900/70 p-6 text-center">
+            <h1 className="text-xl font-bold mb-3">
+              {tr(lang, 'إعدادات المصادقة غير مكتملة', 'Authentication configuration is missing')}
+            </h1>
+            <p className="text-slate-300 text-sm">
+              {tr(
+                lang,
+                'أضف متغيرات VITE_SUPABASE_URL و VITE_SUPABASE_ANON_KEY في بيئة Vercel ثم أعد النشر.',
+                'Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in Vercel environment variables, then redeploy.'
+              )}
+            </p>
+          </div>
         </div>
+        <SiteFooter />
       </div>
     );
   }
 
   if (!authReady) {
     return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center" dir={rootDir}>
-        <div className="flex items-center gap-2 text-sm">
-          <FaSpinner className="animate-spin" />
-          <span>{tr(lang, 'جاري تجهيز الجلسة...', 'Preparing session...')}</span>
+      <div className="min-h-screen flex flex-col" dir={rootDir}>
+        <SeoMeta
+          title="Preparing Session | Transcript AI"
+          description="Initializing authenticated session for Transcript AI."
+          path="/"
+        />
+        <div className="flex-1 bg-slate-950 text-slate-100 flex items-center justify-center">
+          <div className="flex items-center gap-2 text-sm">
+            <FaSpinner className="animate-spin" />
+            <span>{tr(lang, 'جاري تجهيز الجلسة...', 'Preparing session...')}</span>
+          </div>
         </div>
+        <SiteFooter />
       </div>
     );
   }
 
   if (!user) {
     return (
-      <>
-        <LandingPage onStart={() => setIsAuthModalOpen(true)} lang={lang} />
-        <button
-          onClick={toggleLang}
-          className="fixed top-4 right-4 z-50 px-3 py-1.5 rounded-full bg-white/90 text-slate-900 text-sm font-semibold"
-        >
-          {lang === LANG.ar ? 'EN' : 'AR'}
-        </button>
-        <ToastStack items={toasts} onDismiss={dismissToast} />
-        {isAuthModalOpen && (
-          <AuthModal
-            isOpen={isAuthModalOpen}
-            onClose={() => setIsAuthModalOpen(false)}
-            onAuthSuccess={authSuccessHandler}
-            lang={lang}
-            onNotify={notify}
-          />
-        )}
-      </>
+      <div className="min-h-screen flex flex-col">
+        <SeoMeta
+          title="Transcript AI | YouTube Transcript Generation Service"
+          description="Transcript AI is a digital service that converts YouTube links into text transcripts and provides optional AI text analysis."
+          path="/"
+        />
+        <div className="flex-1">
+          <LandingPage onStart={() => setIsAuthModalOpen(true)} lang={lang} />
+          <button
+            onClick={toggleLang}
+            className="fixed top-4 right-4 z-50 px-3 py-1.5 rounded-full bg-white/90 text-slate-900 text-sm font-semibold"
+          >
+            {lang === LANG.ar ? 'EN' : 'AR'}
+          </button>
+          <ToastStack items={toasts} onDismiss={dismissToast} />
+          {isAuthModalOpen && (
+            <AuthModal
+              isOpen={isAuthModalOpen}
+              onClose={() => setIsAuthModalOpen(false)}
+              onAuthSuccess={authSuccessHandler}
+              lang={lang}
+              onNotify={notify}
+            />
+          )}
+        </div>
+        <SiteFooter />
+      </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[linear-gradient(180deg,#f8fafc_0%,#eef2ff_65%,#ecfeff_100%)]" dir={rootDir}>
+    <div className="min-h-screen bg-[linear-gradient(180deg,#f8fafc_0%,#eef2ff_65%,#ecfeff_100%)] flex flex-col" dir={rootDir}>
+      <SeoMeta
+        title="Client Workspace | Transcript AI"
+        description="Authenticated workspace for transcript extraction, AI text processing, and saved transcript history."
+        path="/"
+      />
       <ToastStack items={toasts} onDismiss={dismissToast} />
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
+      <div className="max-w-7xl mx-auto w-full px-3 sm:px-4 py-4 sm:py-6 flex-1">
         <ClientHeader
           lang={lang}
           userEmail={user?.email}
@@ -558,6 +617,7 @@ function App() {
       )}
 
       {showSettings && <Settings onClose={() => setShowSettings(false)} lang={lang} />}
+      <SiteFooter />
     </div>
   );
 }

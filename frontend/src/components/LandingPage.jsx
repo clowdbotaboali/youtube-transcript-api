@@ -26,30 +26,34 @@ function LandingPage({ onStart, lang = LANG.ar }) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
         <header className="flex items-center justify-between mb-10">
           <div className="text-base sm:text-lg font-black tracking-wide text-slate-900">TRANSCRIPT AI</div>
-          <button
-            onClick={onStart}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 transition font-bold"
-          >
-            {tr(lang, 'ابدأ الآن', 'Start now')}
-            <FaArrowRight className={lang === LANG.ar ? 'rotate-180' : ''} />
-          </button>
+          <div className="flex items-center gap-2">
+            <a href="/pricing" className="px-3 py-2 text-sm rounded-xl border border-slate-300 text-slate-700 hover:bg-white transition">Pricing</a>
+            <a href="/contact" className="px-3 py-2 text-sm rounded-xl border border-slate-300 text-slate-700 hover:bg-white transition">Contact</a>
+            <button
+              onClick={onStart}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 transition font-bold"
+            >
+              {tr(lang, 'ابدأ الآن', 'Start now')}
+              <FaArrowRight className={lang === LANG.ar ? 'rotate-180' : ''} />
+            </button>
+          </div>
         </header>
 
         <section className="grid lg:grid-cols-[1.05fr_0.95fr] gap-6 sm:gap-8 items-center mb-12 sm:mb-16">
           <div className="reveal-up">
             <div className="flex flex-wrap gap-2 mb-4">
-              <Pill>{tr(lang, 'استخراج السكريبت', 'Transcript Extraction')}</Pill>
-              <Pill>{tr(lang, 'تحليل بالذكاء الاصطناعي', 'AI Analysis')}</Pill>
+              <Pill>{tr(lang, 'استخراج النص', 'Transcript Generation')}</Pill>
+              <Pill>{tr(lang, 'تحليل نصي', 'Text Analysis')}</Pill>
               <Pill>{tr(lang, 'دردشة سياقية', 'Context Chat')}</Pill>
             </div>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-tight text-slate-900 mb-4">
-              {tr(lang, 'من رابط يوتيوب إلى نتائج جاهزة للتنفيذ', 'From YouTube Link to Action-Ready Output')}
+              {tr(lang, 'خدمة رقمية لتحويل روابط يوتيوب إلى نص', 'Digital Service for YouTube Transcript Generation')}
             </h1>
             <p className="text-slate-700 text-base sm:text-lg mb-7 max-w-2xl">
               {tr(
                 lang,
-                'بعد تسجيل الدخول، ضع الرابط في مساحة الاستخراج واحصل على النص، التلخيص، الخطوات، والردود الذكية في تجربة واحدة.',
-                'After sign-in, paste a link in the extraction workspace and get transcript, summaries, steps, and smart answers in one flow.'
+                'الخدمة مخصصة لتوليد النصوص من الروابط التي يضيفها المستخدم، مع ميزات تحليل نصي اختيارية.',
+                'This service provides transcript output from user-submitted YouTube links, with optional text analysis tools.'
               )}
             </p>
             <div className="flex flex-wrap gap-3">
@@ -71,19 +75,19 @@ function LandingPage({ onStart, lang = LANG.ar }) {
 
           <div className="reveal-up delay-1">
             <div className="rounded-3xl border border-slate-200 bg-white/90 p-5 sm:p-6 shadow-xl">
-              <h2 className="font-black text-lg text-slate-900 mb-4">{tr(lang, 'كيف تعمل المنصة؟', 'How it Works')}</h2>
+              <h2 className="font-black text-lg text-slate-900 mb-4">{tr(lang, 'كيف تعمل المنصة؟', 'How It Works')}</h2>
               <div className="space-y-3">
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                  <p className="font-bold text-slate-800">1. {tr(lang, 'سجّل دخولك', 'Sign in')}</p>
-                  <p className="text-sm text-slate-600">{tr(lang, 'افتح مساحة العميل الخاصة بك.', 'Open your private client area.')}</p>
+                  <p className="font-bold text-slate-800">1. {tr(lang, 'سجل دخولك', 'Sign in')}</p>
+                  <p className="text-sm text-slate-600">{tr(lang, 'أنشئ حسابًا أو سجل الدخول.', 'Create an account or sign in.')}</p>
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                  <p className="font-bold text-slate-800">2. {tr(lang, 'استخرج النص', 'Extract transcript')}</p>
-                  <p className="text-sm text-slate-600">{tr(lang, 'أدخل رابط يوتيوب واحصل على السكريبت.', 'Paste a YouTube URL and fetch transcript.')}</p>
+                  <p className="font-bold text-slate-800">2. {tr(lang, 'أضف رابط يوتيوب', 'Submit YouTube URL')}</p>
+                  <p className="text-sm text-slate-600">{tr(lang, 'أدخل الرابط في صفحة الاستخراج.', 'Submit the URL in the extraction workspace.')}</p>
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                  <p className="font-bold text-slate-800">3. {tr(lang, 'حلّل وناقش', 'Process and discuss')}</p>
-                  <p className="text-sm text-slate-600">{tr(lang, 'شغّل المعالجة أو اسأل الشات مباشرة.', 'Run AI processing or chat instantly.')}</p>
+                  <p className="font-bold text-slate-800">3. {tr(lang, 'استلم المخرجات النصية', 'Receive Text Output')}</p>
+                  <p className="text-sm text-slate-600">{tr(lang, 'احصل على النص وخيارات التحليل النصي.', 'Get transcript output and optional text analysis.')}</p>
                 </div>
               </div>
             </div>
@@ -93,40 +97,24 @@ function LandingPage({ onStart, lang = LANG.ar }) {
         <section className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
           <Feature
             icon={<FaFileAlt />}
-            title={tr(lang, 'سكربت دقيق', 'Accurate Transcript')}
-            text={tr(lang, 'آلية استخراج محسنة مع fallback متدرج.', 'Improved extraction pipeline with robust fallback.')}
+            title={tr(lang, 'تحويل الرابط إلى نص', 'URL to Text')}
+            text={tr(lang, 'تحويل روابط الفيديو إلى نص قابل للقراءة.', 'Convert video links into readable text output.')}
           />
           <Feature
             icon={<FaRobot />}
-            title={tr(lang, 'تحليل عملي', 'Actionable AI')}
-            text={tr(lang, 'تلخيصات وخطوات وموارد قابلة للتطبيق مباشرة.', 'Summaries, steps, and resources you can apply immediately.')}
+            title={tr(lang, 'تحليل نصي اختياري', 'Optional Analysis')}
+            text={tr(lang, 'أدوات تلخيص وتنظيم النص للاستخدام العملي.', 'Summarize and structure transcript content for practical use.')}
           />
           <Feature
             icon={<FaComments />}
-            title={tr(lang, 'شات ذكي', 'Smart Chat')}
-            text={tr(lang, 'نقاش مبني على محتوى الفيديو نفسه.', 'Conversation grounded in transcript context.')}
+            title={tr(lang, 'مساعدة بالدردشة', 'Chat Assistance')}
+            text={tr(lang, 'ناقش محتوى النص داخل نفس جلسة العمل.', 'Discuss transcript content within your session.')}
           />
           <Feature
             icon={<FaHistory />}
-            title={tr(lang, 'سجل دائم', 'Persistent History')}
-            text={tr(lang, 'راجع النتائج لاحقًا من صفحة السجل.', 'Revisit your runs later in the history page.')}
+            title={tr(lang, 'سجل استخدام', 'Usage History')}
+            text={tr(lang, 'احتفظ بنتائجك ضمن حسابك.', 'Keep your generated outputs in account history.')}
           />
-        </section>
-
-        <section className="rounded-3xl border border-slate-200 bg-white/90 p-6 sm:p-8 text-center shadow-lg">
-          <h3 className="text-2xl sm:text-4xl font-black text-slate-900 mb-3">
-            {tr(lang, 'جاهز تبدأ نسخة الإنتاج؟', 'Ready for the Production Experience?')}
-          </h3>
-          <p className="text-slate-600 mb-6">
-            {tr(lang, 'ابدأ الآن، وبعد الدخول ستظهر لك لوحة العميل وصفحة الاستخراج بشكل منفصل.', 'Start now. After sign-in, you will get a dedicated client dashboard and a separate extraction workspace.')}
-          </p>
-          <button
-            onClick={onStart}
-            className="inline-flex items-center gap-2 px-7 py-3 rounded-xl bg-slate-900 text-white hover:bg-slate-800 font-extrabold transition"
-          >
-            {tr(lang, 'ابدأ مجانًا', 'Start Free')}
-            <FaArrowRight className={lang === LANG.ar ? 'rotate-180' : ''} />
-          </button>
         </section>
       </div>
     </div>
