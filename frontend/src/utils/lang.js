@@ -4,5 +4,13 @@ export const LANG = {
 };
 
 export function tr(lang, ar, en) {
-  return lang === LANG.ar ? ar : en;
+  const arText = typeof ar === 'string' ? ar : '';
+  const enText = typeof en === 'string' ? en : arText;
+  const hasBrokenArabic = /\?{2,}|�/.test(arText);
+
+  if (lang === LANG.ar && !hasBrokenArabic) {
+    return arText;
+  }
+
+  return enText;
 }

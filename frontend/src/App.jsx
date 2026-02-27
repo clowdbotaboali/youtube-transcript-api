@@ -99,6 +99,10 @@ function App() {
   };
 
   useEffect(() => {
+    const authSafetyTimer = setTimeout(() => {
+      setAuthReady(true);
+    }, 4500);
+
     const savedUrl = normalizeApiUrl(localStorage.getItem('serverUrl'));
     const savedGuideState = localStorage.getItem('showLocalGuide');
     if (canUseLocalGuide && savedGuideState === 'true') setShowLocalGuide(true);
@@ -123,6 +127,7 @@ function App() {
       .then(async ({ data: { session: initialSession } }) => {
         setSession(initialSession ?? null);
         setAuthReady(true);
+        clearTimeout(authSafetyTimer);
         if (initialSession?.user) {
           await refreshAccount();
         } else {
@@ -131,6 +136,7 @@ function App() {
       })
       .catch(() => {
         setAuthReady(true);
+        clearTimeout(authSafetyTimer);
       });
 
     const {
@@ -146,7 +152,10 @@ function App() {
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      clearTimeout(authSafetyTimer);
+      subscription.unsubscribe();
+    };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {

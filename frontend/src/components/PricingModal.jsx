@@ -9,9 +9,9 @@ const PLANS = [
     amount: 50,
     price: 5,
     priceCent: 500,
-    titleAr: '???? ???????',
+    titleAr: 'Starter Pack',
     titleEn: 'Starter Pack',
-    featuresAr: ['50 ???? ??????', '??? ??? ??????', '???? ??????'],
+    featuresAr: ['50 processing credits', 'Email support', 'No expiry'],
     featuresEn: ['50 processing credits', 'Email support', 'No expiry'],
     icon: FaDatabase,
     color: 'blue'
@@ -20,9 +20,9 @@ const PLANS = [
     amount: 200,
     price: 15,
     priceCent: 1500,
-    titleAr: '???? ????????',
+    titleAr: 'Pro Pack',
     titleEn: 'Pro Pack',
-    featuresAr: ['200 ???? ??????', '??? ??????', '???? ??????', '????? 25%'],
+    featuresAr: ['200 processing credits', 'Priority support', 'No expiry', 'Save 25%'],
     featuresEn: ['200 processing credits', 'Priority support', 'No expiry', 'Save 25%'],
     icon: FaBolt,
     color: 'orange',
@@ -31,8 +31,8 @@ const PLANS = [
 ];
 
 const METHODS = [
-  { value: 'instapay', ar: '????? ???', en: 'InstaPay' },
-  { value: 'vodafone_cash', ar: '??????? ???', en: 'Vodafone Cash' }
+  { value: 'instapay', ar: 'InstaPay', en: 'InstaPay' },
+  { value: 'vodafone_cash', ar: 'Vodafone Cash', en: 'Vodafone Cash' }
 ];
 
 const PLAN_COLORS = {
