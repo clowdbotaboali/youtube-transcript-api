@@ -3,9 +3,7 @@ import { YoutubeTranscript } from 'youtube-transcript';
 import { createClient } from '@supabase/supabase-js';
 import ytdl from '@distube/ytdl-core';
 
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY
-});
+let groqClient = null;
 
 let supabaseClient = null;
 const USER_AGENT =
@@ -19,6 +17,17 @@ function getSupabase() {
   if (!url || !key) return null;
   supabaseClient = createClient(url, key);
   return supabaseClient;
+}
+
+function getGroqClient() {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) {
+    throw new Error('Server not configured: GROQ_API_KEY missing');
+  }
+  if (!groqClient) {
+    groqClient = new Groq({ apiKey });
+  }
+  return groqClient;
 }
 
 function extractVideoId(url) {
@@ -45,6 +54,34 @@ async function getAuthedUser(req) {
   const { data, error } = await supabase.auth.getUser(token);
   if (error || !data?.user) return null;
   return data.user;
+}
+
+async function ensureUserAccountRow(supabase, authUser) {
+  const { error: upsertError } = await supabase
+    .from('users')
+    .upsert(
+      {
+        id: authUser.id,
+        email: authUser.email || null
+      },
+      { onConflict: 'id' }
+    );
+
+  if (upsertError) {
+    throw new Error('Failed to prepare user account');
+  }
+
+  const { data, error } = await supabase
+    .from('users')
+    .select('id, email, credits')
+    .eq('id', authUser.id)
+    .single();
+
+  if (error || !data) {
+    throw new Error('User account not found');
+  }
+
+  return data;
 }
 
 function readBody(req) {
@@ -268,21 +305,14 @@ export default async function handler(req, res) {
       if (!user) {
         return res.status(401).json({ success: false, error: 'Authentication required' });
       }
+      const groq = getGroqClient();
 
       const { transcript, type } = body;
       if (!transcript) {
         return res.status(400).json({ success: false, error: 'Please provide transcript text' });
       }
 
-      const { data: userRow, error: userError } = await supabase
-        .from('users')
-        .select('credits')
-        .eq('id', user.id)
-        .single();
-
-      if (userError || !userRow) {
-        return res.status(404).json({ success: false, error: 'User account not found' });
-      }
+      const userRow = await ensureUserAccountRow(supabase, user);
       if (Number(userRow.credits || 0) < 1) {
         return res.status(403).json({ success: false, error: 'Insufficient credits' });
       }
@@ -313,7 +343,13 @@ export default async function handler(req, res) {
 
       const result = completion.choices?.[0]?.message?.content || '';
       const nextCredits = Number(userRow.credits || 0) - 1;
-      await supabase.from('users').update({ credits: nextCredits }).eq('id', user.id);
+      const { error: creditsError } = await supabase
+        .from('users')
+        .update({ credits: nextCredits })
+        .eq('id', user.id);
+      if (creditsError) {
+        throw new Error('Failed to update credits');
+      }
 
       return res.json({ success: true, type: type || 'all', result, creditsLeft: nextCredits });
     }
@@ -325,6 +361,7 @@ export default async function handler(req, res) {
       }
       const user = await getAuthedUser(req);
       if (!user) return res.status(401).json({ success: false, error: 'Authentication required' });
+      await ensureUserAccountRow(supabase, user);
 
       const { videoId, videoTitle, transcript, processingType, result, aiResult } = body;
       if (!videoId || !transcript) {
@@ -405,6 +442,7 @@ export default async function handler(req, res) {
       }
       const user = await getAuthedUser(req);
       if (!user) return res.status(401).json({ success: false, error: 'Authentication required' });
+      await ensureUserAccountRow(supabase, user);
 
       const { credits, amountCents, method, payerContact, transferReference, notes } = body;
       if (!['instapay', 'vodafone_cash'].includes(method)) {
@@ -448,14 +486,16 @@ export default async function handler(req, res) {
     }
 
     if (url.includes('/api/chat/chat')) {
+      const groq = getGroqClient();
       const { message, transcript } = body;
       if (!message || !transcript) {
         return res.status(400).json({ success: false, error: 'Missing message or transcript' });
       }
+      const transcriptForContext = String(transcript).slice(0, 24000);
       const completion = await groq.chat.completions.create({
         messages: [
           { role: 'system', content: 'You are a helpful Arabic assistant for transcript Q&A.' },
-          { role: 'user', content: `Transcript: ${transcript}\n\nQuestion: ${message}` }
+          { role: 'user', content: `Transcript: ${transcriptForContext}\n\nQuestion: ${message}` }
         ],
         model: 'llama-3.3-70b-versatile',
         temperature: 0.6

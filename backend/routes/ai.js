@@ -5,6 +5,34 @@ import { requireAuth } from '../middleware/auth.js';
 
 const router = express.Router();
 
+async function ensureUserAccountRow(userId, email = null) {
+  const { error: upsertError } = await supabase
+    .from('users')
+    .upsert(
+      {
+        id: userId,
+        email
+      },
+      { onConflict: 'id' }
+    );
+
+  if (upsertError) {
+    throw new Error('Failed to prepare user account');
+  }
+
+  const { data: userRow, error: userError } = await supabase
+    .from('users')
+    .select('credits')
+    .eq('id', userId)
+    .single();
+
+  if (userError || !userRow) {
+    throw new Error('User account not found');
+  }
+
+  return userRow;
+}
+
 router.post('/process', requireAuth, async (req, res) => {
   try {
     const { transcript, type } = req.body;
@@ -17,15 +45,7 @@ router.post('/process', requireAuth, async (req, res) => {
       });
     }
 
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('credits')
-      .eq('id', userId)
-      .single();
-
-    if (userError || !user) {
-      return res.status(404).json({ success: false, error: 'User account not found' });
-    }
+    const user = await ensureUserAccountRow(userId, req.user.email || null);
 
     if (Number(user.credits || 0) < 1) {
       return res.status(403).json({ success: false, error: 'Insufficient credits' });
