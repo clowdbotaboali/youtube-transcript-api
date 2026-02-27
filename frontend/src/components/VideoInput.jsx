@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { FaYoutube, FaSpinner } from 'react-icons/fa';
 import { LANG, tr } from '../utils/lang';
+import { getAuthHeaders } from '../utils/authHeaders';
 
 function VideoInput({ onTranscriptExtracted, loading, setLoading, initialUrl, onUrlChange, apiUrl, lang = LANG.ar }) {
   const [url, setUrl] = useState('');
@@ -34,9 +35,10 @@ function VideoInput({ onTranscriptExtracted, loading, setLoading, initialUrl, on
 
     setLoading(true);
     try {
+      const authHeaders = await getAuthHeaders();
       const response = await fetch(`${apiUrl}/api/transcript/extract`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify({ url: url.trim() })
       });
 

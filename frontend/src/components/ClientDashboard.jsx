@@ -27,11 +27,12 @@ function ClientDashboard({ lang = LANG.ar, credits, userEmail, onStartExtract, o
           {tr(lang, 'مرحبًا في مساحة العميل الخاصة بك', 'Welcome to your client workspace')}
         </h2>
         <p className="text-slate-600 mb-4">
-          {tr(lang, 'كل طلب ناجح يستهلك نقطة واحدة من رصيدك الحالي.', 'Each successful request consumes one credit from your balance.')}
+          {tr(lang, 'الخطة المجانية: 5 طلبات فقط. بعد نفادها تتوقف الخدمات حتى الشحن.', 'Free plan: 5 requests only. After that, services stop until top-up.')}
         </p>
         <div className="flex flex-wrap gap-3 text-sm">
           <span className="rounded-full bg-cyan-50 text-cyan-800 border border-cyan-200 px-3 py-1.5">{tr(lang, 'الحساب', 'Account')}: {userEmail || '-'}</span>
           <span className="rounded-full bg-amber-50 text-amber-800 border border-amber-200 px-3 py-1.5">{tr(lang, 'الرصيد الحالي', 'Current credits')}: {credits ?? '...'}</span>
+          <span className="rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 px-3 py-1.5">{tr(lang, 'الخطة المجانية', 'Free plan')}: 5 {tr(lang, 'طلبات', 'requests')}</span>
           <span className="rounded-full bg-orange-50 text-orange-800 border border-orange-200 px-3 py-1.5">{tr(lang, 'الخطة المدفوعة', 'Paid plan')}: 200 {tr(lang, 'نقطة', 'credits')} / $5</span>
         </div>
       </section>

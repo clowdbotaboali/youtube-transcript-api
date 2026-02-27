@@ -27,6 +27,7 @@ function ClientHeader({
   lang = LANG.ar,
   userEmail,
   credits,
+  freePlanRequests = 5,
   requestCost = 1,
   paidPlanCredits = 200,
   paidPlanPrice = 5,
@@ -55,6 +56,9 @@ function ClientHeader({
             </div>
             <p className="text-[11px] opacity-90 mt-1">
               {tr(lang, 'كل طلب ناجح =', 'Each successful request =')} {requestCost} {tr(lang, 'نقطة', 'credit')}
+            </p>
+            <p className="text-[11px] opacity-90">
+              {tr(lang, 'الخطة المجانية:', 'Free plan:')} {freePlanRequests} {tr(lang, 'طلبات فقط', 'requests only')}
             </p>
             <p className="text-[11px] opacity-90">
               {paidPlanCredits} {tr(lang, 'نقطة', 'credits')} = ${paidPlanPrice}

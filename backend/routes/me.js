@@ -3,6 +3,7 @@ import { requireAuth } from '../middleware/auth.js';
 import { supabase } from '../utils/supabase.js';
 
 const router = express.Router();
+const FREE_PLAN_CREDITS = 5;
 
 async function ensureUserAccountRow(user) {
   const { error: upsertError } = await supabase
@@ -10,9 +11,10 @@ async function ensureUserAccountRow(user) {
     .upsert(
       {
         id: user.id,
-        email: user.email || null
+        email: user.email || null,
+        credits: FREE_PLAN_CREDITS
       },
-      { onConflict: 'id' }
+      { onConflict: 'id', ignoreDuplicates: true }
     );
 
   if (upsertError) {

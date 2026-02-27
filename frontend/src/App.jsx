@@ -42,6 +42,7 @@ const probeApiUrl = async (baseUrl) => {
 };
 
 const hasWindow = typeof window !== 'undefined';
+const FREE_PLAN_REQUESTS = 5;
 const CREDIT_COST_PER_SUCCESS = 1;
 const PAID_PLAN_CREDITS = 200;
 const PAID_PLAN_PRICE_USD = 5;
@@ -206,6 +207,9 @@ function App() {
   const handleTranscriptExtracted = (data) => {
     setTranscriptData(data);
     setAiResult(null);
+    if (typeof data?.creditsLeft === 'number') {
+      setCredits(data.creditsLeft);
+    }
     setClientPage(CLIENT_PAGES.workspace);
   };
 
@@ -374,6 +378,7 @@ function App() {
           lang={lang}
           userEmail={user?.email}
           credits={credits}
+          freePlanRequests={FREE_PLAN_REQUESTS}
           requestCost={CREDIT_COST_PER_SUCCESS}
           paidPlanCredits={PAID_PLAN_CREDITS}
           paidPlanPrice={PAID_PLAN_PRICE_USD}
@@ -441,7 +446,12 @@ function App() {
                       />
                     </div>
                     <div className="p-3 sm:p-4 h-[400px] sm:h-[600px] flex flex-col">
-                      <ChatAssistant transcript={transcriptData.transcript} apiUrl={apiUrl} />
+                      <ChatAssistant
+                        transcript={transcriptData.transcript}
+                        apiUrl={apiUrl}
+                        onCreditsChange={setCredits}
+                        onRequireTopup={() => setIsPricingModalOpen(true)}
+                      />
                     </div>
                   </div>
                 </div>
@@ -486,6 +496,7 @@ function App() {
               <div className="space-y-2 text-sm">
                 <p><span className="font-bold">{tr(lang, 'البريد:', 'Email:')}</span> {user?.email || '-'}</p>
                 <p><span className="font-bold">{tr(lang, 'الرصيد:', 'Credits:')}</span> {credits ?? '...'}</p>
+                <p><span className="font-bold">{tr(lang, 'الخطة المجانية:', 'Free plan:')}</span> {FREE_PLAN_REQUESTS} {tr(lang, 'طلبات فقط', 'requests only')}</p>
                 <p><span className="font-bold">{tr(lang, 'تكلفة الطلب:', 'Request cost:')}</span> {CREDIT_COST_PER_SUCCESS} {tr(lang, 'نقطة لكل طلب ناجح', 'credit per successful request')}</p>
                 <p><span className="font-bold">{tr(lang, 'الحالة:', 'Session:')}</span> {tr(lang, 'متصل', 'Active')}</p>
               </div>

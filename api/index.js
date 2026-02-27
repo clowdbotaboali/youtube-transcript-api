@@ -6,6 +6,8 @@ import ytdl from '@distube/ytdl-core';
 let groqClient = null;
 
 let supabaseClient = null;
+const FREE_PLAN_CREDITS = 5;
+const CREDIT_COST_PER_SUCCESS = 1;
 const USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 const YTDL_AGENT = ytdl.createAgent();
@@ -102,9 +104,10 @@ async function ensureUserAccountRow(supabase, authUser) {
     .upsert(
       {
         id: authUser.id,
-        email: authUser.email || null
+        email: authUser.email || null,
+        credits: FREE_PLAN_CREDITS
       },
-      { onConflict: 'id' }
+      { onConflict: 'id', ignoreDuplicates: true }
     );
 
   if (upsertError) {
@@ -122,6 +125,18 @@ async function ensureUserAccountRow(supabase, authUser) {
   }
 
   return data;
+}
+
+async function consumeCredits(supabase, userId, currentCredits, cost = CREDIT_COST_PER_SUCCESS) {
+  const nextCredits = Number(currentCredits || 0) - cost;
+  const { error } = await supabase
+    .from('users')
+    .update({ credits: nextCredits })
+    .eq('id', userId);
+  if (error) {
+    throw new Error('Failed to update credits');
+  }
+  return nextCredits;
 }
 
 function readBody(req) {
@@ -271,6 +286,19 @@ export default async function handler(req, res) {
     }
 
     if (url.includes('/api/transcript/extract')) {
+      const supabase = getSupabase();
+      if (!supabase) {
+        return res.status(500).json({ success: false, error: 'Server not configured: SUPABASE env vars missing' });
+      }
+      const user = await getAuthedUser(req);
+      if (!user) {
+        return res.status(401).json({ success: false, error: 'Authentication required' });
+      }
+      const userRow = await ensureUserAccountRow(supabase, user);
+      if (Number(userRow.credits || 0) < CREDIT_COST_PER_SUCCESS) {
+        return res.status(403).json({ success: false, error: 'Insufficient credits' });
+      }
+
       const { url: videoUrl } = body;
       if (!videoUrl) {
         return res.status(400).json({ success: false, error: 'Please provide YouTube URL' });
@@ -347,12 +375,15 @@ export default async function handler(req, res) {
         return res.status(404).json({ success: false, error: 'No transcript available for this video' });
       }
 
+      const nextCredits = await consumeCredits(supabase, user.id, userRow.credits, CREDIT_COST_PER_SUCCESS);
+
       return res.json({
         success: true,
         videoId,
         transcript: transcript.trim(),
         wordCount: transcript.trim().split(/\s+/).length,
-        method
+        method,
+        creditsLeft: nextCredits
       });
     }
 
@@ -371,7 +402,7 @@ export default async function handler(req, res) {
       }
 
       const userRow = await ensureUserAccountRow(supabase, user);
-      if (Number(userRow.credits || 0) < 1) {
+      if (Number(userRow.credits || 0) < CREDIT_COST_PER_SUCCESS) {
         return res.status(403).json({ success: false, error: 'Insufficient credits' });
       }
 
@@ -400,14 +431,7 @@ export default async function handler(req, res) {
       });
 
       const result = completion.choices?.[0]?.message?.content || '';
-      const nextCredits = Number(userRow.credits || 0) - 1;
-      const { error: creditsError } = await supabase
-        .from('users')
-        .update({ credits: nextCredits })
-        .eq('id', user.id);
-      if (creditsError) {
-        throw new Error('Failed to update credits');
-      }
+      const nextCredits = await consumeCredits(supabase, user.id, userRow.credits, CREDIT_COST_PER_SUCCESS);
 
       return res.json({ success: true, type: type || 'all', result, creditsLeft: nextCredits });
     }
@@ -544,6 +568,19 @@ export default async function handler(req, res) {
     }
 
     if (url.includes('/api/chat/chat')) {
+      const supabase = getSupabase();
+      if (!supabase) {
+        return res.status(500).json({ success: false, error: 'Server not configured: SUPABASE env vars missing' });
+      }
+      const user = await getAuthedUser(req);
+      if (!user) {
+        return res.status(401).json({ success: false, error: 'Authentication required' });
+      }
+      const userRow = await ensureUserAccountRow(supabase, user);
+      if (Number(userRow.credits || 0) < CREDIT_COST_PER_SUCCESS) {
+        return res.status(403).json({ success: false, error: 'Insufficient credits' });
+      }
+
       const { message, transcript } = body;
       if (!message || !transcript) {
         return res.status(400).json({ success: false, error: 'Missing message or transcript' });
@@ -557,7 +594,12 @@ export default async function handler(req, res) {
         model: 'llama-3.3-70b-versatile',
         temperature: 0.6
       });
-      return res.json({ success: true, response: completion.choices?.[0]?.message?.content || '' });
+      const nextCredits = await consumeCredits(supabase, user.id, userRow.credits, CREDIT_COST_PER_SUCCESS);
+      return res.json({
+        success: true,
+        response: completion.choices?.[0]?.message?.content || '',
+        creditsLeft: nextCredits
+      });
     }
 
     if (url.includes('/api/chat/clear')) {

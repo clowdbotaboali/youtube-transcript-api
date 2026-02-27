@@ -2,10 +2,14 @@ import express from 'express';
 import { YoutubeTranscript } from 'youtube-transcript';
 import ytdl from '@distube/ytdl-core';
 import dotenv from 'dotenv';
+import { requireAuth } from '../middleware/auth.js';
+import { supabase } from '../utils/supabase.js';
 
 dotenv.config();
 
 const router = express.Router();
+const FREE_PLAN_CREDITS = 5;
+const CREDIT_COST_PER_SUCCESS = 1;
 const USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 const YTDL_AGENT = ytdl.createAgent();
@@ -52,6 +56,47 @@ function extractVideoId(url) {
   }
 
   return null;
+}
+
+async function ensureUserAccountRow(user) {
+  const { error: upsertError } = await supabase
+    .from('users')
+    .upsert(
+      {
+        id: user.id,
+        email: user.email || null,
+        credits: FREE_PLAN_CREDITS
+      },
+      { onConflict: 'id', ignoreDuplicates: true }
+    );
+
+  if (upsertError) {
+    throw new Error('Failed to prepare user account');
+  }
+
+  const { data, error } = await supabase
+    .from('users')
+    .select('id, credits')
+    .eq('id', user.id)
+    .single();
+
+  if (error || !data) {
+    throw new Error('User account not found');
+  }
+
+  return data;
+}
+
+async function consumeCredits(userId, currentCredits, cost = CREDIT_COST_PER_SUCCESS) {
+  const nextCredits = Number(currentCredits || 0) - cost;
+  const { error } = await supabase
+    .from('users')
+    .update({ credits: nextCredits })
+    .eq('id', userId);
+  if (error) {
+    throw new Error('Failed to update user credits');
+  }
+  return nextCredits;
 }
 
 async function fetchWithTranscriptAPI(videoUrl, apiKey) {
@@ -158,10 +203,15 @@ async function fetchTranscriptWithYtdl(videoId) {
   }
 }
 
-router.post('/extract', async (req, res) => {
+router.post('/extract', requireAuth, async (req, res) => {
   try {
     const { url } = req.body;
     const transcriptApiKey = process.env.TRANSCRIPT_API_KEY || '';
+    const userRow = await ensureUserAccountRow(req.user);
+
+    if (Number(userRow.credits || 0) < CREDIT_COST_PER_SUCCESS) {
+      return res.status(403).json({ success: false, error: 'Insufficient credits' });
+    }
 
     if (!url) {
       return res.status(400).json({
@@ -288,12 +338,15 @@ router.post('/extract', async (req, res) => {
 
     console.log(`✅ Transcript extracted successfully using: ${method}\n`);
 
+    const nextCredits = await consumeCredits(req.user.id, userRow.credits, CREDIT_COST_PER_SUCCESS);
+
     res.json({
       success: true,
       videoId,
       transcript: transcript.trim(),
       wordCount: transcript.trim().split(/\s+/).length,
-      method
+      method,
+      creditsLeft: nextCredits
     });
 
   } catch (error) {

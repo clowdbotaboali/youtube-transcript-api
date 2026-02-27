@@ -7,13 +7,13 @@ import { LANG, tr } from '../utils/lang';
 const PLANS = [
   {
     id: 'free',
-    amount: 0,
+    amount: 5,
     price: 0,
     priceCent: 0,
     titleAr: 'الخطة المجانية',
     titleEn: 'Free Plan',
-    featuresAr: ['ابدأ الاستخدام مجانًا', 'شحن عند الحاجة', 'كل طلب ناجح = 1 نقطة'],
-    featuresEn: ['Start for free', 'Top up when needed', 'Each successful request = 1 credit'],
+    featuresAr: ['5 طلبات مجانًا كبداية', 'كل طلب ناجح = 1 نقطة', 'بعدها يلزم الشحن'],
+    featuresEn: ['5 free requests to start', 'Each successful request = 1 credit', 'Top-up required after that'],
     selectable: false,
     icon: FaLeaf,
     border: 'border-emerald-200',
@@ -110,6 +110,9 @@ function PricingModal({ isOpen, onClose, user, apiUrl = defaultApiUrl, requireLo
 
         <div className="text-center max-w-2xl mx-auto mb-8">
           <h2 className="text-3xl font-extrabold text-gray-900 mb-3">{tr(lang, 'الخطط والشحن', 'Plans & Top-up')}</h2>
+          <p className="text-gray-600 mb-2">
+            {tr(lang, 'الخطة المجانية: 5 طلبات فقط (استخراج/شات/معالجة).', 'Free plan: 5 requests only (extract/chat/process).')}
+          </p>
           <p className="text-gray-600 mb-2">
             {tr(lang, 'الخطة المدفوعة الحالية: 200 كريديت مقابل 5 دولار.', 'Current paid plan: 200 credits for $5.')}
           </p>

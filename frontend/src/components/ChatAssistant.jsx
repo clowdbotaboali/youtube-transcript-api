@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { FaPaperPlane, FaRobot, FaUser, FaTrash, FaComments, FaLink, FaCheck, FaExternalLinkAlt } from 'react-icons/fa';
 import defaultApiUrl from '../config';
+import { getAuthHeaders } from '../utils/authHeaders';
 
 const urlRegex = /(https?:\/\/[^\s]+)/g;
 
-function ChatAssistant({ transcript, apiUrl = defaultApiUrl }) {
+function ChatAssistant({ transcript, apiUrl = defaultApiUrl, onCreditsChange, onRequireTopup }) {
   const [messages, setMessages] = useState([
     {
       id: 0,
@@ -42,10 +43,12 @@ function ChatAssistant({ transcript, apiUrl = defaultApiUrl }) {
     setLoading(true);
 
     try {
+      const authHeaders = await getAuthHeaders();
       const response = await fetch(`${apiUrl}/api/chat/chat`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          ...authHeaders
         },
         body: JSON.stringify({
           message: userMessage.content,
@@ -57,6 +60,9 @@ function ChatAssistant({ transcript, apiUrl = defaultApiUrl }) {
       const data = await response.json();
 
       if (data.success) {
+        if (typeof data.creditsLeft === 'number' && typeof onCreditsChange === 'function') {
+          onCreditsChange(data.creditsLeft);
+        }
         if (data.conversationId && !conversationId) {
           setConversationId(data.conversationId);
         }
@@ -70,6 +76,9 @@ function ChatAssistant({ transcript, apiUrl = defaultApiUrl }) {
           }
         ]);
       } else {
+        if (response.status === 403 && typeof onRequireTopup === 'function') {
+          onRequireTopup();
+        }
         setMessages(prev => [
           ...prev,
           {
@@ -96,10 +105,12 @@ function ChatAssistant({ transcript, apiUrl = defaultApiUrl }) {
   const handleClear = async () => {
     if (conversationId) {
       try {
+        const authHeaders = await getAuthHeaders();
         await fetch(`${apiUrl}/api/chat/clear`, {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            ...authHeaders
           },
           body: JSON.stringify({ conversationId })
         });
