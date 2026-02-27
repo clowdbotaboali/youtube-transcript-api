@@ -34,12 +34,15 @@ function VideoInput({ onTranscriptExtracted, loading, setLoading, initialUrl, on
     }
 
     setLoading(true);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 45000);
     try {
       const authHeaders = await getAuthHeaders();
       const response = await fetch(`${apiUrl}/api/transcript/extract`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders },
-        body: JSON.stringify({ url: url.trim() })
+        body: JSON.stringify({ url: url.trim() }),
+        signal: controller.signal
       });
 
       const raw = await response.text();
@@ -65,9 +68,14 @@ function VideoInput({ onTranscriptExtracted, loading, setLoading, initialUrl, on
       } else {
         setError(data.error || tr(lang, 'حدث خطأ أثناء استخراج النص', 'Transcript extraction failed'));
       }
-    } catch {
-      setError(tr(lang, 'فشل الاتصال بالخادم', 'Connection failed'));
+    } catch (error) {
+      if (error?.name === 'AbortError') {
+        setError(tr(lang, 'انتهت مهلة الاستخراج. جرّب مرة أخرى.', 'Extraction timed out. Please try again.'));
+      } else {
+        setError(tr(lang, 'فشل الاتصال بالخادم', 'Connection failed'));
+      }
     } finally {
+      clearTimeout(timeoutId);
       setLoading(false);
     }
   };

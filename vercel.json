@@ -4,18 +4,26 @@
   "buildCommand": "cd frontend && npm install && npm run build",
   "outputDirectory": "frontend/dist",
   "installCommand": "npm install",
-  "routes": [
+  "rewrites": [
     {
-      "src": "/api/(.*)",
-      "dest": "/api/index.js"
+      "source": "/privacy-policy",
+      "destination": "/"
     },
     {
-      "src": "/assets/(.*)",
-      "dest": "/frontend/dist/assets/$1"
+      "source": "/terms",
+      "destination": "/"
     },
     {
-      "src": "/.*",
-      "dest": "/frontend/dist/index.html"
+      "source": "/refund-policy",
+      "destination": "/"
+    },
+    {
+      "source": "/contact",
+      "destination": "/"
+    },
+    {
+      "source": "/pricing",
+      "destination": "/"
     }
   ],
   "functions": {

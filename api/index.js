@@ -11,6 +11,34 @@ const CREDIT_COST_PER_SUCCESS = 1;
 const USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 const YTDL_AGENT = ytdl.createAgent();
+const EXTRACTION_TIMEOUT_MS = 20000;
+
+function withTimeout(promise, ms, label = 'Operation') {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${label} timeout`)), ms);
+  });
+
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+async function fetchWithTimeout(url, options = {}, timeoutMs = 10000, label = 'Fetch') {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      throw new Error(`${label} timeout`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 function getSupabase() {
   if (supabaseClient) return supabaseClient;
@@ -191,7 +219,7 @@ async function fetchWithTranscriptApi(videoUrl) {
   const apiKey = process.env.TRANSCRIPT_API_KEY;
   if (!apiKey) return null;
   const encodedUrl = encodeURIComponent(videoUrl);
-  const response = await fetch(
+  const response = await fetchWithTimeout(
     `https://transcriptapi.com/api/v2/youtube/transcript?video_url=${encodedUrl}`,
     {
       method: 'GET',
@@ -200,7 +228,9 @@ async function fetchWithTranscriptApi(videoUrl) {
         'User-Agent': USER_AGENT,
         Accept: 'application/json'
       }
-    }
+    },
+    12000,
+    'TranscriptAPI request'
   );
   if (!response.ok) return null;
   const data = await response.json().catch(() => null);
@@ -209,7 +239,7 @@ async function fetchWithTranscriptApi(videoUrl) {
 }
 
 async function fetchWithYtdl(videoId) {
-  const info = await ytdl.getInfo(videoId, { agent: YTDL_AGENT });
+  const info = await withTimeout(ytdl.getInfo(videoId, { agent: YTDL_AGENT }), 10000, 'ytdl info');
   const captionTracks = info?.player_response?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
   if (!captionTracks || captionTracks.length === 0) return null;
 
@@ -224,15 +254,20 @@ async function fetchWithYtdl(videoId) {
   let bestScore = -1;
 
   for (const track of uniqueTracks) {
-    const response = await fetch(track.baseUrl, {
-      dispatcher: YTDL_AGENT.dispatcher,
-      headers: {
-        'User-Agent': USER_AGENT,
-        'Accept-Language': 'en-US,en;q=0.9'
-      }
-    });
+    const response = await fetchWithTimeout(
+      track.baseUrl,
+      {
+        dispatcher: YTDL_AGENT.dispatcher,
+        headers: {
+          'User-Agent': USER_AGENT,
+          'Accept-Language': 'en-US,en;q=0.9'
+        }
+      },
+      8000,
+      'Caption track request'
+    );
     if (!response.ok) continue;
-    const xmlText = await response.text();
+    const xmlText = await withTimeout(response.text(), 8000, 'Caption track read');
     if (!xmlText) continue;
     const textMatches = xmlText.matchAll(/<text[^>]*>([\s\S]*?)<\/text>/g);
     const transcript = Array.from(textMatches)
@@ -313,7 +348,7 @@ export default async function handler(req, res) {
       let method = 'unknown';
 
       try {
-        transcript = await fetchWithTranscriptApi(videoUrl);
+        transcript = await withTimeout(fetchWithTranscriptApi(videoUrl), EXTRACTION_TIMEOUT_MS, 'TranscriptAPI pipeline');
         if (transcript && isUsableTranscript(transcript)) {
           method = 'transcriptapi';
         } else {
@@ -323,7 +358,7 @@ export default async function handler(req, res) {
 
       if (!transcript) {
         try {
-          transcript = await fetchWithYtdl(videoId);
+          transcript = await withTimeout(fetchWithYtdl(videoId), EXTRACTION_TIMEOUT_MS, 'ytdl pipeline');
           if (transcript && isUsableTranscript(transcript)) {
             method = 'ytdl-core';
           } else {
@@ -334,7 +369,11 @@ export default async function handler(req, res) {
 
       try {
         if (!transcript) {
-          const data = await YoutubeTranscript.fetchTranscript(videoId, { lang: 'ar' });
+          const data = await withTimeout(
+            YoutubeTranscript.fetchTranscript(videoId, { lang: 'ar' }),
+            EXTRACTION_TIMEOUT_MS,
+            'youtube-transcript ar'
+          );
           if (data?.length) {
             const candidate = data.map((item) => item.text).join(' ').trim();
             if (isUsableTranscript(candidate)) {
@@ -347,7 +386,11 @@ export default async function handler(req, res) {
 
       if (!transcript) {
         try {
-          const data = await YoutubeTranscript.fetchTranscript(videoId, { lang: 'en' });
+          const data = await withTimeout(
+            YoutubeTranscript.fetchTranscript(videoId, { lang: 'en' }),
+            EXTRACTION_TIMEOUT_MS,
+            'youtube-transcript en'
+          );
           if (data?.length) {
             const candidate = data.map((item) => item.text).join(' ').trim();
             if (isUsableTranscript(candidate)) {
@@ -360,7 +403,11 @@ export default async function handler(req, res) {
 
       if (!transcript) {
         try {
-          const data = await YoutubeTranscript.fetchTranscript(videoId);
+          const data = await withTimeout(
+            YoutubeTranscript.fetchTranscript(videoId),
+            EXTRACTION_TIMEOUT_MS,
+            'youtube-transcript default'
+          );
           if (data?.length) {
             const candidate = data.map((item) => item.text).join(' ').trim();
             if (isUsableTranscript(candidate)) {
