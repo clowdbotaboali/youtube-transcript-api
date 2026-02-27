@@ -4,10 +4,14 @@ import TodoList from './TodoList';
 import { extractTodos, loadTodoState } from '../utils/todoExtractor';
 import { LANG, tr } from '../utils/lang';
 
-function ResultsDisplay({ result, type, videoId, videoTitle, transcript, onSave, user, lang = LANG.ar }) {
+function ResultsDisplay({ result, type, videoId, videoTitle, transcript, onSave, user, lang = LANG.ar, onNotify }) {
   const [copied, setCopied] = useState(false);
   const [saved, setSaved] = useState(false);
   const [showTodo, setShowTodo] = useState(true);
+
+  const notify = (type, message) => {
+    if (typeof onNotify === 'function') onNotify(type, message);
+  };
 
   const todos = useMemo(() => {
     if (!result || (type !== 'steps' && type !== 'all')) return [];
@@ -34,7 +38,7 @@ function ResultsDisplay({ result, type, videoId, videoTitle, transcript, onSave,
 
   const handleSave = async () => {
     if (!user) {
-      alert(tr(lang, 'يرجى تسجيل الدخول أولًا.', 'Please sign in first.'));
+      notify('info', tr(lang, 'يرجى تسجيل الدخول أولًا.', 'Please sign in first.'));
       return;
     }
 

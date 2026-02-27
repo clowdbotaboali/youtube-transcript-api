@@ -9,9 +9,9 @@ const PLANS = [
     amount: 50,
     price: 5,
     priceCent: 500,
-    titleAr: 'Starter Pack',
+    titleAr: 'باقة البداية',
     titleEn: 'Starter Pack',
-    featuresAr: ['50 processing credits', 'Email support', 'No expiry'],
+    featuresAr: ['50 نقطة معالجة', 'دعم عبر البريد الإلكتروني', 'بدون تاريخ انتهاء'],
     featuresEn: ['50 processing credits', 'Email support', 'No expiry'],
     icon: FaDatabase,
     color: 'blue'
@@ -20,9 +20,9 @@ const PLANS = [
     amount: 200,
     price: 15,
     priceCent: 1500,
-    titleAr: 'Pro Pack',
+    titleAr: 'باقة المحترفين',
     titleEn: 'Pro Pack',
-    featuresAr: ['200 processing credits', 'Priority support', 'No expiry', 'Save 25%'],
+    featuresAr: ['200 نقطة معالجة', 'دعم أولوية', 'بدون تاريخ انتهاء', 'وفر 25%'],
     featuresEn: ['200 processing credits', 'Priority support', 'No expiry', 'Save 25%'],
     icon: FaBolt,
     color: 'orange',
@@ -31,8 +31,8 @@ const PLANS = [
 ];
 
 const METHODS = [
-  { value: 'instapay', ar: 'InstaPay', en: 'InstaPay' },
-  { value: 'vodafone_cash', ar: 'Vodafone Cash', en: 'Vodafone Cash' }
+  { value: 'instapay', ar: 'إنستا باي', en: 'InstaPay' },
+  { value: 'vodafone_cash', ar: 'فودافون كاش', en: 'Vodafone Cash' }
 ];
 
 const PLAN_COLORS = {
@@ -82,16 +82,16 @@ function PricingModal({ isOpen, onClose, user, apiUrl = defaultApiUrl, requireLo
           'success',
           tr(
             lang,
-            '?? ????? ??? ?????. ???? ??????? ?????? ?????? ??????.',
+            'تم إرسال طلب الشحن بنجاح. سيتم مراجعته واعتماده يدويًا.',
             'Top-up request submitted. It will be reviewed and approved manually.'
           )
         );
         onClose();
       } else {
-        notify('error', tr(lang, `???: ${data.error || '??? ?????'}`, `Error: ${data.error || 'Request failed'}`));
+        notify('error', tr(lang, `خطأ: ${data.error || 'فشل الطلب'}`, `Error: ${data.error || 'Request failed'}`));
       }
     } catch {
-      notify('error', tr(lang, '??? ??????? ???????', 'Connection failed'));
+      notify('error', tr(lang, 'فشل الاتصال بالخادم', 'Connection failed'));
     } finally {
       setLoadingPlan(null);
     }
@@ -108,11 +108,11 @@ function PricingModal({ isOpen, onClose, user, apiUrl = defaultApiUrl, requireLo
         </button>
 
         <div className="text-center max-w-2xl mx-auto mb-8">
-          <h2 className="text-3xl font-extrabold text-gray-900 mb-4">{tr(lang, '??? ??? ??????', 'Top-up Request')}</h2>
+          <h2 className="text-3xl font-extrabold text-gray-900 mb-4">{tr(lang, 'طلب شحن الرصيد', 'Top-up Request')}</h2>
           <p className="text-gray-600">
             {tr(
               lang,
-              '????? ???? ?????? ??? ????? ??? ?? ??????? ???. ??? ???????? ???? ?????? ??????? ?? ???.',
+              'وسائل الدفع المتاحة مؤقتًا: إنستا باي أو فودافون كاش. بعد التحويل أضف بيانات العملية من هنا.',
               'Temporary payment methods: InstaPay or Vodafone Cash. Submit transfer details from here after payment.'
             )}
           </p>
@@ -121,7 +121,7 @@ function PricingModal({ isOpen, onClose, user, apiUrl = defaultApiUrl, requireLo
         <div className="bg-white border rounded-xl p-4 mb-6">
           <div className="grid md:grid-cols-3 gap-3">
             <div>
-              <label className="block text-sm font-semibold mb-1">{tr(lang, '????? ?????', 'Payment method')}</label>
+              <label className="block text-sm font-semibold mb-1">{tr(lang, 'وسيلة الدفع', 'Payment method')}</label>
               <select
                 value={method}
                 onChange={(e) => setMethod(e.target.value)}
@@ -135,21 +135,21 @@ function PricingModal({ isOpen, onClose, user, apiUrl = defaultApiUrl, requireLo
               </select>
             </div>
             <div>
-              <label className="block text-sm font-semibold mb-1">{tr(lang, '??? ??????/???????', 'Sender/wallet number')}</label>
+              <label className="block text-sm font-semibold mb-1">{tr(lang, 'رقم المُرسل أو المحفظة', 'Sender/wallet number')}</label>
               <input
                 value={payerContact}
                 onChange={(e) => setPayerContact(e.target.value)}
                 className="w-full border rounded-lg px-3 py-2"
-                placeholder={tr(lang, '???????', 'Optional')}
+                placeholder={tr(lang, 'اختياري', 'Optional')}
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold mb-1">{tr(lang, '???? ???????', 'Transfer reference')}</label>
+              <label className="block text-sm font-semibold mb-1">{tr(lang, 'مرجع التحويل', 'Transfer reference')}</label>
               <input
                 value={transferReference}
                 onChange={(e) => setTransferReference(e.target.value)}
                 className="w-full border rounded-lg px-3 py-2"
-                placeholder={tr(lang, '???????', 'Optional')}
+                placeholder={tr(lang, 'اختياري', 'Optional')}
               />
             </div>
           </div>
@@ -168,14 +168,14 @@ function PricingModal({ isOpen, onClose, user, apiUrl = defaultApiUrl, requireLo
               >
                 {plan.popular && (
                   <span className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-orange-500 text-white px-3 py-1 rounded-full text-sm font-bold tracking-wide">
-                    {tr(lang, '?????? ?????', 'Most Popular')}
+                    {tr(lang, 'الأكثر طلبًا', 'Most Popular')}
                   </span>
                 )}
                 <div className="flex justify-between items-start mb-6">
                   <div>
                     <h3 className="text-xl font-bold text-gray-900 mb-2">{lang === LANG.ar ? plan.titleAr : plan.titleEn}</h3>
                     <p className="text-gray-500 text-sm">
-                      {plan.amount} {tr(lang, '????', 'credits')}
+                      {plan.amount} {tr(lang, 'نقطة', 'credits')}
                     </p>
                   </div>
                   <div className={`p-3 rounded-xl ${color.iconWrap}`}>
@@ -185,7 +185,7 @@ function PricingModal({ isOpen, onClose, user, apiUrl = defaultApiUrl, requireLo
 
                 <div className="mb-6">
                   <span className="text-4xl font-extrabold text-gray-900">${plan.price}</span>
-                  <span className="text-gray-500 ml-2">{tr(lang, '???? ?????', 'one-time')}</span>
+                  <span className="text-gray-500 ml-2">{tr(lang, 'دفعة واحدة', 'one-time')}</span>
                 </div>
 
                 <ul className="space-y-4 mb-8">
@@ -204,7 +204,7 @@ function PricingModal({ isOpen, onClose, user, apiUrl = defaultApiUrl, requireLo
                     plan.popular ? 'bg-orange-600 hover:bg-orange-700' : 'bg-gray-900 hover:bg-gray-800'
                   }`}
                 >
-                  {loadingPlan === plan.amount ? tr(lang, '???? ???????...', 'Submitting...') : tr(lang, '????? ??? ?????', 'Submit top-up request')}
+                  {loadingPlan === plan.amount ? tr(lang, 'جاري الإرسال...', 'Submitting...') : tr(lang, 'إرسال طلب الشحن', 'Submit top-up request')}
                 </button>
               </div>
             );

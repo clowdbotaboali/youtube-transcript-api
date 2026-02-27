@@ -11,11 +11,15 @@ function getInitialLinks() {
   }
 }
 
-function SavedLinks({ onSelectLink, lang = LANG.ar }) {
+function SavedLinks({ onSelectLink, lang = LANG.ar, onNotify }) {
   const [links, setLinks] = useState(getInitialLinks);
   const [newLink, setNewLink] = useState('');
   const [newName, setNewName] = useState('');
   const [showForm, setShowForm] = useState(false);
+
+  const notify = (type, message) => {
+    if (typeof onNotify === 'function') onNotify(type, message);
+  };
 
   const persist = (nextLinks) => {
     localStorage.setItem('savedLinks', JSON.stringify(nextLinks));
@@ -36,13 +40,13 @@ function SavedLinks({ onSelectLink, lang = LANG.ar }) {
 
   const handleAddLink = () => {
     if (!newLink.trim()) {
-      alert(tr(lang, 'من فضلك أدخل رابطًا', 'Please enter a link'));
+      notify('error', tr(lang, 'من فضلك أدخل رابطًا', 'Please enter a link'));
       return;
     }
 
     const videoId = extractVideoId(newLink);
     if (!videoId) {
-      alert(tr(lang, 'من فضلك أدخل رابط يوتيوب صحيح', 'Please enter a valid YouTube link'));
+      notify('error', tr(lang, 'من فضلك أدخل رابط يوتيوب صحيح', 'Please enter a valid YouTube link'));
       return;
     }
 

@@ -18,20 +18,20 @@ function AuthModal({ isOpen, onClose, onAuthSuccess, lang = LANG.ar, onNotify })
   const mapAuthError = (err) => {
     const msg = String(err?.message || '').toLowerCase();
     if (msg.includes('invalid login credentials')) {
-      return tr(lang, '?????? ?????? ??? ?????.', 'Invalid email or password.');
+      return tr(lang, 'البريد الإلكتروني أو كلمة المرور غير صحيحة.', 'Invalid email or password.');
     }
     if (msg.includes('email not confirmed')) {
-      return tr(lang, '???? ????? ?????? ?????????? ?????.', 'Please confirm your email first.');
+      return tr(lang, 'يرجى تأكيد بريدك الإلكتروني أولاً.', 'Please confirm your email first.');
     }
     if (msg.includes('user already registered')) {
-      return tr(lang, '??? ?????? ???? ??????.', 'This email is already registered.');
+      return tr(lang, 'هذا البريد مسجل بالفعل.', 'This email is already registered.');
     }
-    return err?.message || tr(lang, '??? ??? ????? ????????.', 'Authentication failed.');
+    return err?.message || tr(lang, 'فشلت عملية تسجيل الدخول.', 'Authentication failed.');
   };
 
   const handleForgotPassword = async () => {
     if (!email.trim()) {
-      setError(tr(lang, '???? ?????? ?????????? ?????.', 'Enter your email first.'));
+      setError(tr(lang, 'أدخل بريدك الإلكتروني أولاً.', 'Enter your email first.'));
       return;
     }
 
@@ -43,7 +43,7 @@ function AuthModal({ isOpen, onClose, onAuthSuccess, lang = LANG.ar, onNotify })
         redirectTo: window.location.origin
       });
       if (resetError) throw resetError;
-      notify('success', tr(lang, '?? ????? ???? ??????? ???? ?????? ??? ?????.', 'Password reset email sent.'));
+      notify('success', tr(lang, 'تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك.', 'Password reset email sent.'));
     } catch (err) {
       setError(mapAuthError(err));
     } finally {
@@ -64,7 +64,7 @@ function AuthModal({ isOpen, onClose, onAuthSuccess, lang = LANG.ar, onNotify })
         });
         if (signInError) throw signInError;
         if (!data?.session) {
-          throw new Error(tr(lang, '???? ????? ???? ????.', 'Could not create a valid session.'));
+          throw new Error(tr(lang, 'تعذر إنشاء جلسة صالحة.', 'Could not create a valid session.'));
         }
         onAuthSuccess(data.session);
         return;
@@ -82,7 +82,7 @@ function AuthModal({ isOpen, onClose, onAuthSuccess, lang = LANG.ar, onNotify })
           'success',
           tr(
             lang,
-            '?? ????? ??????. ???? ?? ????? ?????? ?????? ?? ???? ??????.',
+            'تم إنشاء الحساب. راجع بريدك الإلكتروني للتأكيد ثم سجّل الدخول.',
             'Account created. Check your email to confirm, then sign in.'
           )
         );
@@ -100,17 +100,17 @@ function AuthModal({ isOpen, onClose, onAuthSuccess, lang = LANG.ar, onNotify })
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 px-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 relative" dir="rtl">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 relative" dir={lang === LANG.ar ? 'rtl' : 'ltr'}>
         <button
           onClick={onClose}
-          className="absolute top-4 left-4 text-gray-500 hover:text-gray-700"
+          className={`absolute top-4 ${lang === LANG.ar ? 'left-4' : 'right-4'} text-gray-500 hover:text-gray-700`}
           aria-label="Close"
         >
           X
         </button>
 
         <h2 className="text-2xl font-bold text-center mb-6">
-          {isLogin ? tr(lang, '????? ??????', 'Sign in') : tr(lang, '????? ???? ????', 'Create account')}
+          {isLogin ? tr(lang, 'تسجيل الدخول', 'Sign in') : tr(lang, 'إنشاء حساب جديد', 'Create account')}
         </h2>
 
         {error && (
@@ -122,7 +122,7 @@ function AuthModal({ isOpen, onClose, onAuthSuccess, lang = LANG.ar, onNotify })
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              {tr(lang, '?????? ??????????', 'Email')}
+              {tr(lang, 'البريد الإلكتروني', 'Email')}
             </label>
             <input
               type="email"
@@ -136,7 +136,7 @@ function AuthModal({ isOpen, onClose, onAuthSuccess, lang = LANG.ar, onNotify })
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              {tr(lang, '???? ??????', 'Password')}
+              {tr(lang, 'كلمة المرور', 'Password')}
             </label>
             <input
               type="password"
@@ -155,10 +155,10 @@ function AuthModal({ isOpen, onClose, onAuthSuccess, lang = LANG.ar, onNotify })
             className="w-full bg-blue-600 text-white rounded-lg py-2.5 font-medium hover:bg-blue-700 transition disabled:opacity-70"
           >
             {loading
-              ? tr(lang, '???? ????????...', 'Processing...')
+              ? tr(lang, 'جاري التنفيذ...', 'Processing...')
               : isLogin
-                ? tr(lang, '????? ??????', 'Sign in')
-                : tr(lang, '????? ??????', 'Create account')}
+                ? tr(lang, 'تسجيل الدخول', 'Sign in')
+                : tr(lang, 'إنشاء حساب', 'Create account')}
           </button>
         </form>
 
@@ -169,14 +169,14 @@ function AuthModal({ isOpen, onClose, onAuthSuccess, lang = LANG.ar, onNotify })
             className="mt-3 text-sm text-blue-600 hover:underline"
             disabled={loading}
           >
-            {tr(lang, '???? ???? ???????', 'Forgot password?')}
+            {tr(lang, 'نسيت كلمة المرور؟', 'Forgot password?')}
           </button>
         )}
 
         <div className="mt-6 text-center text-sm text-gray-600">
           {isLogin
-            ? tr(lang, '??? ???? ????? ', "Don't have an account? ")
-            : tr(lang, '???? ???? ??????? ', 'Already have an account? ')}
+            ? tr(lang, 'ليس لديك حساب؟ ', "Don't have an account? ")
+            : tr(lang, 'لديك حساب بالفعل؟ ', 'Already have an account? ')}
           <button
             onClick={() => {
               setIsLogin(!isLogin);
@@ -184,7 +184,7 @@ function AuthModal({ isOpen, onClose, onAuthSuccess, lang = LANG.ar, onNotify })
             }}
             className="text-blue-600 hover:underline font-medium"
           >
-            {isLogin ? tr(lang, '????? ????', 'Create account') : tr(lang, '????? ??????', 'Sign in')}
+            {isLogin ? tr(lang, 'أنشئ حسابًا', 'Create account') : tr(lang, 'تسجيل الدخول', 'Sign in')}
           </button>
         </div>
       </div>

@@ -193,7 +193,7 @@ function App() {
     if (!transcriptData) return;
     if (!user) {
       setIsAuthModalOpen(true);
-      notify('info', tr(lang, '???? ?????? ????? ???????? ??????? ?????????.', 'Please sign in to use AI processing.'));
+      notify('info', tr(lang, 'يرجى تسجيل الدخول لاستخدام المعالجة بالذكاء الاصطناعي.', 'Please sign in to use AI processing.'));
       return;
     }
 
@@ -220,15 +220,15 @@ function App() {
         });
         setCredits(Number(data.creditsLeft ?? credits ?? 0));
       } else if (response.status === 403) {
-        notify('error', tr(lang, '?? ???? ???? ????. ???? ?????.', 'No credits left. Please top up.'));
+        notify('error', tr(lang, 'لا توجد نقاط كافية. يرجى شحن الرصيد.', 'No credits left. Please top up.'));
       } else if (response.status === 401) {
         setIsAuthModalOpen(true);
-        notify('error', tr(lang, '????? ??????. ???? ?????? ??? ????.', 'Session expired. Please sign in again.'));
+        notify('error', tr(lang, 'انتهت الجلسة. يرجى تسجيل الدخول مرة أخرى.', 'Session expired. Please sign in again.'));
       } else {
-        notify('error', tr(lang, `???: ${data.error || '???? ????????'}`, `Error: ${data.error || 'Processing failed'}`));
+        notify('error', tr(lang, `خطأ: ${data.error || 'فشلت المعالجة'}`, `Error: ${data.error || 'Processing failed'}`));
       }
     } catch {
-      notify('error', tr(lang, '??? ??????? ???????', 'Connection failed'));
+      notify('error', tr(lang, 'فشل الاتصال بالخادم', 'Connection failed'));
     } finally {
       setProcessLoading(false);
     }
@@ -249,11 +249,11 @@ function App() {
       const data = await response.json().catch(() => ({}));
       const success = !!(response.ok && data.success);
       if (!success) {
-        notify('error', tr(lang, '???? ??? ???????.', 'Failed to save result.'));
+        notify('error', tr(lang, 'تعذر حفظ النتيجة.', 'Failed to save result.'));
       }
       return success;
     } catch {
-      notify('error', tr(lang, '??? ??????? ???????', 'Connection failed'));
+      notify('error', tr(lang, 'فشل الاتصال بالخادم', 'Connection failed'));
       return false;
     }
   };
@@ -263,7 +263,7 @@ function App() {
     setIsAuthModalOpen(false);
     if (nextSession?.user) {
       await refreshAccount();
-      notify('success', tr(lang, '?? ????? ?????? ?????.', 'Signed in successfully.'));
+      notify('success', tr(lang, 'تم تسجيل الدخول بنجاح.', 'Signed in successfully.'));
     }
   };
 
@@ -274,7 +274,7 @@ function App() {
       <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center" dir={rootDir}>
         <div className="flex items-center gap-2 text-sm">
           <FaSpinner className="animate-spin" />
-          <span>{tr(lang, '???? ????? ??????...', 'Preparing session...')}</span>
+          <span>{tr(lang, 'جاري تجهيز الجلسة...', 'Preparing session...')}</span>
         </div>
       </div>
     );
@@ -315,19 +315,19 @@ function App() {
               className="flex items-center justify-center gap-2 px-4 py-2 hover:bg-gray-100 text-gray-700 rounded-lg transition"
             >
               <FaCog />
-              <span className="hidden sm:inline">{tr(lang, '?????????', 'Settings')}</span>
+              <span className="hidden sm:inline">{tr(lang, 'الإعدادات', 'Settings')}</span>
             </button>
 
             <div className="flex items-center gap-2 px-3 py-2 bg-yellow-50 text-yellow-700 rounded-lg border border-yellow-200">
               <FaGem />
               <span className="font-bold">{credits ?? '...'}</span>
-              <span className="text-sm">{tr(lang, '????', 'credits')}</span>
+              <span className="text-sm">{tr(lang, 'نقطة', 'credits')}</span>
             </div>
             <button
               onClick={() => setIsPricingModalOpen(true)}
               className="flex items-center justify-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition text-sm sm:text-base font-bold"
             >
-              {tr(lang, '????', 'Top up')}
+              {tr(lang, 'اشحن', 'Top up')}
             </button>
             <button
               onClick={toggleLang}
@@ -339,15 +339,16 @@ function App() {
               onClick={() => supabase.auth.signOut()}
               className="flex items-center justify-center gap-2 px-3 py-2 hover:bg-red-50 text-red-600 rounded-lg transition text-sm border border-transparent hover:border-red-100"
             >
-              {tr(lang, '????', 'Logout')}
+              {tr(lang, 'خروج', 'Logout')}
             </button>
           </div>
 
           <div className="text-center order-first sm:order-none">
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-800">{tr(lang, '????? ?????', 'Transcript Workspace')}</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-800">{tr(lang, 'مساحة العمل', 'Transcript Workspace')}</h1>
             <p className="text-gray-600 text-xs sm:text-sm hidden sm:block">
-              {tr(lang, '?????? ????? ????? ??????? ?????????? ????? ????? ???????.', 'Extract, process with AI, chat, and save your workflow.')}
+              {tr(lang, 'استخرج النص، عالجه بالذكاء الاصطناعي، دردش، واحفظ النتائج.', 'Extract, process with AI, chat, and save your workflow.')}
             </p>
+            {user?.email && <p className="text-[11px] text-gray-500 mt-1">{user.email}</p>}
           </div>
 
           <div className="hidden sm:block w-32" />
@@ -360,8 +361,8 @@ function App() {
               onClick={toggleLocalGuide}
               className="inline-flex items-center gap-2 text-xs sm:text-sm px-3 py-1.5 rounded-full border border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100 transition"
             >
-              <span>{showLocalGuide ? tr(lang, '?????', 'Hide') : tr(lang, '?????', 'Show')}</span>
-              <span>{tr(lang, '???? ?????? ??????', 'Local backend guide')}</span>
+              <span>{showLocalGuide ? tr(lang, 'إخفاء', 'Hide') : tr(lang, 'إظهار', 'Show')}</span>
+              <span>{tr(lang, 'دليل الخادم المحلي', 'Local backend guide')}</span>
             </button>
           </div>
         )}
@@ -408,6 +409,7 @@ function App() {
                 onSave={handleSave}
                 user={user}
                 lang={lang}
+                onNotify={notify}
               />
             )}
           </div>
@@ -416,7 +418,7 @@ function App() {
         <div className="mt-4 sm:mt-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <SavedHistory key={aiResult?.result || user?.id} apiUrl={apiUrl} user={user} />
-            <SavedLinks onSelectLink={setSelectedUrl} apiUrl={apiUrl} lang={lang} />
+            <SavedLinks onSelectLink={setSelectedUrl} apiUrl={apiUrl} lang={lang} onNotify={notify} />
           </div>
         </div>
       </div>
