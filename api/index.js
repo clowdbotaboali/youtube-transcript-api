@@ -30,6 +30,46 @@ function getGroqClient() {
   return groqClient;
 }
 
+function getGroqApiKey() {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) {
+    throw new Error('Server not configured: GROQ_API_KEY missing');
+  }
+  return apiKey;
+}
+
+async function createGroqChatCompletion({ messages, model = 'llama-3.3-70b-versatile', temperature = 0.4, maxTokens }) {
+  const apiKey = getGroqApiKey();
+  const payload = {
+    messages,
+    model,
+    temperature
+  };
+  if (typeof maxTokens === 'number') {
+    payload.max_tokens = maxTokens;
+  }
+
+  try {
+    const groq = getGroqClient();
+    return await groq.chat.completions.create(payload);
+  } catch (sdkError) {
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+    const data = await response.json().catch(() => null);
+    if (!response.ok || !data) {
+      const apiError = data?.error?.message;
+      throw new Error(apiError || sdkError?.message || `Groq request failed (${response.status})`);
+    }
+    return data;
+  }
+}
+
 function extractVideoId(url) {
   const patterns = [
     /(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/,
@@ -305,8 +345,6 @@ export default async function handler(req, res) {
       if (!user) {
         return res.status(401).json({ success: false, error: 'Authentication required' });
       }
-      const groq = getGroqClient();
-
       const { transcript, type } = body;
       if (!transcript) {
         return res.status(400).json({ success: false, error: 'Please provide transcript text' });
@@ -332,7 +370,7 @@ export default async function handler(req, res) {
           systemPrompt = 'Provide comprehensive Arabic analysis with summary, steps, and resources.';
       }
 
-      const completion = await groq.chat.completions.create({
+      const completion = await createGroqChatCompletion({
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: transcript }
@@ -486,13 +524,12 @@ export default async function handler(req, res) {
     }
 
     if (url.includes('/api/chat/chat')) {
-      const groq = getGroqClient();
       const { message, transcript } = body;
       if (!message || !transcript) {
         return res.status(400).json({ success: false, error: 'Missing message or transcript' });
       }
       const transcriptForContext = String(transcript).slice(0, 24000);
-      const completion = await groq.chat.completions.create({
+      const completion = await createGroqChatCompletion({
         messages: [
           { role: 'system', content: 'You are a helpful Arabic assistant for transcript Q&A.' },
           { role: 'user', content: `Transcript: ${transcriptForContext}\n\nQuestion: ${message}` }
