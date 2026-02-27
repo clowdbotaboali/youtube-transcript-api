@@ -30,6 +30,11 @@ function AuthModal({ isOpen, onClose, onAuthSuccess, lang = LANG.ar, onNotify })
   };
 
   const handleForgotPassword = async () => {
+    if (!supabase) {
+      setError(tr(lang, 'خدمة تسجيل الدخول غير مهيأة حاليًا.', 'Authentication service is not configured.'));
+      return;
+    }
+
     if (!email.trim()) {
       setError(tr(lang, 'أدخل بريدك الإلكتروني أولاً.', 'Enter your email first.'));
       return;
@@ -53,6 +58,11 @@ function AuthModal({ isOpen, onClose, onAuthSuccess, lang = LANG.ar, onNotify })
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!supabase) {
+      setError(tr(lang, 'خدمة تسجيل الدخول غير مهيأة حاليًا.', 'Authentication service is not configured.'));
+      return;
+    }
+
     setLoading(true);
     setError(null);
 

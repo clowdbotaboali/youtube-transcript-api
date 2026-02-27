@@ -13,7 +13,7 @@ import AuthModal from './components/AuthModal';
 import PricingModal from './components/PricingModal';
 import LandingPage from './components/LandingPage';
 import ToastStack from './components/ToastStack';
-import { supabase } from './utils/supabase';
+import { supabase, SUPABASE_CONFIGURED } from './utils/supabase';
 import defaultApiUrl from './config';
 import { getAuthHeaders } from './utils/authHeaders';
 import { LANG, tr } from './utils/lang';
@@ -99,6 +99,11 @@ function App() {
   };
 
   useEffect(() => {
+    if (!SUPABASE_CONFIGURED) {
+      setAuthReady(true);
+      return;
+    }
+
     const authSafetyTimer = setTimeout(() => {
       setAuthReady(true);
     }, 4500);
@@ -269,6 +274,25 @@ function App() {
 
   const rootDir = useMemo(() => (lang === LANG.ar ? 'rtl' : 'ltr'), [lang]);
 
+  if (!SUPABASE_CONFIGURED) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center px-4" dir={rootDir}>
+        <div className="max-w-lg w-full rounded-xl border border-slate-700 bg-slate-900/70 p-6 text-center">
+          <h1 className="text-xl font-bold mb-3">
+            {tr(lang, 'إعدادات المصادقة غير مكتملة', 'Authentication configuration is missing')}
+          </h1>
+          <p className="text-slate-300 text-sm">
+            {tr(
+              lang,
+              'أضف متغيرات VITE_SUPABASE_URL و VITE_SUPABASE_ANON_KEY في بيئة Vercel ثم أعد النشر.',
+              'Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in Vercel environment variables, then redeploy.'
+            )}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   if (!authReady) {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center" dir={rootDir}>
@@ -336,7 +360,7 @@ function App() {
               {lang === LANG.ar ? 'EN' : 'AR'}
             </button>
             <button
-              onClick={() => supabase.auth.signOut()}
+              onClick={() => supabase?.auth.signOut()}
               className="flex items-center justify-center gap-2 px-3 py-2 hover:bg-red-50 text-red-600 rounded-lg transition text-sm border border-transparent hover:border-red-100"
             >
               {tr(lang, 'خروج', 'Logout')}
