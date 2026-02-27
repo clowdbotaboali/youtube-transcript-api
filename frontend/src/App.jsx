@@ -65,7 +65,7 @@ const clearSupabaseAuthStorage = () => {
     for (let i = 0; i < storage.length; i += 1) {
       const key = storage.key(i);
       if (!key) continue;
-      if (key.startsWith('sb-') || key === 'supabase.auth.token') {
+      if (key.startsWith('sb-') || key === 'supabase.auth.token' || key.toLowerCase().includes('supabase')) {
         keysToRemove.push(key);
       }
     }
@@ -334,17 +334,7 @@ function App() {
   };
 
   const handleLogout = async () => {
-    let signOutFailed = false;
-
-    try {
-      const { error } = await supabase.auth.signOut({ scope: 'local' });
-      if (error) {
-        signOutFailed = true;
-      }
-    } catch {
-      signOutFailed = true;
-    }
-
+    // Force local sign-out immediately in UI and storage.
     clearSupabaseAuthStorage();
     setSession(null);
     setCredits(null);
@@ -361,12 +351,21 @@ function App() {
       window.scrollTo({ top: 0, behavior: 'auto' });
     }
 
-    if (signOutFailed) {
-      notify('info', tr(lang, 'تم تسجيل الخروج محليًا. أعد فتح الصفحة إذا لزم.', 'Signed out locally. Refresh if needed.'));
-      return;
+    // Best-effort Supabase sign-out; do not block logout flow on network/client issues.
+    try {
+      if (supabase?.auth) {
+        supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+      }
+    } catch {
+      // Intentionally ignored.
     }
 
     notify('success', tr(lang, 'تم تسجيل الخروج بنجاح.', 'Signed out successfully.'));
+
+    // Hard refresh to guarantee no in-memory auth state survives.
+    if (hasWindow) {
+      window.location.replace('/');
+    }
   };
 
   const rootDir = useMemo(() => (lang === LANG.ar ? 'rtl' : 'ltr'), [lang]);
