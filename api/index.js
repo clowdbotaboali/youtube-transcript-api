@@ -12,6 +12,9 @@ const USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 const YTDL_AGENT = ytdl.createAgent();
 const EXTRACTION_TIMEOUT_MS = 20000;
+const AI_TRANSCRIPT_CHAR_LIMIT = 8500;
+const CHAT_TRANSCRIPT_CHAR_LIMIT = 6500;
+const CHAT_QUESTION_CHAR_LIMIT = 1200;
 
 function withTimeout(promise, ms, label = 'Operation') {
   let timer;
@@ -193,6 +196,33 @@ function decodeXmlEntities(text) {
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'");
+}
+
+function normalizeTextInput(value) {
+  return String(value || '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function trimForModel(value, maxChars) {
+  const text = normalizeTextInput(value);
+  if (!text) {
+    return { text: '', truncated: false, originalLength: 0 };
+  }
+  if (text.length <= maxChars) {
+    return { text, truncated: false, originalLength: text.length };
+  }
+
+  const clipped = text.slice(0, maxChars);
+  const lastWordBreak = clipped.lastIndexOf(' ');
+  const safeText = lastWordBreak > Math.floor(maxChars * 0.7) ? clipped.slice(0, lastWordBreak) : clipped;
+
+  return {
+    text: safeText.trim(),
+    truncated: true,
+    originalLength: text.length
+  };
 }
 
 function getTranscriptStats(rawText = '') {
@@ -453,6 +483,16 @@ export default async function handler(req, res) {
         return res.status(403).json({ success: false, error: 'Insufficient credits' });
       }
 
+      const {
+        text: transcriptForModel,
+        truncated: transcriptTruncated,
+        originalLength: transcriptOriginalLength
+      } = trimForModel(transcript, AI_TRANSCRIPT_CHAR_LIMIT);
+
+      if (!transcriptForModel) {
+        return res.status(400).json({ success: false, error: 'Transcript text is empty after normalization' });
+      }
+
       let systemPrompt = '';
       switch (type) {
         case 'summary':
@@ -471,16 +511,28 @@ export default async function handler(req, res) {
       const completion = await createGroqChatCompletion({
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: transcript }
+          {
+            role: 'user',
+            content: transcriptTruncated
+              ? `Transcript was truncated from ${transcriptOriginalLength} to ${transcriptForModel.length} characters to fit model limits.\n\n${transcriptForModel}`
+              : transcriptForModel
+          }
         ],
         model: 'llama-3.3-70b-versatile',
-        temperature: 0.4
+        temperature: 0.4,
+        maxTokens: type === 'all' ? 900 : 700
       });
 
       const result = completion.choices?.[0]?.message?.content || '';
       const nextCredits = await consumeCredits(supabase, user.id, userRow.credits, CREDIT_COST_PER_SUCCESS);
 
-      return res.json({ success: true, type: type || 'all', result, creditsLeft: nextCredits });
+      return res.json({
+        success: true,
+        type: type || 'all',
+        result,
+        creditsLeft: nextCredits,
+        inputTrimmed: transcriptTruncated
+      });
     }
 
     if (url.includes('/api/history/save')) {
@@ -632,14 +684,17 @@ export default async function handler(req, res) {
       if (!message || !transcript) {
         return res.status(400).json({ success: false, error: 'Missing message or transcript' });
       }
-      const transcriptForContext = String(transcript).slice(0, 24000);
+      const { text: transcriptForContext } = trimForModel(transcript, CHAT_TRANSCRIPT_CHAR_LIMIT);
+      const { text: questionForModel } = trimForModel(message, CHAT_QUESTION_CHAR_LIMIT);
+
       const completion = await createGroqChatCompletion({
         messages: [
           { role: 'system', content: 'You are a helpful Arabic assistant for transcript Q&A.' },
-          { role: 'user', content: `Transcript: ${transcriptForContext}\n\nQuestion: ${message}` }
+          { role: 'user', content: `Transcript: ${transcriptForContext}\n\nQuestion: ${questionForModel}` }
         ],
         model: 'llama-3.3-70b-versatile',
-        temperature: 0.6
+        temperature: 0.6,
+        maxTokens: 600
       });
       const nextCredits = await consumeCredits(supabase, user.id, userRow.credits, CREDIT_COST_PER_SUCCESS);
       return res.json({
@@ -655,6 +710,13 @@ export default async function handler(req, res) {
 
     return res.status(404).json({ success: false, error: 'Not found' });
   } catch (error) {
+    const message = String(error?.message || 'Internal error');
+    if (message.toLowerCase().includes('request too large') || message.toLowerCase().includes('rate limit')) {
+      return res.status(413).json({
+        success: false,
+        error: 'Input is too large for current AI limits. Please retry; the system now trims long transcripts automatically.'
+      });
+    }
     return res.status(500).json({ success: false, error: error.message || 'Internal error' });
   }
 }
