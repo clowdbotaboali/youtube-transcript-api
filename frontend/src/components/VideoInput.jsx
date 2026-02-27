@@ -34,8 +34,15 @@ function VideoInput({ onTranscriptExtracted, loading, setLoading, initialUrl, on
     }
 
     setLoading(true);
+    let isSettled = false;
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 45000);
+    const failSafeId = setTimeout(() => {
+      if (!isSettled) {
+        setError(tr(lang, 'انتهت المهلة. تأكد من تسجيل الدخول ثم حاول مرة أخرى.', 'Request timed out. Please re-login and try again.'));
+        setLoading(false);
+      }
+    }, 60000);
     try {
       const authHeaders = await getAuthHeaders();
       const response = await fetch(`${apiUrl}/api/transcript/extract`, {
@@ -75,7 +82,9 @@ function VideoInput({ onTranscriptExtracted, loading, setLoading, initialUrl, on
         setError(tr(lang, 'فشل الاتصال بالخادم', 'Connection failed'));
       }
     } finally {
+      isSettled = true;
       clearTimeout(timeoutId);
+      clearTimeout(failSafeId);
       setLoading(false);
     }
   };
