@@ -48,3 +48,10 @@
 - [x] Improve global typography and visual tokens for Arabic + English.
 - [x] Validate responsive behavior for mobile and desktop.
 - [x] Run lint/build and ship to production.
+
+## Task 9: Client IA Restructure + Logout Fix
+- [x] Split logged-in UX into dedicated pages (`Overview`, `Extract`, `History`, `Account`).
+- [x] Add explicit client navigation header and action hierarchy.
+- [x] Refactor extraction flow into dedicated workspace section.
+- [x] Add a dedicated account page for customer profile and actions.
+- [x] Fix logout flow with resilient state reset + explicit feedback.
