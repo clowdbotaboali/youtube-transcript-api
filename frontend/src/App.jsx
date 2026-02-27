@@ -55,6 +55,24 @@ const CREDIT_COST_PER_SUCCESS = 1;
 const PAID_PLAN_CREDITS = 200;
 const PAID_PLAN_PRICE_USD = 5;
 
+const clearSupabaseAuthStorage = () => {
+  if (!hasWindow) return;
+  const storages = [window.localStorage, window.sessionStorage];
+
+  for (const storage of storages) {
+    if (!storage) continue;
+    const keysToRemove = [];
+    for (let i = 0; i < storage.length; i += 1) {
+      const key = storage.key(i);
+      if (!key) continue;
+      if (key.startsWith('sb-') || key === 'supabase.auth.token') {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach((key) => storage.removeItem(key));
+  }
+};
+
 function App() {
   const [transcriptData, setTranscriptData] = useState(null);
   const [aiResult, setAiResult] = useState(null);
@@ -316,19 +334,39 @@ function App() {
   };
 
   const handleLogout = async () => {
+    let signOutFailed = false;
+
+    try {
+      const { error } = await supabase.auth.signOut({ scope: 'local' });
+      if (error) {
+        signOutFailed = true;
+      }
+    } catch {
+      signOutFailed = true;
+    }
+
+    clearSupabaseAuthStorage();
     setSession(null);
     setCredits(null);
     setTranscriptData(null);
     setAiResult(null);
     setClientPage(CLIENT_PAGES.dashboard);
+    setIsAuthModalOpen(false);
+    setIsPricingModalOpen(false);
+    setShowSettings(false);
 
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      notify('success', tr(lang, 'تم تسجيل الخروج بنجاح.', 'Signed out successfully.'));
-    } catch {
-      notify('error', tr(lang, 'تعذر تسجيل الخروج بشكل كامل.', 'Sign out did not complete cleanly.'));
+    if (hasWindow) {
+      window.history.pushState({}, '', '/');
+      setCurrentPath('/');
+      window.scrollTo({ top: 0, behavior: 'auto' });
     }
+
+    if (signOutFailed) {
+      notify('info', tr(lang, 'تم تسجيل الخروج محليًا. أعد فتح الصفحة إذا لزم.', 'Signed out locally. Refresh if needed.'));
+      return;
+    }
+
+    notify('success', tr(lang, 'تم تسجيل الخروج بنجاح.', 'Signed out successfully.'));
   };
 
   const rootDir = useMemo(() => (lang === LANG.ar ? 'rtl' : 'ltr'), [lang]);
@@ -444,7 +482,7 @@ function App() {
           currentPage={clientPage}
           onPageChange={setClientPage}
           onToggleLang={toggleLang}
-          onOpenSettings={() => setShowSettings(true)}
+          onOpenSettings={canUseLocalGuide ? () => setShowSettings(true) : undefined}
           onOpenPricing={() => setIsPricingModalOpen(true)}
           onLogout={handleLogout}
         />
@@ -581,13 +619,15 @@ function App() {
                 >
                   {tr(lang, 'طلب شحن', 'Top-up request')}
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setShowSettings(true)}
-                  className="rounded-xl px-4 py-2 bg-slate-900 text-white font-bold hover:bg-slate-800 transition"
-                >
-                  {tr(lang, 'فتح الإعدادات', 'Open settings')}
-                </button>
+                {canUseLocalGuide && (
+                  <button
+                    type="button"
+                    onClick={() => setShowSettings(true)}
+                    className="rounded-xl px-4 py-2 bg-slate-900 text-white font-bold hover:bg-slate-800 transition"
+                  >
+                    {tr(lang, 'فتح الإعدادات', 'Open settings')}
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={handleLogout}
@@ -616,7 +656,7 @@ function App() {
         />
       )}
 
-      {showSettings && <Settings onClose={() => setShowSettings(false)} lang={lang} />}
+      {canUseLocalGuide && showSettings && <Settings onClose={() => setShowSettings(false)} lang={lang} />}
       <SiteFooter />
     </div>
   );

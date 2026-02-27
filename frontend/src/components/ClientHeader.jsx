@@ -78,14 +78,16 @@ function ClientHeader({
           >
             {lang === LANG.ar ? 'EN' : 'AR'}
           </button>
-          <button
-            type="button"
-            onClick={onOpenSettings}
-            className="inline-flex items-center gap-2 rounded-xl px-3 py-2 bg-white/10 hover:bg-white/20 transition"
-          >
-            <FaCog />
-            <span>{tr(lang, 'الإعدادات', 'Settings')}</span>
-          </button>
+          {typeof onOpenSettings === 'function' && (
+            <button
+              type="button"
+              onClick={onOpenSettings}
+              className="inline-flex items-center gap-2 rounded-xl px-3 py-2 bg-white/10 hover:bg-white/20 transition"
+            >
+              <FaCog />
+              <span>{tr(lang, 'الإعدادات', 'Settings')}</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={onLogout}
