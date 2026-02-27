@@ -55,10 +55,10 @@ function ClientHeader({
               <span className="text-sm">{tr(lang, 'نقطة', 'credits')}</span>
             </div>
             <p className="text-[11px] opacity-90 mt-1">
-              {tr(lang, 'كل طلب ناجح =', 'Each successful request =')} {requestCost} {tr(lang, 'نقطة', 'credit')}
+              {tr(lang, 'كل رابط فيديو جديد =', 'Each new video link =')} {requestCost} {tr(lang, 'نقطة', 'credit')}
             </p>
             <p className="text-[11px] opacity-90">
-              {tr(lang, 'الخطة المجانية:', 'Free plan:')} {freePlanRequests} {tr(lang, 'طلبات فقط', 'requests only')}
+              {tr(lang, 'الخطة المجانية:', 'Free plan:')} {freePlanRequests} {tr(lang, 'روابط فقط', 'links only')}
             </p>
             <p className="text-[11px] opacity-90">
               {paidPlanCredits} {tr(lang, 'نقطة', 'credits')} = ${paidPlanPrice}

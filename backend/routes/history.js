@@ -3,6 +3,7 @@ import { supabase } from '../utils/supabase.js';
 import { requireAuth } from '../middleware/auth.js';
 
 const router = express.Router();
+const QUOTA_MARKER_TYPE = 'quota_extract_marker';
 
 router.use(requireAuth);
 
@@ -46,6 +47,7 @@ router.get('/', async (req, res) => {
       .from('transcripts_history')
       .select('*')
       .eq('user_id', userId)
+      .neq('processing_type', QUOTA_MARKER_TYPE)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -66,6 +68,7 @@ router.get('/:id', async (req, res) => {
       .select('*')
       .eq('id', id)
       .eq('user_id', userId)
+      .neq('processing_type', QUOTA_MARKER_TYPE)
       .single();
 
     if (error || !data) {

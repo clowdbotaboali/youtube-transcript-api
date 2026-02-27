@@ -8,7 +8,6 @@ dotenv.config();
 
 const router = express.Router();
 const FREE_PLAN_CREDITS = 5;
-const CREDIT_COST_PER_SUCCESS = 1;
 
 // Store conversation history per session
 const conversations = new Map();
@@ -42,25 +41,10 @@ async function ensureUserAccountRow(user) {
   return data;
 }
 
-async function consumeCredits(userId, currentCredits, cost = CREDIT_COST_PER_SUCCESS) {
-  const nextCredits = Number(currentCredits || 0) - cost;
-  const { error } = await supabase
-    .from('users')
-    .update({ credits: nextCredits })
-    .eq('id', userId);
-  if (error) {
-    throw new Error('Failed to update user credits');
-  }
-  return nextCredits;
-}
-
 router.post('/chat', requireAuth, async (req, res) => {
   try {
     const { message, transcript, conversationId } = req.body;
     const userRow = await ensureUserAccountRow(req.user);
-    if (Number(userRow.credits || 0) < CREDIT_COST_PER_SUCCESS) {
-      return res.status(403).json({ success: false, error: 'Insufficient credits' });
-    }
 
     const groqApiKey = process.env.GROQ_API_KEY;
 
@@ -133,13 +117,11 @@ ${transcript}
     // Save conversation
     conversations.set(convId, history);
 
-    const nextCredits = await consumeCredits(req.user.id, userRow.credits, CREDIT_COST_PER_SUCCESS);
-
     res.json({
       success: true,
       response: aiResponse,
       conversationId: convId,
-      creditsLeft: nextCredits
+      creditsLeft: Number(userRow.credits || 0)
     });
 
   } catch (error) {

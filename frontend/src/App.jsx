@@ -592,8 +592,8 @@ function App() {
               <div className="space-y-2 text-sm">
                 <p><span className="font-bold">{tr(lang, 'البريد:', 'Email:')}</span> {user?.email || '-'}</p>
                 <p><span className="font-bold">{tr(lang, 'الرصيد:', 'Credits:')}</span> {credits ?? '...'}</p>
-                <p><span className="font-bold">{tr(lang, 'الخطة المجانية:', 'Free plan:')}</span> {FREE_PLAN_REQUESTS} {tr(lang, 'طلبات فقط', 'requests only')}</p>
-                <p><span className="font-bold">{tr(lang, 'تكلفة الطلب:', 'Request cost:')}</span> {CREDIT_COST_PER_SUCCESS} {tr(lang, 'نقطة لكل طلب ناجح', 'credit per successful request')}</p>
+                <p><span className="font-bold">{tr(lang, 'الخطة المجانية:', 'Free plan:')}</span> {FREE_PLAN_REQUESTS} {tr(lang, 'روابط فقط', 'links only')}</p>
+                <p><span className="font-bold">{tr(lang, 'تكلفة الرابط:', 'Link cost:')}</span> {CREDIT_COST_PER_SUCCESS} {tr(lang, 'نقطة لكل رابط فيديو جديد', 'credit per new video link')}</p>
                 <p><span className="font-bold">{tr(lang, 'الحالة:', 'Session:')}</span> {tr(lang, 'متصل', 'Active')}</p>
               </div>
             </article>

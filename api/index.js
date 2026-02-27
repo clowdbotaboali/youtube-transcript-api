@@ -15,6 +15,7 @@ const EXTRACTION_TIMEOUT_MS = 20000;
 const AI_TRANSCRIPT_CHAR_LIMIT = 8500;
 const CHAT_TRANSCRIPT_CHAR_LIMIT = 6500;
 const CHAT_QUESTION_CHAR_LIMIT = 1200;
+const QUOTA_MARKER_TYPE = 'quota_extract_marker';
 
 function withTimeout(promise, ms, label = 'Operation') {
   let timer;
@@ -168,6 +169,41 @@ async function consumeCredits(supabase, userId, currentCredits, cost = CREDIT_CO
     throw new Error('Failed to update credits');
   }
   return nextCredits;
+}
+
+async function hasQuotaMarkerForVideo(supabase, userId, videoId) {
+  const { data, error } = await supabase
+    .from('transcripts_history')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('video_id', videoId)
+    .eq('processing_type', QUOTA_MARKER_TYPE)
+    .limit(1);
+
+  if (error) {
+    throw new Error('Failed to check extraction usage');
+  }
+
+  return Array.isArray(data) && data.length > 0;
+}
+
+async function addQuotaMarkerForVideo(supabase, userId, videoId) {
+  const { error } = await supabase
+    .from('transcripts_history')
+    .insert([
+      {
+        user_id: userId,
+        video_id: videoId,
+        video_title: `[quota:${videoId}]`,
+        transcript: '__quota_marker__',
+        ai_result: null,
+        processing_type: QUOTA_MARKER_TYPE
+      }
+    ]);
+
+  if (error) {
+    throw new Error('Failed to record extraction usage');
+  }
 }
 
 function readBody(req) {
@@ -360,9 +396,6 @@ export default async function handler(req, res) {
         return res.status(401).json({ success: false, error: 'Authentication required' });
       }
       const userRow = await ensureUserAccountRow(supabase, user);
-      if (Number(userRow.credits || 0) < CREDIT_COST_PER_SUCCESS) {
-        return res.status(403).json({ success: false, error: 'Insufficient credits' });
-      }
 
       const { url: videoUrl } = body;
       if (!videoUrl) {
@@ -372,6 +405,14 @@ export default async function handler(req, res) {
       const videoId = extractVideoId(videoUrl);
       if (!videoId) {
         return res.status(400).json({ success: false, error: 'Invalid YouTube URL' });
+      }
+
+      const alreadyUnlockedForUser = await hasQuotaMarkerForVideo(supabase, user.id, videoId);
+      if (!alreadyUnlockedForUser && Number(userRow.credits || 0) < CREDIT_COST_PER_SUCCESS) {
+        return res.status(403).json({
+          success: false,
+          error: 'Insufficient credits for a new video link'
+        });
       }
 
       let transcript = null;
@@ -452,7 +493,12 @@ export default async function handler(req, res) {
         return res.status(404).json({ success: false, error: 'No transcript available for this video' });
       }
 
-      const nextCredits = await consumeCredits(supabase, user.id, userRow.credits, CREDIT_COST_PER_SUCCESS);
+      let nextCredits = Number(userRow.credits || 0);
+      const chargedForNewVideo = !alreadyUnlockedForUser;
+      if (chargedForNewVideo) {
+        await addQuotaMarkerForVideo(supabase, user.id, videoId);
+        nextCredits = await consumeCredits(supabase, user.id, userRow.credits, CREDIT_COST_PER_SUCCESS);
+      }
 
       return res.json({
         success: true,
@@ -460,7 +506,8 @@ export default async function handler(req, res) {
         transcript: transcript.trim(),
         wordCount: transcript.trim().split(/\s+/).length,
         method,
-        creditsLeft: nextCredits
+        creditsLeft: nextCredits,
+        chargedForNewVideo
       });
     }
 
@@ -479,9 +526,6 @@ export default async function handler(req, res) {
       }
 
       const userRow = await ensureUserAccountRow(supabase, user);
-      if (Number(userRow.credits || 0) < CREDIT_COST_PER_SUCCESS) {
-        return res.status(403).json({ success: false, error: 'Insufficient credits' });
-      }
 
       const {
         text: transcriptForModel,
@@ -524,13 +568,12 @@ export default async function handler(req, res) {
       });
 
       const result = completion.choices?.[0]?.message?.content || '';
-      const nextCredits = await consumeCredits(supabase, user.id, userRow.credits, CREDIT_COST_PER_SUCCESS);
 
       return res.json({
         success: true,
         type: type || 'all',
         result,
-        creditsLeft: nextCredits,
+        creditsLeft: Number(userRow.credits || 0),
         inputTrimmed: transcriptTruncated
       });
     }
@@ -582,6 +625,7 @@ export default async function handler(req, res) {
         .select('*')
         .eq('id', id)
         .eq('user_id', user.id)
+        .neq('processing_type', QUOTA_MARKER_TYPE)
         .single();
       if (error || !data) return res.status(404).json({ success: false, error: 'History item not found' });
       return res.json({ success: true, item: data });
@@ -611,6 +655,7 @@ export default async function handler(req, res) {
         .from('transcripts_history')
         .select('*')
         .eq('user_id', user.id)
+        .neq('processing_type', QUOTA_MARKER_TYPE)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return res.json({ success: true, data });
@@ -676,9 +721,6 @@ export default async function handler(req, res) {
         return res.status(401).json({ success: false, error: 'Authentication required' });
       }
       const userRow = await ensureUserAccountRow(supabase, user);
-      if (Number(userRow.credits || 0) < CREDIT_COST_PER_SUCCESS) {
-        return res.status(403).json({ success: false, error: 'Insufficient credits' });
-      }
 
       const { message, transcript } = body;
       if (!message || !transcript) {
@@ -696,11 +738,10 @@ export default async function handler(req, res) {
         temperature: 0.6,
         maxTokens: 600
       });
-      const nextCredits = await consumeCredits(supabase, user.id, userRow.credits, CREDIT_COST_PER_SUCCESS);
       return res.json({
         success: true,
         response: completion.choices?.[0]?.message?.content || '',
-        creditsLeft: nextCredits
+        creditsLeft: Number(userRow.credits || 0)
       });
     }
 

@@ -5,7 +5,6 @@ import { requireAuth } from '../middleware/auth.js';
 
 const router = express.Router();
 const FREE_PLAN_CREDITS = 5;
-const CREDIT_COST_PER_SUCCESS = 1;
 
 async function ensureUserAccountRow(userId, email = null) {
   const { error: upsertError } = await supabase
@@ -36,20 +35,6 @@ async function ensureUserAccountRow(userId, email = null) {
   return userRow;
 }
 
-async function consumeCredits(userId, currentCredits, cost = CREDIT_COST_PER_SUCCESS) {
-  const nextCredits = Number(currentCredits || 0) - cost;
-  const { error: updateError } = await supabase
-    .from('users')
-    .update({ credits: nextCredits })
-    .eq('id', userId);
-
-  if (updateError) {
-    throw new Error('Failed to update user credits');
-  }
-
-  return nextCredits;
-}
-
 router.post('/process', requireAuth, async (req, res) => {
   try {
     const { transcript, type } = req.body;
@@ -64,22 +49,16 @@ router.post('/process', requireAuth, async (req, res) => {
 
     const user = await ensureUserAccountRow(userId, req.user.email || null);
 
-    if (Number(user.credits || 0) < CREDIT_COST_PER_SUCCESS) {
-      return res.status(403).json({ success: false, error: 'Insufficient credits' });
-    }
-
     const validTypes = ['summary', 'steps', 'resources', 'all'];
     const processingType = validTypes.includes(type) ? type : 'all';
 
     const result = await processWithGroq(transcript, processingType);
 
-    const nextCredits = await consumeCredits(userId, user.credits, CREDIT_COST_PER_SUCCESS);
-
     res.json({
       success: true,
       type: processingType,
       result,
-      creditsLeft: nextCredits
+      creditsLeft: Number(user.credits || 0)
     });
   } catch (error) {
     console.error('AI processing error:', error);

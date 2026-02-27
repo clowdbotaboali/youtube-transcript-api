@@ -10,6 +10,7 @@ dotenv.config();
 const router = express.Router();
 const FREE_PLAN_CREDITS = 5;
 const CREDIT_COST_PER_SUCCESS = 1;
+const QUOTA_MARKER_TYPE = 'quota_extract_marker';
 const USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 const YTDL_AGENT = ytdl.createAgent();
@@ -97,6 +98,41 @@ async function consumeCredits(userId, currentCredits, cost = CREDIT_COST_PER_SUC
     throw new Error('Failed to update user credits');
   }
   return nextCredits;
+}
+
+async function hasQuotaMarkerForVideo(userId, videoId) {
+  const { data, error } = await supabase
+    .from('transcripts_history')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('video_id', videoId)
+    .eq('processing_type', QUOTA_MARKER_TYPE)
+    .limit(1);
+
+  if (error) {
+    throw new Error('Failed to check extraction usage');
+  }
+
+  return Array.isArray(data) && data.length > 0;
+}
+
+async function addQuotaMarkerForVideo(userId, videoId) {
+  const { error } = await supabase
+    .from('transcripts_history')
+    .insert([
+      {
+        user_id: userId,
+        video_id: videoId,
+        video_title: `[quota:${videoId}]`,
+        transcript: '__quota_marker__',
+        ai_result: null,
+        processing_type: QUOTA_MARKER_TYPE
+      }
+    ]);
+
+  if (error) {
+    throw new Error('Failed to record extraction usage');
+  }
 }
 
 async function fetchWithTranscriptAPI(videoUrl, apiKey) {
@@ -209,10 +245,6 @@ router.post('/extract', requireAuth, async (req, res) => {
     const transcriptApiKey = process.env.TRANSCRIPT_API_KEY || '';
     const userRow = await ensureUserAccountRow(req.user);
 
-    if (Number(userRow.credits || 0) < CREDIT_COST_PER_SUCCESS) {
-      return res.status(403).json({ success: false, error: 'Insufficient credits' });
-    }
-
     if (!url) {
       return res.status(400).json({
         success: false,
@@ -227,6 +259,11 @@ router.post('/extract', requireAuth, async (req, res) => {
         success: false,
         error: 'رابط YouTube غير صالح'
       });
+    }
+
+    const alreadyUnlockedForUser = await hasQuotaMarkerForVideo(req.user.id, videoId);
+    if (!alreadyUnlockedForUser && Number(userRow.credits || 0) < CREDIT_COST_PER_SUCCESS) {
+      return res.status(403).json({ success: false, error: 'Insufficient credits for a new video link' });
     }
 
     console.log(`\n🎬 Attempting to fetch transcript for video: ${videoId}`);
@@ -338,7 +375,12 @@ router.post('/extract', requireAuth, async (req, res) => {
 
     console.log(`✅ Transcript extracted successfully using: ${method}\n`);
 
-    const nextCredits = await consumeCredits(req.user.id, userRow.credits, CREDIT_COST_PER_SUCCESS);
+    let nextCredits = Number(userRow.credits || 0);
+    const chargedForNewVideo = !alreadyUnlockedForUser;
+    if (chargedForNewVideo) {
+      await addQuotaMarkerForVideo(req.user.id, videoId);
+      nextCredits = await consumeCredits(req.user.id, userRow.credits, CREDIT_COST_PER_SUCCESS);
+    }
 
     res.json({
       success: true,
@@ -346,7 +388,8 @@ router.post('/extract', requireAuth, async (req, res) => {
       transcript: transcript.trim(),
       wordCount: transcript.trim().split(/\s+/).length,
       method,
-      creditsLeft: nextCredits
+      creditsLeft: nextCredits,
+      chargedForNewVideo
     });
 
   } catch (error) {

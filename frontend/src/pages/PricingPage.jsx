@@ -22,11 +22,11 @@ function PricingPage() {
             <article className="rounded-2xl border border-emerald-200 bg-white p-6">
               <p className="inline-flex text-xs font-bold rounded-full px-2 py-1 bg-emerald-100 text-emerald-800 mb-3">Active</p>
               <h2 className="text-2xl font-black text-slate-900 mb-2">Free Plan</h2>
-              <p className="text-slate-600 mb-4">5 requests included for transcript and related analysis access.</p>
+              <p className="text-slate-600 mb-4">5 video links included. Summary and chat on the same extracted video are included without extra charge.</p>
               <ul className="text-sm text-slate-700 space-y-2">
-                <li>- 5 service requests</li>
-                <li>- Transcript generation access</li>
-                <li>- Suitable for initial evaluation</li>
+                <li>- 5 unique video links</li>
+                <li>- Each new link costs 1 credit</li>
+                <li>- Same-video summary/chat does not consume extra credits</li>
               </ul>
             </article>
 
