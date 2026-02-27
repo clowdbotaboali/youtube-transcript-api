@@ -22,10 +22,10 @@
 ## Task 5: Workspace and Account UI
 - [x] Add lightweight account panel/section (email + credits + session state).
 - [x] Improve header action hierarchy and spacing.
-- [ ] Validate mobile layouts for auth, workspace, and billing modal.
+- [x] Validate mobile layouts for auth, workspace, and billing modal.
 
 ## Task 6: Verification and Deployment
 - [x] Run `npm run lint --prefix frontend`.
 - [x] Run `npm run build --prefix frontend`.
-- [ ] Commit, push, deploy to Vercel production.
-- [ ] Smoke test key flows: login, transcript extract, AI process, chat.
+- [x] Commit, push, deploy to Vercel production.
+- [x] Smoke test key flows: login, transcript extract, AI process, chat.
