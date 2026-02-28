@@ -28,6 +28,10 @@
     {
       "source": "/pricing",
       "destination": "/"
+    },
+    {
+      "source": "/admin",
+      "destination": "/"
     }
   ],
   "functions": {
