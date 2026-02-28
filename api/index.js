@@ -715,19 +715,19 @@ function defaultAiProviderConfig() {
     selectedModel: 'llama-3.3-70b-versatile',
     providers: {
       groq: {
-        apiKey: process.env.GROQ_API_KEY || ''
+        apiKey: ''
       },
       openrouter: {
-        apiKey: process.env.OPENROUTER_API_KEY || ''
+        apiKey: ''
       },
       openai: {
-        apiKey: process.env.OPENAI_API_KEY || ''
+        apiKey: ''
       },
       google: {
-        apiKey: process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || ''
+        apiKey: ''
       },
       anthropic: {
-        apiKey: process.env.ANTHROPIC_API_KEY || ''
+        apiKey: ''
       }
     },
     modelCatalog: {},
@@ -820,7 +820,7 @@ async function saveAiProviderConfig(supabase, config) {
 
 function defaultTranscriptApiConfig() {
   return {
-    keys: normalizeApiKeys([process.env.TRANSCRIPT_API_KEY || '']),
+    keys: [],
     updatedAt: new Date().toISOString()
   };
 }
@@ -1254,8 +1254,7 @@ async function createMultiProviderChatCompletion({ supabase, messages, temperatu
   const model = String(config.selectedModel || defaultModelForProvider(provider)).trim() || defaultModelForProvider(provider);
   const key = String(config.providers?.[provider]?.apiKey || '').trim();
 
-  const fallbackGroqKey = process.env.GROQ_API_KEY || '';
-  const selectedKey = key || (provider === 'groq' ? fallbackGroqKey : '');
+  const selectedKey = key;
   if (!selectedKey) {
     throw new Error(`AI provider "${provider}" is not configured with an API key`);
   }
@@ -1611,9 +1610,8 @@ function isUsableTranscript(text = '') {
 }
 
 async function fetchWithTranscriptApi(videoUrl, supabase) {
-  const fallbackEnvKeys = normalizeApiKeys([process.env.TRANSCRIPT_API_KEY || '']);
-  const config = supabase ? await loadOrBootstrapTranscriptApiConfig(supabase) : { keys: fallbackEnvKeys };
-  const keys = normalizeApiKeys(config?.keys || fallbackEnvKeys);
+  const config = supabase ? await loadOrBootstrapTranscriptApiConfig(supabase) : { keys: [] };
+  const keys = normalizeApiKeys(config?.keys || []);
   if (keys.length === 0) return null;
 
   const encodedUrl = encodeURIComponent(videoUrl);
@@ -2235,12 +2233,19 @@ export default async function handler(req, res) {
       const current = await loadOrBootstrapAiProviderConfig(supabase);
       const currentProviders = current.providers || {};
       const incomingProviders = body.providers && typeof body.providers === 'object' ? body.providers : {};
+      const clearProviders = new Set(
+        Array.isArray(body.clearProviders)
+          ? body.clearProviders.map((item) => normalizeProviderName(item))
+          : []
+      );
       const mergedProviders = {};
       for (const provider of Object.keys(currentProviders)) {
         const currentKey = String(currentProviders[provider]?.apiKey || '').trim();
         const incomingKey = String(incomingProviders?.[provider]?.apiKey || '').trim();
         mergedProviders[provider] = {
-          apiKey: incomingKey || currentKey
+          apiKey: clearProviders.has(provider)
+            ? ''
+            : (incomingKey || currentKey)
         };
       }
 

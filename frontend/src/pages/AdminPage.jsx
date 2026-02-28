@@ -419,6 +419,43 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
       setNotice(tr(lang, 'تم حفظ إعدادات الذكاء الاصطناعي.', 'AI settings saved.'));
     });
   };
+
+  const clearAiProviderKey = async (provider) => {
+    const confirmed = window.confirm(
+      tr(
+        lang,
+        'سيتم حذف المفتاح المحفوظ لهذا المزود. هل تريد المتابعة؟',
+        'This will remove the saved key for this provider. Continue?'
+      )
+    );
+    if (!confirmed) return;
+
+    await withAction(`ai:clear:${provider}`, async () => {
+      const payload = {
+        selectedProvider: aiConfig.selectedProvider,
+        selectedModel: aiConfig.selectedModel,
+        clearProviders: [provider],
+        modelCatalog: serializeModelCatalog(aiConfig.modelCatalog)
+      };
+      const data = await authedFetch('/api/admin/ai/config', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+      const nextProvider = data.data?.selectedProvider || aiConfig.selectedProvider;
+      const nextModelCatalog = normalizeModelCatalog(data.data?.modelCatalog);
+      const savedModel = String(data.data?.selectedModel || aiConfig.selectedModel || '').trim();
+      const providerModels = Array.isArray(nextModelCatalog[nextProvider]) ? nextModelCatalog[nextProvider] : [];
+      setAiConfig({
+        selectedProvider: nextProvider,
+        selectedModel: savedModel || providerModels[0]?.id || '',
+        providers: data.data?.providers || {},
+        modelCatalog: nextModelCatalog
+      });
+      setAiKeysDraft((prev) => ({ ...prev, [provider]: '' }));
+      setNotice(tr(lang, 'تم حذف المفتاح المحفوظ.', 'Saved provider key removed.'));
+    });
+  };
+
   const saveTranscriptApiKeys = async (e) => {
     e.preventDefault();
     await withAction('transcript:save', async () => {
@@ -433,6 +470,22 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
       setTranscriptKeysText('');
       await loadTranscriptApiConfig();
       setNotice(tr(lang, 'تم حفظ مفاتيح Transcript API.', 'Transcript API keys saved.'));
+    });
+  };
+
+  const clearTranscriptApiKeys = async () => {
+    const confirmed = window.confirm(
+      tr(lang, 'سيتم حذف كل مفاتيح Transcript API المحفوظة. هل تريد المتابعة؟', 'This will remove all saved Transcript API keys. Continue?')
+    );
+    if (!confirmed) return;
+    await withAction('transcript:clear', async () => {
+      await authedFetch('/api/admin/transcript-api/config', {
+        method: 'POST',
+        body: JSON.stringify({ keys: [] })
+      });
+      setTranscriptKeysText('');
+      await loadTranscriptApiConfig();
+      setNotice(tr(lang, 'تم حذف جميع مفاتيح Transcript API.', 'All Transcript API keys were removed.'));
     });
   };
 
@@ -812,10 +865,26 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
                       <div key={provider} className="rounded-xl border border-slate-200 p-3">
                         <div className="flex items-center justify-between gap-2 mb-2">
                           <p className="text-sm font-black">{provider.toUpperCase()}</p>
-                          <button type="button" onClick={() => loadProviderModels(provider)} disabled={busyAction === `models:${provider}`} className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs border border-cyan-200 text-cyan-700 hover:bg-cyan-50 disabled:opacity-60">
-                            <FaRobot />
-                            <span>{tr(lang, 'تحميل الموديلات', 'Load models')}</span>
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => loadProviderModels(provider)}
+                              disabled={busyAction === `models:${provider}`}
+                              className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs border border-cyan-200 text-cyan-700 hover:bg-cyan-50 disabled:opacity-60"
+                            >
+                              <FaRobot />
+                              <span>{tr(lang, 'تحميل الموديلات', 'Load models')}</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => clearAiProviderKey(provider)}
+                              disabled={busyAction === `ai:clear:${provider}` || !aiConfig.providers?.[provider]?.hasKey}
+                              className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs border border-red-200 text-red-700 hover:bg-red-50 disabled:opacity-60"
+                            >
+                              <FaTrashAlt />
+                              <span>{tr(lang, 'حذف المفتاح', 'Clear key')}</span>
+                            </button>
+                          </div>
                         </div>
                         <input type="password" placeholder={tr(lang, 'الصق API Key (اختياري)', 'Paste API key (optional update)')} value={aiKeysDraft[provider]} onChange={(e) => setAiKeysDraft((prev) => ({ ...prev, [provider]: e.target.value }))} className={inputClass} />
                         <p className="text-xs text-slate-500 mt-2">{aiConfig.providers?.[provider]?.hasKey ? tr(lang, 'مفتاح محفوظ.', 'Key is saved.') : tr(lang, 'لا يوجد مفتاح محفوظ.', 'No saved key.')}</p>
@@ -882,9 +951,19 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
                 <form onSubmit={saveTranscriptApiKeys}>
                   <label className="block text-sm font-semibold mb-1">{tr(lang, 'الصق المفاتيح (كل مفتاح في سطر)', 'Paste keys (one key per line)')}</label>
                   <textarea rows={6} value={transcriptKeysText} onChange={(e) => setTranscriptKeysText(e.target.value)} className={inputClass} />
-                  <button type="submit" disabled={busyAction === 'transcript:save'} className="mt-3 rounded-lg px-4 py-2 bg-slate-900 text-white font-bold hover:bg-slate-800 disabled:opacity-60">
-                    {busyAction === 'transcript:save' ? tr(lang, 'جارٍ الحفظ...', 'Saving...') : tr(lang, 'حفظ المفاتيح', 'Save keys')}
-                  </button>
+                  <div className="mt-3 flex items-center gap-2">
+                    <button type="submit" disabled={busyAction === 'transcript:save'} className="rounded-lg px-4 py-2 bg-slate-900 text-white font-bold hover:bg-slate-800 disabled:opacity-60">
+                      {busyAction === 'transcript:save' ? tr(lang, 'جارٍ الحفظ...', 'Saving...') : tr(lang, 'حفظ المفاتيح', 'Save keys')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={clearTranscriptApiKeys}
+                      disabled={busyAction === 'transcript:clear' || transcriptApiMeta.keysCount === 0}
+                      className="rounded-lg px-4 py-2 border border-red-200 text-red-700 font-bold hover:bg-red-50 disabled:opacity-60"
+                    >
+                      {busyAction === 'transcript:clear' ? tr(lang, 'جارٍ المسح...', 'Clearing...') : tr(lang, 'حذف كل المفاتيح', 'Clear all keys')}
+                    </button>
+                  </div>
                 </form>
               </article>
             </section>
