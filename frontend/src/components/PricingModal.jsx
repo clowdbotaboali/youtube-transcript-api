@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { FaBolt, FaCheck, FaCrown, FaLeaf } from 'react-icons/fa';
+import { useEffect, useMemo, useState } from 'react';
+import { FaBolt, FaCheck, FaCrown, FaLeaf, FaUpload } from 'react-icons/fa';
 import defaultApiUrl from '../config';
 import { getAuthHeaders } from '../utils/authHeaders';
 import { LANG, tr } from '../utils/lang';
@@ -10,6 +10,7 @@ const METHODS = [
 ];
 
 const QUICK_AMOUNTS = [5, 10, 20, 50, 100];
+const MAX_PROOF_SIZE = 3 * 1024 * 1024;
 
 function calculateQuote(amountUsd) {
   const amount = Number(amountUsd || 0);
@@ -41,6 +42,13 @@ function calculateQuote(amountUsd) {
   };
 }
 
+function statusBadge(status, lang) {
+  const value = String(status || '').toLowerCase();
+  if (value === 'approved') return tr(lang, 'مقبول', 'Approved', 'Approuve');
+  if (value === 'rejected') return tr(lang, 'مرفوض', 'Rejected', 'Rejete');
+  return tr(lang, 'معلّق', 'Pending', 'En attente');
+}
+
 function PricingModal({
   isOpen,
   onClose,
@@ -49,13 +57,20 @@ function PricingModal({
   requireLogin,
   lang = LANG.ar,
   theme = 'light',
-  onNotify
+  onNotify,
+  onTopupSubmitted
 }) {
   const [loading, setLoading] = useState(false);
+  const [loadingContext, setLoadingContext] = useState(false);
   const [method, setMethod] = useState('instapay');
   const [payerContact, setPayerContact] = useState('');
   const [transferReference, setTransferReference] = useState('');
   const [amountUsd, setAmountUsd] = useState(5);
+  const [userNote, setUserNote] = useState('');
+  const [proofImageDataUrl, setProofImageDataUrl] = useState('');
+  const [proofFileName, setProofFileName] = useState('');
+  const [billingConfig, setBillingConfig] = useState(null);
+  const [myRequests, setMyRequests] = useState([]);
 
   const isDark = theme === 'dark';
 
@@ -63,9 +78,74 @@ function PricingModal({
     if (typeof onNotify === 'function') onNotify(type, message);
   };
 
-  const quote = calculateQuote(amountUsd);
+  const quote = useMemo(() => calculateQuote(amountUsd), [amountUsd]);
+
+  const loadBillingContext = async () => {
+    if (!user) return;
+    setLoadingContext(true);
+    try {
+      const authHeaders = await getAuthHeaders();
+      const [configResponse, requestsResponse] = await Promise.all([
+        fetch(`${apiUrl}/api/billing/config`, { headers: authHeaders }),
+        fetch(`${apiUrl}/api/billing/my-requests`, { headers: authHeaders })
+      ]);
+
+      const configData = await configResponse.json().catch(() => ({}));
+      const requestsData = await requestsResponse.json().catch(() => ({}));
+
+      if (configResponse.ok && configData.success) {
+        setBillingConfig(configData.data || null);
+      }
+      if (requestsResponse.ok && requestsData.success) {
+        setMyRequests(Array.isArray(requestsData.data) ? requestsData.data : []);
+      }
+    } catch {
+      notify('error', tr(lang, 'تعذر تحميل بيانات الدفع.', 'Failed to load billing data.', 'Echec du chargement des donnees de paiement.'));
+    } finally {
+      setLoadingContext(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!isOpen || !user) return;
+    loadBillingContext();
+  }, [isOpen, user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!isOpen) return null;
+
+  const handleProofChange = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      setProofImageDataUrl('');
+      setProofFileName('');
+      return;
+    }
+    if (!/^image\/(png|jpeg|jpg|webp)$/i.test(file.type)) {
+      notify('error', tr(lang, 'صيغة الصورة غير مدعومة (PNG/JPEG/WEBP).', 'Unsupported image type (PNG/JPEG/WEBP).', 'Format d image non pris en charge (PNG/JPEG/WEBP).'));
+      event.target.value = '';
+      return;
+    }
+    if (file.size > MAX_PROOF_SIZE) {
+      notify('error', tr(lang, 'حجم الصورة أكبر من 3MB.', 'Image is larger than 3MB.', 'L image depasse 3 Mo.'));
+      event.target.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setProofImageDataUrl(String(reader.result || ''));
+      setProofFileName(file.name);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const resetFormAfterSubmit = () => {
+    setPayerContact('');
+    setTransferReference('');
+    setUserNote('');
+    setProofImageDataUrl('');
+    setProofFileName('');
+  };
 
   const handleSubmitTopup = async () => {
     if (!user) {
@@ -84,6 +164,18 @@ function PricingModal({
       );
       return;
     }
+    if (!proofImageDataUrl) {
+      notify(
+        'error',
+        tr(
+          lang,
+          'ارفع صورة إثبات التحويل قبل إرسال الطلب.',
+          'Upload transfer proof before submitting.',
+          'Telechargez la preuve du transfert avant d envoyer.'
+        )
+      );
+      return;
+    }
 
     setLoading(true);
     try {
@@ -98,7 +190,9 @@ function PricingModal({
           amountCents: quote.amountCents,
           method,
           payerContact: payerContact.trim() || null,
-          transferReference: transferReference.trim() || null
+          transferReference: transferReference.trim() || null,
+          userNote: userNote.trim() || null,
+          proofImageDataUrl
         })
       });
       const data = await response.json().catch(() => ({}));
@@ -108,12 +202,14 @@ function PricingModal({
           'success',
           tr(
             lang,
-            `تم إرسال الطلب بنجاح: ${data.quote?.credits ?? quote.credits} كريديت مقابل $${quote.amountUsd}.`,
-            `Top-up request submitted: ${data.quote?.credits ?? quote.credits} credits for $${quote.amountUsd}.`,
-            `Demande envoyee: ${data.quote?.credits ?? quote.credits} credits pour $${quote.amountUsd}.`
+            `تم إرسال طلب الشحن بنجاح (${data.quote?.credits ?? quote.credits} كريديت).`,
+            `Top-up request submitted (${data.quote?.credits ?? quote.credits} credits).`,
+            `Demande envoyee (${data.quote?.credits ?? quote.credits} credits).`
           )
         );
-        onClose();
+        resetFormAfterSubmit();
+        await loadBillingContext();
+        if (typeof onTopupSubmitted === 'function') onTopupSubmitted(data);
       } else {
         notify(
           'error',
@@ -132,10 +228,14 @@ function PricingModal({
     }
   };
 
+  const requestLocale = lang === LANG.ar ? 'ar-EG' : lang === LANG.fr ? 'fr-FR' : 'en-US';
+  const selectedMethodData = METHODS.find((item) => item.value === method) || METHODS[0];
+  const methodName = lang === LANG.ar ? selectedMethodData.ar : lang === LANG.fr ? selectedMethodData.fr : selectedMethodData.en;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-8 overflow-y-auto">
       <div
-        className={`rounded-2xl shadow-xl w-full max-w-5xl p-6 md:p-8 relative mt-10 md:mt-0 ${
+        className={`rounded-2xl shadow-xl w-full max-w-6xl p-6 md:p-8 relative mt-10 md:mt-0 ${
           isDark ? 'bg-slate-900 text-slate-100 border border-slate-700' : 'bg-gray-50 text-slate-900'
         }`}
         dir={lang === LANG.ar ? 'rtl' : 'ltr'}
@@ -180,11 +280,11 @@ function PricingModal({
               </li>
               <li className="flex items-center gap-2">
                 <FaCheck className="text-emerald-600" />
-                {tr(lang, 'كل رابط جديد = 1 كريديت', 'Each new video link costs 1 credit', 'Chaque nouveau lien coute 1 credit')}
+                {tr(lang, 'كل رابط فيديو جديد = 1 كريديت', 'Each new video link costs 1 credit', 'Chaque nouveau lien coute 1 credit')}
               </li>
               <li className="flex items-center gap-2">
                 <FaCheck className="text-emerald-600" />
-                {tr(lang, 'التلخيص والشات لنفس الفيديو بدون خصم', 'Same-video summary/chat has no extra charge', 'Resume/chat de la meme video sans cout supplementaire')}
+                {tr(lang, 'نفس الفيديو: تلخيص وشات بدون خصم إضافي', 'Same-video summary/chat has no extra charge', 'Resume/chat sur la meme video sans cout supplementaire')}
               </li>
             </ul>
           </article>
@@ -248,6 +348,31 @@ function PricingModal({
         </div>
 
         <div className={`rounded-xl border p-4 mb-6 ${isDark ? 'border-slate-700 bg-slate-800/60' : 'border-slate-200 bg-white'}`}>
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <h3 className="font-black text-base">{tr(lang, 'بيانات الدفع ورفع الإثبات', 'Payment details & proof upload', 'Details de paiement et preuve')}</h3>
+            {loadingContext ? <span className="text-xs opacity-70">{tr(lang, 'جارٍ التحديث...', 'Refreshing...', 'Actualisation...')}</span> : null}
+          </div>
+
+          <div className={`rounded-lg border p-3 mb-4 ${isDark ? 'border-cyan-800 bg-cyan-950/20' : 'border-cyan-200 bg-cyan-50'}`}>
+            <p className="text-sm font-semibold mb-2">
+              {tr(lang, 'بيانات الاستقبال الحالية', 'Current receiver info', 'Infos de reception actuelles')}
+            </p>
+            <div className="grid md:grid-cols-2 gap-3 text-sm">
+              <p><span className="font-bold">{tr(lang, 'اسم الحساب:', 'Account name:', 'Nom du compte:')}</span> {billingConfig?.accountName || '-'}</p>
+              <p><span className="font-bold">{tr(lang, 'طريقة الدفع:', 'Method:', 'Methode:')}</span> {methodName}</p>
+              <p><span className="font-bold">InstaPay:</span> {billingConfig?.instapayHandle || '-'}</p>
+              <p><span className="font-bold">Vodafone Cash:</span> {billingConfig?.vodafoneCashNumber || '-'}</p>
+              <p className="md:col-span-2"><span className="font-bold">{tr(lang, 'الدعم:', 'Support:', 'Support:')}</span> {billingConfig?.supportContact || '-'}</p>
+              <p className="md:col-span-2 text-xs opacity-90">
+                {lang === LANG.ar
+                  ? billingConfig?.instructionsAr
+                  : lang === LANG.fr
+                    ? billingConfig?.instructionsFr
+                    : billingConfig?.instructionsEn}
+              </p>
+            </div>
+          </div>
+
           <div className="grid md:grid-cols-3 gap-3">
             <div>
               <label className="block text-sm font-semibold mb-1">{tr(lang, 'وسيلة الدفع', 'Payment method', 'Methode de paiement')}</label>
@@ -274,8 +399,33 @@ function PricingModal({
                 value={transferReference}
                 onChange={(e) => setTransferReference(e.target.value)}
                 className={`w-full border rounded-lg px-3 py-2 ${isDark ? 'border-slate-700 bg-slate-900 text-slate-100' : ''}`}
-                placeholder={tr(lang, 'اختياري', 'Optional', 'Optionnel')}
+                placeholder={tr(lang, 'مطلوب لتسريع المراجعة', 'Recommended for faster approval', 'Recommande pour validation rapide')}
               />
+            </div>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-3 mt-3">
+            <div>
+              <label className="block text-sm font-semibold mb-1">{tr(lang, 'ملاحظة إضافية', 'Additional note', 'Note supplementaire')}</label>
+              <textarea
+                value={userNote}
+                onChange={(e) => setUserNote(e.target.value)}
+                rows={3}
+                className={`w-full border rounded-lg px-3 py-2 ${isDark ? 'border-slate-700 bg-slate-900 text-slate-100' : ''}`}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold mb-1">{tr(lang, 'رفع صورة التحويل (إجباري)', 'Upload transfer proof (required)', 'Telecharger preuve de transfert (obligatoire)')}</label>
+              <label className={`w-full h-[92px] border-2 border-dashed rounded-lg flex items-center justify-center gap-2 cursor-pointer ${isDark ? 'border-slate-600 bg-slate-900/60 text-slate-200' : 'border-slate-300 bg-slate-50 text-slate-700'}`}>
+                <FaUpload />
+                <span className="text-sm">{proofFileName || tr(lang, 'اختر صورة', 'Choose image', 'Choisir une image')}</span>
+                <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={handleProofChange} />
+              </label>
+              {proofImageDataUrl ? (
+                <div className="mt-2">
+                  <img src={proofImageDataUrl} alt="transfer-proof-preview" className="h-24 rounded border border-slate-300 object-cover" />
+                </div>
+              ) : null}
             </div>
           </div>
         </div>
@@ -293,6 +443,41 @@ function PricingModal({
               : tr(lang, 'إرسال طلب الشحن', 'Submit top-up request', 'Envoyer la demande')}
           </span>
         </button>
+
+        <div className={`rounded-xl border p-4 mt-6 ${isDark ? 'border-slate-700 bg-slate-800/50' : 'border-slate-200 bg-white'}`}>
+          <h4 className="font-black text-sm mb-3">{tr(lang, 'طلباتي الأخيرة', 'My recent requests', 'Mes demandes recentes')}</h4>
+          {myRequests.length === 0 ? (
+            <p className="text-sm opacity-70">{tr(lang, 'لا توجد طلبات شحن بعد.', 'No top-up requests yet.', 'Aucune demande de recharge pour le moment.')}</p>
+          ) : (
+            <div className="max-h-56 overflow-auto space-y-2 pr-1">
+              {myRequests.slice(0, 10).map((item) => (
+                <div key={item.id} className={`rounded-lg border p-3 ${isDark ? 'border-slate-700 bg-slate-900/70' : 'border-slate-200 bg-slate-50'}`}>
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                    <span className="font-semibold">${(Number(item.amount_cents || 0) / 100).toFixed(2)} / {item.credits_added} {tr(lang, 'كريديت', 'credits', 'credits')}</span>
+                    <span className={`text-xs rounded-full px-2 py-1 ${
+                      item.status === 'approved'
+                        ? 'bg-emerald-100 text-emerald-700'
+                        : item.status === 'rejected'
+                          ? 'bg-red-100 text-red-700'
+                          : 'bg-amber-100 text-amber-700'
+                    }`}>{statusBadge(item.status, lang)}</span>
+                  </div>
+                  <p className="text-xs opacity-70 mt-1">{new Date(item.created_at).toLocaleString(requestLocale)}</p>
+                  {item?.proof_url ? (
+                    <a
+                      href={item.proof_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs underline mt-1 inline-block"
+                    >
+                      {tr(lang, 'عرض صورة التحويل', 'View transfer proof', 'Voir la preuve de transfert')}
+                    </a>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

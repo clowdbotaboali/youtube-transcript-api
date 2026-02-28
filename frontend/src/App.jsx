@@ -95,6 +95,7 @@ function App() {
   const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
   const [credits, setCredits] = useState(null);
   const [freeLinksRemaining, setFreeLinksRemaining] = useState(FREE_PLAN_REQUESTS);
+  const [accountAccess, setAccountAccess] = useState({ status: 'active', reason: null });
   const [clientPage, setClientPage] = useState(CLIENT_PAGES.dashboard);
   const [lang, setLang] = useState(() => (hasWindow ? localStorage.getItem('appLang') || LANG.ar : LANG.ar));
   const [theme, setTheme] = useState(() => (hasWindow ? localStorage.getItem('appTheme') || THEME.light : THEME.light));
@@ -140,6 +141,7 @@ function App() {
       if (!headers.Authorization) {
         setCredits(null);
         setFreeLinksRemaining(FREE_PLAN_REQUESTS);
+        setAccountAccess({ status: 'active', reason: null });
         return;
       }
       const response = await fetch(`${apiUrl}/api/me`, {
@@ -154,9 +156,14 @@ function App() {
             ? Number(data.data.freeLinksRemaining)
             : FREE_PLAN_REQUESTS
         );
+        setAccountAccess({
+          status: data.data?.accessStatus || 'active',
+          reason: data.data?.accessReason || null
+        });
       } else if (response.status === 401) {
         setCredits(null);
         setFreeLinksRemaining(FREE_PLAN_REQUESTS);
+        setAccountAccess({ status: 'active', reason: null });
       }
     } catch {
       // Keep current credits value to avoid noisy UI resets on transient failures.
@@ -236,6 +243,7 @@ function App() {
         setClientPage(CLIENT_PAGES.dashboard);
         setCredits(null);
         setFreeLinksRemaining(FREE_PLAN_REQUESTS);
+        setAccountAccess({ status: 'active', reason: null });
         setTranscriptData(null);
         setAiResult(null);
       }
@@ -252,6 +260,27 @@ function App() {
       refreshAccount();
     }
   }, [apiUrl, user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!hasWindow || !user?.id) return undefined;
+    const runRefresh = () => {
+      refreshAccount();
+    };
+
+    const intervalId = window.setInterval(runRefresh, 45000);
+    const onFocus = () => runRefresh();
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') runRefresh();
+    };
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisibility);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [user?.id, apiUrl]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (user?.id) {
@@ -387,6 +416,7 @@ function App() {
     setSession(null);
     setCredits(null);
     setFreeLinksRemaining(FREE_PLAN_REQUESTS);
+    setAccountAccess({ status: 'active', reason: null });
     setTranscriptData(null);
     setAiResult(null);
     setClientPage(CLIENT_PAGES.dashboard);
@@ -684,6 +714,12 @@ function App() {
                 <p><span className="font-bold">{tr(lang, 'المتبقي من المجانية:', 'Free links remaining:')}</span> {freeLinksRemaining} / {FREE_PLAN_REQUESTS}</p>
                 <p><span className="font-bold">{tr(lang, 'تكلفة الرابط:', 'Link cost:')}</span> {CREDIT_COST_PER_SUCCESS} {tr(lang, 'نقطة لكل رابط فيديو جديد', 'credit per new video link')}</p>
                 <p><span className="font-bold">{tr(lang, 'الحالة:', 'Session:')}</span> {tr(lang, 'متصل', 'Active')}</p>
+                {accountAccess.status !== 'active' ? (
+                  <p>
+                    <span className="font-bold">{tr(lang, 'حالة الوصول:', 'Access status:')}</span>{' '}
+                    {accountAccess.status} {accountAccess.reason ? `(${accountAccess.reason})` : ''}
+                  </p>
+                ) : null}
               </div>
             </article>
             <article className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
@@ -739,6 +775,9 @@ function App() {
           lang={lang}
           theme={theme}
           onNotify={notify}
+          onTopupSubmitted={() => {
+            refreshAccount();
+          }}
           requireLogin={() => {
             setIsPricingModalOpen(false);
             setIsAuthModalOpen(true);

@@ -21,12 +21,22 @@ const EXTRACT_TYPE = 'extract';
 const CHAT_TYPE_PREFIX = 'chat:';
 const ADMIN_CONFIG_TYPE = 'admin_config';
 const ADMIN_CONFIG_VIDEO_ID = 'admin_credentials';
+const BILLING_CONFIG_TYPE = 'billing_config';
+const BILLING_CONFIG_VIDEO_ID = 'payment_receivers';
+const USER_ACCESS_CONFIG_TYPE = 'user_access_config';
+const USER_ACCESS_CONFIG_VIDEO_ID = 'users_access';
+const AI_CONFIG_TYPE = 'ai_provider_config';
+const AI_CONFIG_VIDEO_ID = 'ai_providers';
+const TRANSCRIPT_API_CONFIG_TYPE = 'transcript_api_config';
+const TRANSCRIPT_API_VIDEO_ID = 'transcript_api_keys';
 const ADMIN_DEFAULT_USERNAME = 'admin';
 const ADMIN_DEFAULT_EMAIL = process.env.ADMIN_EMAIL || 'admin@transcriptai-eg.com';
 const ADMIN_DEFAULT_PASSWORD = process.env.ADMIN_PASSWORD || 'Aa01015415601@@@@@';
 const ADMIN_TOKEN_SECRET = process.env.ADMIN_TOKEN_SECRET || 'transcript-ai-admin-secret';
 const ADMIN_TOKEN_TTL_MS = 1000 * 60 * 60 * 12;
 const LINKS_MAX_ITEMS = 500;
+const PAYMENT_PROOF_BUCKET = process.env.PAYMENT_PROOF_BUCKET || 'payment-proofs';
+const MAX_PAYMENT_PROOF_BYTES = 3 * 1024 * 1024;
 
 function withTimeout(promise, ms, label = 'Operation') {
   let timer;
@@ -493,6 +503,806 @@ async function requireAdmin(req, supabase) {
   return { payload, config };
 }
 
+function parseJsonSafe(value, fallback = {}) {
+  if (typeof value !== 'string' || !value.trim()) return fallback;
+  try {
+    const parsed = JSON.parse(value);
+    if (parsed && typeof parsed === 'object') return parsed;
+    return fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function maskApiKey(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  if (raw.length <= 8) return '********';
+  return `${raw.slice(0, 4)}...${raw.slice(-4)}`;
+}
+
+function normalizeApiKeys(rawKeys) {
+  const source = Array.isArray(rawKeys) ? rawKeys : String(rawKeys || '').split(/\r?\n/);
+  const unique = new Set();
+  for (const item of source) {
+    const value = String(item || '').trim();
+    if (!value) continue;
+    unique.add(value);
+  }
+  return Array.from(unique);
+}
+
+async function getConfigOwnerId(supabase) {
+  const admin = await loadOrBootstrapAdminConfig(supabase);
+  return admin.userId;
+}
+
+async function loadConfigPayload(supabase, processingType, videoId) {
+  const { data, error } = await supabase
+    .from('transcripts_history')
+    .select('id, user_id, ai_result, created_at')
+    .eq('processing_type', processingType)
+    .eq('video_id', videoId)
+    .order('created_at', { ascending: false })
+    .limit(1);
+  if (error) {
+    throw new Error(`Failed to load ${processingType}`);
+  }
+
+  const latest = Array.isArray(data) ? data[0] : null;
+  return {
+    row: latest,
+    payload: latest ? parseJsonSafe(latest.ai_result, {}) : null
+  };
+}
+
+async function saveConfigPayload(supabase, { processingType, videoId, videoTitle, transcript, payload }) {
+  const ownerId = await getConfigOwnerId(supabase);
+  const { error } = await supabase
+    .from('transcripts_history')
+    .insert([
+      {
+        user_id: ownerId,
+        video_id: videoId,
+        video_title: videoTitle,
+        transcript,
+        ai_result: JSON.stringify(payload || {}),
+        processing_type: processingType
+      }
+    ]);
+
+  if (error) {
+    throw new Error(`Failed to save ${processingType}`);
+  }
+  return payload;
+}
+
+function buildDefaultBillingConfig() {
+  return {
+    accountName: '',
+    instapayHandle: '',
+    vodafoneCashNumber: '',
+    supportContact: '',
+    instructionsAr: 'حوّل المبلغ ثم ارفع صورة التحويل ورقم المرجع وسيتم المراجعة خلال وقت قصير.',
+    instructionsEn: 'Transfer the amount, upload transfer proof, and add the reference number for manual review.',
+    instructionsFr: 'Effectuez le virement, telechargez la preuve et ajoutez la reference pour verification.',
+    updatedAt: new Date().toISOString()
+  };
+}
+
+async function loadOrBootstrapBillingConfig(supabase) {
+  const defaults = buildDefaultBillingConfig();
+  const { payload } = await loadConfigPayload(supabase, BILLING_CONFIG_TYPE, BILLING_CONFIG_VIDEO_ID);
+  if (payload) {
+    return {
+      ...defaults,
+      ...payload
+    };
+  }
+  await saveConfigPayload(supabase, {
+    processingType: BILLING_CONFIG_TYPE,
+    videoId: BILLING_CONFIG_VIDEO_ID,
+    videoTitle: 'Billing Receiver Config',
+    transcript: 'billing',
+    payload: defaults
+  });
+  return defaults;
+}
+
+function buildDefaultUserAccessConfig() {
+  return {
+    blockedUsers: {},
+    suspendedUsers: {},
+    updatedAt: new Date().toISOString()
+  };
+}
+
+function normalizeUserAccessConfig(payload) {
+  const config = payload && typeof payload === 'object' ? payload : {};
+  return {
+    blockedUsers: config.blockedUsers && typeof config.blockedUsers === 'object' ? config.blockedUsers : {},
+    suspendedUsers: config.suspendedUsers && typeof config.suspendedUsers === 'object' ? config.suspendedUsers : {},
+    updatedAt: config.updatedAt || new Date().toISOString()
+  };
+}
+
+async function loadOrBootstrapUserAccessConfig(supabase) {
+  const { payload } = await loadConfigPayload(supabase, USER_ACCESS_CONFIG_TYPE, USER_ACCESS_CONFIG_VIDEO_ID);
+  if (payload) {
+    return normalizeUserAccessConfig(payload);
+  }
+
+  const defaults = buildDefaultUserAccessConfig();
+  await saveConfigPayload(supabase, {
+    processingType: USER_ACCESS_CONFIG_TYPE,
+    videoId: USER_ACCESS_CONFIG_VIDEO_ID,
+    videoTitle: 'User Access Control',
+    transcript: 'access',
+    payload: defaults
+  });
+  return defaults;
+}
+
+async function saveUserAccessConfig(supabase, config) {
+  const normalized = normalizeUserAccessConfig(config);
+  normalized.updatedAt = new Date().toISOString();
+  await saveConfigPayload(supabase, {
+    processingType: USER_ACCESS_CONFIG_TYPE,
+    videoId: USER_ACCESS_CONFIG_VIDEO_ID,
+    videoTitle: 'User Access Control',
+    transcript: 'access',
+    payload: normalized
+  });
+  return normalized;
+}
+
+function getUserAccessStateFromConfig(config, userId) {
+  const blocked = config.blockedUsers?.[userId] || null;
+  if (blocked) {
+    return {
+      status: 'blocked',
+      reason: blocked.reason || 'Blocked by admin',
+      updatedAt: blocked.updatedAt || null,
+      message: 'Your account is blocked. Please contact support.'
+    };
+  }
+
+  const suspended = config.suspendedUsers?.[userId] || null;
+  if (suspended) {
+    return {
+      status: 'suspended',
+      reason: suspended.reason || 'Suspended by admin',
+      updatedAt: suspended.updatedAt || null,
+      message: 'Your account is suspended. Please contact support.'
+    };
+  }
+
+  return {
+    status: 'active',
+    reason: null,
+    updatedAt: null,
+    message: null
+  };
+}
+
+async function getUserAccessState(supabase, userId) {
+  const config = await loadOrBootstrapUserAccessConfig(supabase);
+  return getUserAccessStateFromConfig(config, userId);
+}
+
+async function assertUserIsActive(supabase, userId) {
+  const state = await getUserAccessState(supabase, userId);
+  if (state.status !== 'active') {
+    const error = new Error(state.message || 'Access denied');
+    error.code = 'USER_ACCESS_RESTRICTED';
+    error.access = state;
+    throw error;
+  }
+  return state;
+}
+
+function defaultModelForProvider(provider) {
+  if (provider === 'openai') return 'gpt-4o-mini';
+  if (provider === 'openrouter') return 'openai/gpt-4o-mini';
+  if (provider === 'google') return 'gemini-2.0-flash';
+  if (provider === 'anthropic') return 'claude-3-5-sonnet-latest';
+  return 'llama-3.3-70b-versatile';
+}
+
+function defaultAiProviderConfig() {
+  return {
+    selectedProvider: 'groq',
+    selectedModel: 'llama-3.3-70b-versatile',
+    providers: {
+      groq: {
+        apiKey: process.env.GROQ_API_KEY || ''
+      },
+      openrouter: {
+        apiKey: process.env.OPENROUTER_API_KEY || ''
+      },
+      openai: {
+        apiKey: process.env.OPENAI_API_KEY || ''
+      },
+      google: {
+        apiKey: process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || ''
+      },
+      anthropic: {
+        apiKey: process.env.ANTHROPIC_API_KEY || ''
+      }
+    },
+    modelCatalog: {},
+    updatedAt: new Date().toISOString()
+  };
+}
+
+function normalizeProviderName(value) {
+  const provider = String(value || '').trim().toLowerCase();
+  if (['groq', 'openrouter', 'openai', 'google', 'anthropic'].includes(provider)) {
+    return provider;
+  }
+  return 'groq';
+}
+
+function normalizeAiConfigPayload(raw) {
+  const defaults = defaultAiProviderConfig();
+  const payload = raw && typeof raw === 'object' ? raw : {};
+  const providers = payload.providers && typeof payload.providers === 'object' ? payload.providers : {};
+  const mergedProviders = {};
+
+  for (const provider of Object.keys(defaults.providers)) {
+    const current = providers[provider] && typeof providers[provider] === 'object' ? providers[provider] : {};
+    mergedProviders[provider] = {
+      apiKey: String(current.apiKey || defaults.providers[provider].apiKey || '').trim()
+    };
+  }
+
+  const selectedProvider = normalizeProviderName(payload.selectedProvider || defaults.selectedProvider);
+  const selectedModel = String(payload.selectedModel || defaultModelForProvider(selectedProvider) || '').trim();
+  const modelCatalog = payload.modelCatalog && typeof payload.modelCatalog === 'object' ? payload.modelCatalog : {};
+
+  return {
+    selectedProvider,
+    selectedModel: selectedModel || defaultModelForProvider(selectedProvider),
+    providers: mergedProviders,
+    modelCatalog,
+    updatedAt: payload.updatedAt || defaults.updatedAt
+  };
+}
+
+function sanitizeAiConfigForAdmin(config) {
+  const providers = {};
+  for (const [provider, value] of Object.entries(config.providers || {})) {
+    const key = String(value?.apiKey || '').trim();
+    providers[provider] = {
+      hasKey: Boolean(key),
+      maskedKey: key ? maskApiKey(key) : ''
+    };
+  }
+
+  return {
+    selectedProvider: config.selectedProvider,
+    selectedModel: config.selectedModel,
+    providers,
+    modelCatalog: config.modelCatalog || {},
+    updatedAt: config.updatedAt || null
+  };
+}
+
+async function loadOrBootstrapAiProviderConfig(supabase) {
+  const { payload } = await loadConfigPayload(supabase, AI_CONFIG_TYPE, AI_CONFIG_VIDEO_ID);
+  if (payload) {
+    return normalizeAiConfigPayload(payload);
+  }
+
+  const defaults = normalizeAiConfigPayload(defaultAiProviderConfig());
+  await saveConfigPayload(supabase, {
+    processingType: AI_CONFIG_TYPE,
+    videoId: AI_CONFIG_VIDEO_ID,
+    videoTitle: 'AI Providers Config',
+    transcript: 'ai-providers',
+    payload: defaults
+  });
+  return defaults;
+}
+
+async function saveAiProviderConfig(supabase, config) {
+  const normalized = normalizeAiConfigPayload(config);
+  normalized.updatedAt = new Date().toISOString();
+  await saveConfigPayload(supabase, {
+    processingType: AI_CONFIG_TYPE,
+    videoId: AI_CONFIG_VIDEO_ID,
+    videoTitle: 'AI Providers Config',
+    transcript: 'ai-providers',
+    payload: normalized
+  });
+  return normalized;
+}
+
+function defaultTranscriptApiConfig() {
+  return {
+    keys: normalizeApiKeys([process.env.TRANSCRIPT_API_KEY || '']),
+    updatedAt: new Date().toISOString()
+  };
+}
+
+function normalizeTranscriptApiConfig(payload) {
+  const defaults = defaultTranscriptApiConfig();
+  const data = payload && typeof payload === 'object' ? payload : {};
+  return {
+    keys: normalizeApiKeys(data.keys || defaults.keys),
+    updatedAt: data.updatedAt || defaults.updatedAt
+  };
+}
+
+async function loadOrBootstrapTranscriptApiConfig(supabase) {
+  const { payload } = await loadConfigPayload(supabase, TRANSCRIPT_API_CONFIG_TYPE, TRANSCRIPT_API_VIDEO_ID);
+  if (payload) {
+    return normalizeTranscriptApiConfig(payload);
+  }
+
+  const defaults = normalizeTranscriptApiConfig(defaultTranscriptApiConfig());
+  await saveConfigPayload(supabase, {
+    processingType: TRANSCRIPT_API_CONFIG_TYPE,
+    videoId: TRANSCRIPT_API_VIDEO_ID,
+    videoTitle: 'Transcript API Keys Config',
+    transcript: 'transcript-api-keys',
+    payload: defaults
+  });
+  return defaults;
+}
+
+async function saveTranscriptApiConfig(supabase, config) {
+  const normalized = normalizeTranscriptApiConfig(config);
+  normalized.updatedAt = new Date().toISOString();
+  await saveConfigPayload(supabase, {
+    processingType: TRANSCRIPT_API_CONFIG_TYPE,
+    videoId: TRANSCRIPT_API_VIDEO_ID,
+    videoTitle: 'Transcript API Keys Config',
+    transcript: 'transcript-api-keys',
+    payload: normalized
+  });
+  return normalized;
+}
+
+async function ensurePaymentProofBucket(supabase) {
+  const { data: buckets } = await supabase.storage.listBuckets();
+  const exists = Array.isArray(buckets) && buckets.some((bucket) => bucket.name === PAYMENT_PROOF_BUCKET);
+  if (exists) return;
+
+  await supabase.storage.createBucket(PAYMENT_PROOF_BUCKET, {
+    public: false,
+    fileSizeLimit: MAX_PAYMENT_PROOF_BYTES,
+    allowedMimeTypes: ['image/png', 'image/jpeg', 'image/webp']
+  });
+}
+
+function parseDataUrlImage(dataUrl) {
+  const raw = String(dataUrl || '').trim();
+  const match = raw.match(/^data:(image\/(?:png|jpeg|jpg|webp));base64,([\s\S]+)$/i);
+  if (!match) {
+    throw new Error('Invalid image format. Use PNG/JPEG/WEBP');
+  }
+
+  const mime = match[1].toLowerCase() === 'image/jpg' ? 'image/jpeg' : match[1].toLowerCase();
+  const base64 = match[2];
+  const buffer = Buffer.from(base64, 'base64');
+  if (!buffer.length) {
+    throw new Error('Uploaded image is empty');
+  }
+  if (buffer.length > MAX_PAYMENT_PROOF_BYTES) {
+    throw new Error('Image is too large. Max size is 3MB');
+  }
+
+  const extMap = {
+    'image/png': 'png',
+    'image/jpeg': 'jpg',
+    'image/webp': 'webp'
+  };
+  const ext = extMap[mime] || 'jpg';
+  return { mime, buffer, ext, sizeBytes: buffer.length };
+}
+
+async function uploadPaymentProof(supabase, userId, dataUrl) {
+  const parsed = parseDataUrlImage(dataUrl);
+  await ensurePaymentProofBucket(supabase);
+
+  const hash = makeHash(`${userId}:${Date.now()}:${Math.random()}`).slice(0, 16);
+  const objectPath = `${userId}/${Date.now()}-${hash}.${parsed.ext}`;
+  const { error } = await supabase.storage
+    .from(PAYMENT_PROOF_BUCKET)
+    .upload(objectPath, parsed.buffer, {
+      contentType: parsed.mime,
+      upsert: false
+    });
+  if (error) {
+    throw new Error('Failed to upload payment proof');
+  }
+
+  return {
+    bucket: PAYMENT_PROOF_BUCKET,
+    path: objectPath,
+    mime: parsed.mime,
+    sizeBytes: parsed.sizeBytes
+  };
+}
+
+async function createSignedProofUrl(supabase, path, expiresIn = 60 * 60 * 24) {
+  if (!path) return null;
+  const { data, error } = await supabase.storage.from(PAYMENT_PROOF_BUCKET).createSignedUrl(path, expiresIn);
+  if (error) return null;
+  return data?.signedUrl || null;
+}
+
+function parsePaymentNotes(notes) {
+  const text = String(notes || '').trim();
+  if (!text) {
+    return {
+      quote: null,
+      receiverSnapshot: null,
+      proof: null,
+      userNote: '',
+      audit: [],
+      legacyNote: ''
+    };
+  }
+
+  const parsed = parseJsonSafe(text, null);
+  if (parsed && typeof parsed === 'object') {
+    return {
+      quote: parsed.quote || null,
+      receiverSnapshot: parsed.receiverSnapshot || null,
+      proof: parsed.proof || null,
+      userNote: parsed.userNote || '',
+      audit: Array.isArray(parsed.audit) ? parsed.audit : [],
+      legacyNote: parsed.legacyNote || ''
+    };
+  }
+
+  return {
+    quote: null,
+    receiverSnapshot: null,
+    proof: null,
+    userNote: '',
+    audit: [],
+    legacyNote: text
+  };
+}
+
+function stringifyPaymentNotes(notes) {
+  return JSON.stringify({
+    quote: notes.quote || null,
+    receiverSnapshot: notes.receiverSnapshot || null,
+    proof: notes.proof || null,
+    userNote: notes.userNote || '',
+    audit: Array.isArray(notes.audit) ? notes.audit : [],
+    legacyNote: notes.legacyNote || ''
+  });
+}
+
+function appendPaymentAudit(existingNotes, auditEntry) {
+  const notes = parsePaymentNotes(existingNotes);
+  const nextAudit = Array.isArray(notes.audit) ? notes.audit : [];
+  nextAudit.push({
+    at: new Date().toISOString(),
+    ...auditEntry
+  });
+  return stringifyPaymentNotes({
+    ...notes,
+    audit: nextAudit
+  });
+}
+
+async function enrichPaymentForResponse(supabase, payment, { includeAudit = false } = {}) {
+  const notes = parsePaymentNotes(payment?.notes);
+  const proofPath = notes?.proof?.path || null;
+  const proofUrl = proofPath ? await createSignedProofUrl(supabase, proofPath, 60 * 60 * 6) : null;
+
+  return {
+    ...payment,
+    proof_url: proofUrl,
+    note_meta: {
+      userNote: notes.userNote || '',
+      quote: notes.quote || null,
+      receiverSnapshot: notes.receiverSnapshot || null,
+      proof: notes.proof || null,
+      legacyNote: notes.legacyNote || ''
+    },
+    ...(includeAudit ? { note_audit: notes.audit || [] } : {})
+  };
+}
+
+async function fetchProviderModels(provider, apiKey) {
+  const target = normalizeProviderName(provider);
+  const key = String(apiKey || '').trim();
+
+  if (target === 'anthropic') {
+    return [
+      { id: 'claude-3-5-sonnet-latest', name: 'Claude 3.5 Sonnet', tier: 'paid' },
+      { id: 'claude-3-5-haiku-latest', name: 'Claude 3.5 Haiku', tier: 'paid' },
+      { id: 'claude-3-opus-latest', name: 'Claude 3 Opus', tier: 'paid' }
+    ];
+  }
+
+  if (!key) {
+    throw new Error('API key is required for this provider');
+  }
+
+  if (target === 'google') {
+    const response = await fetchWithTimeout(
+      `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(key)}`,
+      { method: 'GET', headers: { Accept: 'application/json' } },
+      12000,
+      'Google models'
+    );
+    const data = await response.json().catch(() => null);
+    if (!response.ok || !data) {
+      throw new Error(data?.error?.message || `Google models request failed (${response.status})`);
+    }
+    return (Array.isArray(data.models) ? data.models : [])
+      .filter((item) => Array.isArray(item.supportedGenerationMethods) && item.supportedGenerationMethods.includes('generateContent'))
+      .map((item) => ({
+        id: String(item.name || '').replace(/^models\//, ''),
+        name: item.displayName || item.name || 'Gemini model',
+        tier: 'mixed'
+      }))
+      .filter((item) => item.id);
+  }
+
+  const urlMap = {
+    groq: 'https://api.groq.com/openai/v1/models',
+    openai: 'https://api.openai.com/v1/models',
+    openrouter: 'https://openrouter.ai/api/v1/models'
+  };
+  const response = await fetchWithTimeout(
+    urlMap[target],
+    {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${key}`,
+        'Content-Type': 'application/json',
+        ...(target === 'openrouter'
+          ? {
+              'HTTP-Referer': 'https://youtube-transcript-api-lilac.vercel.app',
+              'X-Title': 'Transcript AI'
+            }
+          : {})
+      }
+    },
+    12000,
+    `${target} models`
+  );
+  const data = await response.json().catch(() => null);
+  if (!response.ok || !data) {
+    const apiError = data?.error?.message || data?.error;
+    throw new Error(apiError || `${target} models request failed (${response.status})`);
+  }
+
+  const models = Array.isArray(data.data) ? data.data : [];
+  return models
+    .map((item) => {
+      const promptPrice = Number(item?.pricing?.prompt ?? item?.pricing?.input ?? NaN);
+      const completionPrice = Number(item?.pricing?.completion ?? item?.pricing?.output ?? NaN);
+      let tier = 'paid';
+      if (Number.isFinite(promptPrice) && Number.isFinite(completionPrice)) {
+        tier = promptPrice === 0 && completionPrice === 0 ? 'free' : 'paid';
+      } else if (target === 'groq') {
+        tier = 'mixed';
+      }
+      return {
+        id: item?.id || '',
+        name: item?.id || item?.name || 'model',
+        tier
+      };
+    })
+    .filter((item) => item.id);
+}
+
+async function requestOpenAiCompatibleCompletion({
+  baseUrl,
+  apiKey,
+  model,
+  messages,
+  temperature = 0.4,
+  maxTokens,
+  extraHeaders = {}
+}) {
+  const payload = {
+    model,
+    messages,
+    temperature
+  };
+  if (typeof maxTokens === 'number') payload.max_tokens = maxTokens;
+
+  const response = await fetchWithTimeout(
+    `${baseUrl}/chat/completions`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        ...extraHeaders
+      },
+      body: JSON.stringify(payload)
+    },
+    30000,
+    'AI completion'
+  );
+  const data = await response.json().catch(() => null);
+  if (!response.ok || !data) {
+    const apiError = data?.error?.message || data?.error;
+    throw new Error(apiError || `AI request failed (${response.status})`);
+  }
+  return data;
+}
+
+function toSimpleTextFromMessages(messages) {
+  const list = Array.isArray(messages) ? messages : [];
+  const parts = [];
+  for (const item of list) {
+    const role = String(item?.role || 'user');
+    const content = String(item?.content || '').trim();
+    if (!content) continue;
+    if (role === 'system') continue;
+    parts.push(`${role.toUpperCase()}: ${content}`);
+  }
+  return parts.join('\n\n');
+}
+
+async function requestGoogleCompletion({ apiKey, model, messages, temperature = 0.4, maxTokens }) {
+  const systemText = (Array.isArray(messages) ? messages : [])
+    .filter((item) => item?.role === 'system')
+    .map((item) => String(item?.content || '').trim())
+    .filter(Boolean)
+    .join('\n');
+  const prompt = toSimpleTextFromMessages(messages);
+
+  const payload = {
+    contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    generationConfig: {
+      temperature,
+      ...(typeof maxTokens === 'number' ? { maxOutputTokens: maxTokens } : {})
+    },
+    ...(systemText ? { systemInstruction: { parts: [{ text: systemText }] } } : {})
+  };
+
+  const response = await fetchWithTimeout(
+    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    },
+    30000,
+    'Google completion'
+  );
+  const data = await response.json().catch(() => null);
+  if (!response.ok || !data) {
+    throw new Error(data?.error?.message || `Google request failed (${response.status})`);
+  }
+
+  const content = (data?.candidates?.[0]?.content?.parts || [])
+    .map((part) => String(part?.text || '').trim())
+    .filter(Boolean)
+    .join('\n');
+
+  return {
+    choices: [{ message: { content } }]
+  };
+}
+
+async function requestAnthropicCompletion({ apiKey, model, messages, temperature = 0.4, maxTokens }) {
+  const list = Array.isArray(messages) ? messages : [];
+  const system = list
+    .filter((item) => item?.role === 'system')
+    .map((item) => String(item?.content || '').trim())
+    .filter(Boolean)
+    .join('\n');
+
+  const anthropicMessages = list
+    .filter((item) => item?.role !== 'system')
+    .map((item) => ({
+      role: item?.role === 'assistant' ? 'assistant' : 'user',
+      content: String(item?.content || '')
+    }))
+    .filter((item) => item.content.trim().length > 0);
+
+  if (anthropicMessages.length === 0) {
+    anthropicMessages.push({ role: 'user', content: 'Hello' });
+  }
+
+  const payload = {
+    model,
+    max_tokens: typeof maxTokens === 'number' ? maxTokens : 900,
+    temperature,
+    messages: anthropicMessages,
+    ...(system ? { system } : {})
+  };
+
+  const response = await fetchWithTimeout(
+    'https://api.anthropic.com/v1/messages',
+    {
+      method: 'POST',
+      headers: {
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    },
+    30000,
+    'Anthropic completion'
+  );
+  const data = await response.json().catch(() => null);
+  if (!response.ok || !data) {
+    const errorMessage = data?.error?.message || data?.error?.type;
+    throw new Error(errorMessage || `Anthropic request failed (${response.status})`);
+  }
+
+  const content = (Array.isArray(data.content) ? data.content : [])
+    .map((part) => (part?.type === 'text' ? String(part?.text || '') : ''))
+    .join('\n')
+    .trim();
+
+  return {
+    choices: [{ message: { content } }]
+  };
+}
+
+async function createMultiProviderChatCompletion({ supabase, messages, temperature = 0.4, maxTokens }) {
+  const config = await loadOrBootstrapAiProviderConfig(supabase);
+  const provider = normalizeProviderName(config.selectedProvider);
+  const model = String(config.selectedModel || defaultModelForProvider(provider)).trim() || defaultModelForProvider(provider);
+  const key = String(config.providers?.[provider]?.apiKey || '').trim();
+
+  const fallbackGroqKey = process.env.GROQ_API_KEY || '';
+  const selectedKey = key || (provider === 'groq' ? fallbackGroqKey : '');
+  if (!selectedKey) {
+    throw new Error(`AI provider "${provider}" is not configured with an API key`);
+  }
+
+  if (provider === 'google') {
+    return requestGoogleCompletion({
+      apiKey: selectedKey,
+      model,
+      messages,
+      temperature,
+      maxTokens
+    });
+  }
+
+  if (provider === 'anthropic') {
+    return requestAnthropicCompletion({
+      apiKey: selectedKey,
+      model,
+      messages,
+      temperature,
+      maxTokens
+    });
+  }
+
+  const endpointByProvider = {
+    groq: 'https://api.groq.com/openai/v1',
+    openrouter: 'https://openrouter.ai/api/v1',
+    openai: 'https://api.openai.com/v1'
+  };
+
+  return requestOpenAiCompatibleCompletion({
+    baseUrl: endpointByProvider[provider] || endpointByProvider.groq,
+    apiKey: selectedKey,
+    model,
+    messages,
+    temperature,
+    maxTokens,
+    extraHeaders:
+      provider === 'openrouter'
+        ? {
+            'HTTP-Referer': 'https://youtube-transcript-api-lilac.vercel.app',
+            'X-Title': 'Transcript AI'
+          }
+        : {}
+  });
+}
+
 async function getCachedExtractRecord(supabase, userId, videoId) {
   const { data, error } = await supabase
     .from('transcripts_history')
@@ -800,27 +1610,54 @@ function isUsableTranscript(text = '') {
   return stats.wordsCount >= 3 && stats.uniqueWords >= 2;
 }
 
-async function fetchWithTranscriptApi(videoUrl) {
-  const apiKey = process.env.TRANSCRIPT_API_KEY;
-  if (!apiKey) return null;
+async function fetchWithTranscriptApi(videoUrl, supabase) {
+  const fallbackEnvKeys = normalizeApiKeys([process.env.TRANSCRIPT_API_KEY || '']);
+  const config = supabase ? await loadOrBootstrapTranscriptApiConfig(supabase) : { keys: fallbackEnvKeys };
+  const keys = normalizeApiKeys(config?.keys || fallbackEnvKeys);
+  if (keys.length === 0) return null;
+
   const encodedUrl = encodeURIComponent(videoUrl);
-  const response = await fetchWithTimeout(
-    `https://transcriptapi.com/api/v2/youtube/transcript?video_url=${encodedUrl}`,
-    {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'User-Agent': USER_AGENT,
-        Accept: 'application/json'
+  let lastError = null;
+
+  for (const apiKey of keys) {
+    try {
+      const response = await fetchWithTimeout(
+        `https://transcriptapi.com/api/v2/youtube/transcript?video_url=${encodedUrl}`,
+        {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            'User-Agent': USER_AGENT,
+            Accept: 'application/json'
+          }
+        },
+        12000,
+        'TranscriptAPI request'
+      );
+
+      if (!response.ok) {
+        lastError = new Error(`TranscriptAPI failed with status ${response.status}`);
+        continue;
       }
-    },
-    12000,
-    'TranscriptAPI request'
-  );
-  if (!response.ok) return null;
-  const data = await response.json().catch(() => null);
-  if (!data?.transcript || !Array.isArray(data.transcript)) return null;
-  return data.transcript.map((item) => item.text || '').join(' ').trim();
+
+      const data = await response.json().catch(() => null);
+      if (!data?.transcript || !Array.isArray(data.transcript)) {
+        lastError = new Error('TranscriptAPI response did not include transcript');
+        continue;
+      }
+
+      const transcript = data.transcript.map((item) => item.text || '').join(' ').trim();
+      if (transcript) return transcript;
+      lastError = new Error('TranscriptAPI returned empty transcript');
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  if (lastError) {
+    return null;
+  }
+  return null;
 }
 
 async function fetchWithYtdl(videoId) {
@@ -896,6 +1733,8 @@ export default async function handler(req, res) {
         return res.status(401).json({ success: false, error: 'Authentication required' });
       }
       const userRow = await ensureUserAccountRow(supabase, user);
+      await assertUserIsActive(supabase, user.id);
+      const access = await getUserAccessState(supabase, user.id);
       const usage = await getFreeLinksUsage(supabase, user.id);
       return res.json({
         success: true,
@@ -905,7 +1744,9 @@ export default async function handler(req, res) {
           credits: Number(userRow.credits || 0),
           freePlanLimit: usage.freePlanLimit,
           freeLinksUsed: usage.freeLinksUsed,
-          freeLinksRemaining: usage.freeLinksRemaining
+          freeLinksRemaining: usage.freeLinksRemaining,
+          accessStatus: access.status,
+          accessReason: access.reason
         }
       });
     }
@@ -997,6 +1838,9 @@ export default async function handler(req, res) {
           uniqueUserLinks.add(`${item.user_id}::${item.video_id}`);
         }
       }
+      const accessConfig = await loadOrBootstrapUserAccessConfig(supabase);
+      const blockedUsersCount = Object.keys(accessConfig.blockedUsers || {}).length;
+      const suspendedUsersCount = Object.keys(accessConfig.suspendedUsers || {}).length;
 
       return res.json({
         success: true,
@@ -1010,6 +1854,10 @@ export default async function handler(req, res) {
           usage: {
             extractRecords: Array.isArray(extracts) ? extracts.length : 0,
             uniqueExtractedLinks: uniqueUserLinks.size
+          },
+          usersAccess: {
+            blocked: blockedUsersCount,
+            suspended: suspendedUsersCount
           },
           generatedAt: new Date().toISOString()
         }
@@ -1028,12 +1876,20 @@ export default async function handler(req, res) {
 
       const { limit, page, offset } = parsePaginationFromUrl(url, { limit: 25, maxLimit: 200 });
       const rows = await listAdminUsersWithStats(supabase, { limit, offset });
+      const accessConfig = await loadOrBootstrapUserAccessConfig(supabase);
+      const enrichedRows = rows.map((item) => {
+        const access = getUserAccessStateFromConfig(accessConfig, item.id);
+        return {
+          ...item,
+          access
+        };
+      });
       const usersCountResponse = await supabase.from('users').select('id', { count: 'exact', head: true });
       if (usersCountResponse.error) throw usersCountResponse.error;
 
       return res.json({
         success: true,
-        data: rows,
+        data: enrichedRows,
         pagination: {
           page,
           limit,
@@ -1066,10 +1922,15 @@ export default async function handler(req, res) {
 
       const { data, error } = await query;
       if (error) throw error;
+      const items = await Promise.all(
+        (Array.isArray(data) ? data : []).map((item) =>
+          enrichPaymentForResponse(supabase, item, { includeAudit: true })
+        )
+      );
 
       return res.json({
         success: true,
-        data: Array.isArray(data) ? data : [],
+        data: items,
         pagination: { page, limit }
       });
     }
@@ -1111,15 +1972,11 @@ export default async function handler(req, res) {
         userCreditsAfter = await addCreditsToUser(supabase, payment.user_id, payment.credits_added);
       }
 
-      const auditLine = [
-        new Date().toISOString(),
-        `admin:${adminSession.config.username}`,
-        `decision:${decision}`,
-        note ? `note:${note}` : null
-      ]
-        .filter(Boolean)
-        .join(' | ');
-      const mergedNotes = [payment.notes || null, auditLine].filter(Boolean).join('\n');
+      const mergedNotes = appendPaymentAudit(payment.notes, {
+        admin: adminSession.config.username,
+        decision,
+        note
+      });
 
       const { data: updatedPayment, error: updateError } = await supabase
         .from('payments')
@@ -1134,7 +1991,7 @@ export default async function handler(req, res) {
 
       return res.json({
         success: true,
-        payment: updatedPayment,
+        payment: await enrichPaymentForResponse(supabase, updatedPayment, { includeAudit: true }),
         userCreditsAfter
       });
     }
@@ -1215,6 +2072,280 @@ export default async function handler(req, res) {
       });
     }
 
+    if (pathname === '/api/admin/billing-config' && req.method === 'GET') {
+      const supabase = getSupabase();
+      if (!supabase) {
+        return res.status(500).json({ success: false, error: 'Server not configured: SUPABASE env vars missing' });
+      }
+      const adminSession = await requireAdmin(req, supabase);
+      if (!adminSession) {
+        return res.status(401).json({ success: false, error: 'Admin authentication required' });
+      }
+      const config = await loadOrBootstrapBillingConfig(supabase);
+      return res.json({ success: true, data: config });
+    }
+
+    if (pathname === '/api/admin/billing-config' && req.method === 'POST') {
+      const supabase = getSupabase();
+      if (!supabase) {
+        return res.status(500).json({ success: false, error: 'Server not configured: SUPABASE env vars missing' });
+      }
+      const adminSession = await requireAdmin(req, supabase);
+      if (!adminSession) {
+        return res.status(401).json({ success: false, error: 'Admin authentication required' });
+      }
+
+      const current = await loadOrBootstrapBillingConfig(supabase);
+      const next = {
+        ...current,
+        accountName: String(body.accountName ?? current.accountName).trim(),
+        instapayHandle: String(body.instapayHandle ?? current.instapayHandle).trim(),
+        vodafoneCashNumber: String(body.vodafoneCashNumber ?? current.vodafoneCashNumber).trim(),
+        supportContact: String(body.supportContact ?? current.supportContact).trim(),
+        instructionsAr: String(body.instructionsAr ?? current.instructionsAr).trim(),
+        instructionsEn: String(body.instructionsEn ?? current.instructionsEn).trim(),
+        instructionsFr: String(body.instructionsFr ?? current.instructionsFr).trim(),
+        updatedAt: new Date().toISOString(),
+        updatedBy: adminSession.config.username
+      };
+      await saveConfigPayload(supabase, {
+        processingType: BILLING_CONFIG_TYPE,
+        videoId: BILLING_CONFIG_VIDEO_ID,
+        videoTitle: 'Billing Receiver Config',
+        transcript: 'billing',
+        payload: next
+      });
+
+      return res.json({ success: true, data: next });
+    }
+
+    const adminUserStatusMatch = pathname.match(/^\/api\/admin\/users\/([^/]+)\/status$/);
+    if (adminUserStatusMatch && req.method === 'POST') {
+      const supabase = getSupabase();
+      if (!supabase) {
+        return res.status(500).json({ success: false, error: 'Server not configured: SUPABASE env vars missing' });
+      }
+      const adminSession = await requireAdmin(req, supabase);
+      if (!adminSession) {
+        return res.status(401).json({ success: false, error: 'Admin authentication required' });
+      }
+
+      const targetUserId = adminUserStatusMatch[1];
+      const action = String(body.action || '').trim().toLowerCase();
+      const reason = String(body.reason || '').trim();
+      if (!['active', 'suspended', 'blocked'].includes(action)) {
+        return res.status(400).json({ success: false, error: 'action must be active, suspended, or blocked' });
+      }
+
+      if (targetUserId === adminSession.config.userId) {
+        return res.status(400).json({ success: false, error: 'Admin account cannot be modified here' });
+      }
+
+      const accessConfig = await loadOrBootstrapUserAccessConfig(supabase);
+      delete accessConfig.blockedUsers[targetUserId];
+      delete accessConfig.suspendedUsers[targetUserId];
+
+      if (action === 'blocked') {
+        accessConfig.blockedUsers[targetUserId] = {
+          reason: reason || 'Blocked by admin',
+          updatedAt: new Date().toISOString(),
+          updatedBy: adminSession.config.username
+        };
+      } else if (action === 'suspended') {
+        accessConfig.suspendedUsers[targetUserId] = {
+          reason: reason || 'Suspended by admin',
+          updatedAt: new Date().toISOString(),
+          updatedBy: adminSession.config.username
+        };
+      }
+
+      const saved = await saveUserAccessConfig(supabase, accessConfig);
+      return res.json({
+        success: true,
+        data: {
+          userId: targetUserId,
+          access: getUserAccessStateFromConfig(saved, targetUserId)
+        }
+      });
+    }
+
+    const adminUserDeleteMatch = pathname.match(/^\/api\/admin\/users\/([^/]+)$/);
+    if (adminUserDeleteMatch && req.method === 'DELETE') {
+      const supabase = getSupabase();
+      if (!supabase) {
+        return res.status(500).json({ success: false, error: 'Server not configured: SUPABASE env vars missing' });
+      }
+      const adminSession = await requireAdmin(req, supabase);
+      if (!adminSession) {
+        return res.status(401).json({ success: false, error: 'Admin authentication required' });
+      }
+
+      const targetUserId = adminUserDeleteMatch[1];
+      if (!targetUserId) {
+        return res.status(400).json({ success: false, error: 'Missing target user id' });
+      }
+      if (targetUserId === adminSession.config.userId) {
+        return res.status(400).json({ success: false, error: 'Admin account cannot be deleted here' });
+      }
+
+      await supabase.from('payments').delete().eq('user_id', targetUserId);
+      await supabase.from('transcripts_history').delete().eq('user_id', targetUserId);
+      await supabase.from('users').delete().eq('id', targetUserId);
+
+      try {
+        await authAdminRequest(`/auth/v1/admin/users/${targetUserId}`, { method: 'DELETE' });
+      } catch {
+        // Ignore not-found or already-deleted cases.
+      }
+
+      const accessConfig = await loadOrBootstrapUserAccessConfig(supabase);
+      delete accessConfig.blockedUsers[targetUserId];
+      delete accessConfig.suspendedUsers[targetUserId];
+      await saveUserAccessConfig(supabase, accessConfig);
+
+      return res.json({ success: true });
+    }
+
+    if (pathname === '/api/admin/ai/config' && req.method === 'GET') {
+      const supabase = getSupabase();
+      if (!supabase) {
+        return res.status(500).json({ success: false, error: 'Server not configured: SUPABASE env vars missing' });
+      }
+      const adminSession = await requireAdmin(req, supabase);
+      if (!adminSession) {
+        return res.status(401).json({ success: false, error: 'Admin authentication required' });
+      }
+      const config = await loadOrBootstrapAiProviderConfig(supabase);
+      return res.json({
+        success: true,
+        data: sanitizeAiConfigForAdmin(config)
+      });
+    }
+
+    if (pathname === '/api/admin/ai/config' && req.method === 'POST') {
+      const supabase = getSupabase();
+      if (!supabase) {
+        return res.status(500).json({ success: false, error: 'Server not configured: SUPABASE env vars missing' });
+      }
+      const adminSession = await requireAdmin(req, supabase);
+      if (!adminSession) {
+        return res.status(401).json({ success: false, error: 'Admin authentication required' });
+      }
+
+      const current = await loadOrBootstrapAiProviderConfig(supabase);
+      const currentProviders = current.providers || {};
+      const incomingProviders = body.providers && typeof body.providers === 'object' ? body.providers : {};
+      const mergedProviders = {};
+      for (const provider of Object.keys(currentProviders)) {
+        const currentKey = String(currentProviders[provider]?.apiKey || '').trim();
+        const incomingKey = String(incomingProviders?.[provider]?.apiKey || '').trim();
+        mergedProviders[provider] = {
+          apiKey: incomingKey || currentKey
+        };
+      }
+
+      const next = normalizeAiConfigPayload({
+        ...current,
+        selectedProvider: body.selectedProvider || current.selectedProvider,
+        selectedModel: body.selectedModel || current.selectedModel,
+        providers: mergedProviders,
+        modelCatalog: body.modelCatalog && typeof body.modelCatalog === 'object'
+          ? {
+              ...(current.modelCatalog || {}),
+              ...body.modelCatalog
+            }
+          : current.modelCatalog,
+        updatedAt: new Date().toISOString(),
+        updatedBy: adminSession.config.username
+      });
+      const saved = await saveAiProviderConfig(supabase, next);
+
+      return res.json({
+        success: true,
+        data: sanitizeAiConfigForAdmin(saved)
+      });
+    }
+
+    if (pathname === '/api/admin/ai/models' && req.method === 'POST') {
+      const supabase = getSupabase();
+      if (!supabase) {
+        return res.status(500).json({ success: false, error: 'Server not configured: SUPABASE env vars missing' });
+      }
+      const adminSession = await requireAdmin(req, supabase);
+      if (!adminSession) {
+        return res.status(401).json({ success: false, error: 'Admin authentication required' });
+      }
+
+      const provider = normalizeProviderName(body.provider);
+      const config = await loadOrBootstrapAiProviderConfig(supabase);
+      const keyFromBody = String(body.apiKey || '').trim();
+      const key = keyFromBody || String(config.providers?.[provider]?.apiKey || '').trim();
+      const models = await fetchProviderModels(provider, key);
+
+      const modelCatalog = {
+        ...(config.modelCatalog || {}),
+        [provider]: models
+      };
+      const nextConfig = await saveAiProviderConfig(supabase, {
+        ...config,
+        modelCatalog
+      });
+
+      return res.json({
+        success: true,
+        data: {
+          provider,
+          models,
+          config: sanitizeAiConfigForAdmin(nextConfig)
+        }
+      });
+    }
+
+    if (pathname === '/api/admin/transcript-api/config' && req.method === 'GET') {
+      const supabase = getSupabase();
+      if (!supabase) {
+        return res.status(500).json({ success: false, error: 'Server not configured: SUPABASE env vars missing' });
+      }
+      const adminSession = await requireAdmin(req, supabase);
+      if (!adminSession) {
+        return res.status(401).json({ success: false, error: 'Admin authentication required' });
+      }
+      const config = await loadOrBootstrapTranscriptApiConfig(supabase);
+      return res.json({
+        success: true,
+        data: {
+          keysCount: config.keys.length,
+          keysMasked: config.keys.map((key) => maskApiKey(key)),
+          updatedAt: config.updatedAt
+        }
+      });
+    }
+
+    if (pathname === '/api/admin/transcript-api/config' && req.method === 'POST') {
+      const supabase = getSupabase();
+      if (!supabase) {
+        return res.status(500).json({ success: false, error: 'Server not configured: SUPABASE env vars missing' });
+      }
+      const adminSession = await requireAdmin(req, supabase);
+      if (!adminSession) {
+        return res.status(401).json({ success: false, error: 'Admin authentication required' });
+      }
+      const keys = normalizeApiKeys(body.keys || []);
+      const saved = await saveTranscriptApiConfig(supabase, {
+        keys,
+        updatedBy: adminSession.config.username,
+        updatedAt: new Date().toISOString()
+      });
+      return res.json({
+        success: true,
+        data: {
+          keysCount: saved.keys.length,
+          keysMasked: saved.keys.map((key) => maskApiKey(key)),
+          updatedAt: saved.updatedAt
+        }
+      });
+    }
+
     if (pathname === '/api/transcript/extract') {
       const supabase = getSupabase();
       if (!supabase) {
@@ -1225,6 +2356,7 @@ export default async function handler(req, res) {
         return res.status(401).json({ success: false, error: 'Authentication required' });
       }
       const userRow = await ensureUserAccountRow(supabase, user);
+      await assertUserIsActive(supabase, user.id);
 
       const { url: videoUrl } = body;
       if (!videoUrl) {
@@ -1262,7 +2394,7 @@ export default async function handler(req, res) {
       let method = 'unknown';
 
       try {
-        transcript = await withTimeout(fetchWithTranscriptApi(videoUrl), EXTRACTION_TIMEOUT_MS, 'TranscriptAPI pipeline');
+        transcript = await withTimeout(fetchWithTranscriptApi(videoUrl, supabase), EXTRACTION_TIMEOUT_MS, 'TranscriptAPI pipeline');
         if (transcript && isUsableTranscript(transcript)) {
           method = 'transcriptapi';
         } else {
@@ -1420,7 +2552,8 @@ export default async function handler(req, res) {
         });
       }
 
-      const completion = await createGroqChatCompletion({
+      const completion = await createMultiProviderChatCompletion({
+        supabase,
         messages: [
           { role: 'system', content: systemPrompt },
           {
@@ -1430,7 +2563,6 @@ export default async function handler(req, res) {
               : transcriptForModel
           }
         ],
-        model: 'llama-3.3-70b-versatile',
         temperature: 0.4,
         maxTokens: type === 'all' ? 900 : 700
       });
@@ -1456,6 +2588,7 @@ export default async function handler(req, res) {
       const user = await getAuthedUser(req);
       if (!user) return res.status(401).json({ success: false, error: 'Authentication required' });
       await ensureUserAccountRow(supabase, user);
+      await assertUserIsActive(supabase, user.id);
 
       const { videoId, videoTitle, transcript, processingType, result, aiResult } = body;
       if (!videoId || !transcript) {
@@ -1505,6 +2638,7 @@ export default async function handler(req, res) {
       }
       const user = await getAuthedUser(req);
       if (!user) return res.status(401).json({ success: false, error: 'Authentication required' });
+      await assertUserIsActive(supabase, user.id);
       const id = pathname.split('/').pop();
 
       const { data, error } = await supabase
@@ -1514,6 +2648,10 @@ export default async function handler(req, res) {
         .eq('user_id', user.id)
         .neq('processing_type', QUOTA_MARKER_TYPE)
         .neq('processing_type', ADMIN_CONFIG_TYPE)
+        .neq('processing_type', BILLING_CONFIG_TYPE)
+        .neq('processing_type', USER_ACCESS_CONFIG_TYPE)
+        .neq('processing_type', AI_CONFIG_TYPE)
+        .neq('processing_type', TRANSCRIPT_API_CONFIG_TYPE)
         .single();
       if (error || !data) return res.status(404).json({ success: false, error: 'History item not found' });
       return res.json({ success: true, item: data });
@@ -1526,6 +2664,7 @@ export default async function handler(req, res) {
       }
       const user = await getAuthedUser(req);
       if (!user) return res.status(401).json({ success: false, error: 'Authentication required' });
+      await assertUserIsActive(supabase, user.id);
       const id = pathname.split('/').pop();
       const { error } = await supabase.from('transcripts_history').delete().eq('id', id).eq('user_id', user.id);
       if (error) throw error;
@@ -1539,12 +2678,17 @@ export default async function handler(req, res) {
       }
       const user = await getAuthedUser(req);
       if (!user) return res.status(401).json({ success: false, error: 'Authentication required' });
+      await assertUserIsActive(supabase, user.id);
       const { data, error } = await supabase
         .from('transcripts_history')
         .select('*')
         .eq('user_id', user.id)
         .neq('processing_type', QUOTA_MARKER_TYPE)
         .neq('processing_type', ADMIN_CONFIG_TYPE)
+        .neq('processing_type', BILLING_CONFIG_TYPE)
+        .neq('processing_type', USER_ACCESS_CONFIG_TYPE)
+        .neq('processing_type', AI_CONFIG_TYPE)
+        .neq('processing_type', TRANSCRIPT_API_CONFIG_TYPE)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return res.json({ success: true, data });
@@ -1557,6 +2701,7 @@ export default async function handler(req, res) {
       }
       const user = await getAuthedUser(req);
       if (!user) return res.status(401).json({ success: false, error: 'Authentication required' });
+      await assertUserIsActive(supabase, user.id);
 
       const { data, error } = await supabase
         .from('transcripts_history')
@@ -1583,6 +2728,22 @@ export default async function handler(req, res) {
       return res.json({ success: true, data: Array.from(unique.values()) });
     }
 
+    if (pathname === '/api/billing/config' && req.method === 'GET') {
+      const supabase = getSupabase();
+      if (!supabase) {
+        return res.status(500).json({ success: false, error: 'Server not configured: SUPABASE env vars missing' });
+      }
+      const user = await getAuthedUser(req);
+      if (!user) return res.status(401).json({ success: false, error: 'Authentication required' });
+      await assertUserIsActive(supabase, user.id);
+
+      const config = await loadOrBootstrapBillingConfig(supabase);
+      return res.json({
+        success: true,
+        data: config
+      });
+    }
+
     if (pathname === '/api/billing/create-topup-request' && req.method === 'POST') {
       const supabase = getSupabase();
       if (!supabase) {
@@ -1591,12 +2752,44 @@ export default async function handler(req, res) {
       const user = await getAuthedUser(req);
       if (!user) return res.status(401).json({ success: false, error: 'Authentication required' });
       await ensureUserAccountRow(supabase, user);
+      await assertUserIsActive(supabase, user.id);
 
-      const { amountCents, method, payerContact, transferReference, notes } = body;
+      const { amountCents, method, payerContact, transferReference, notes, userNote, proofImageDataUrl } = body;
       if (!['instapay', 'vodafone_cash'].includes(method)) {
         return res.status(400).json({ success: false, error: 'Invalid payment method' });
       }
+      if (!proofImageDataUrl) {
+        return res.status(400).json({ success: false, error: 'Transfer proof image is required' });
+      }
       const quote = calculateTopupQuote(amountCents);
+      const billingConfig = await loadOrBootstrapBillingConfig(supabase);
+
+      const proof = await uploadPaymentProof(supabase, user.id, proofImageDataUrl);
+
+      const paymentNotes = stringifyPaymentNotes({
+        quote: {
+          packs: quote.packs,
+          baseCredits: quote.baseCredits,
+          bonusRate: quote.bonusRate,
+          credits: quote.credits,
+          amountCents: quote.amountCents
+        },
+        receiverSnapshot: {
+          accountName: billingConfig.accountName,
+          instapayHandle: billingConfig.instapayHandle,
+          vodafoneCashNumber: billingConfig.vodafoneCashNumber,
+          supportContact: billingConfig.supportContact
+        },
+        proof,
+        userNote: String(userNote || notes || '').trim(),
+        audit: [
+          {
+            at: new Date().toISOString(),
+            event: 'created_by_user',
+            userId: user.id
+          }
+        ]
+      });
 
       const { data, error } = await supabase
         .from('payments')
@@ -1609,17 +2802,17 @@ export default async function handler(req, res) {
             payment_method: method,
             payer_contact: payerContact || null,
             transfer_reference: transferReference || null,
-            notes:
-              notes ||
-              `packs=${quote.packs}; base=${quote.baseCredits}; bonusRate=${Math.round(quote.bonusRate * 100)}%`
+            notes: paymentNotes
           }
         ])
         .select()
         .single();
       if (error) throw error;
+      const request = await enrichPaymentForResponse(supabase, data, { includeAudit: false });
       return res.json({
         success: true,
-        request: data,
+        request,
+        billing: billingConfig,
         quote: {
           packs: quote.packs,
           baseCredits: quote.baseCredits,
@@ -1636,13 +2829,15 @@ export default async function handler(req, res) {
       }
       const user = await getAuthedUser(req);
       if (!user) return res.status(401).json({ success: false, error: 'Authentication required' });
+      await assertUserIsActive(supabase, user.id);
       const { data, error } = await supabase
         .from('payments')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return res.json({ success: true, data });
+      const items = await Promise.all((Array.isArray(data) ? data : []).map((item) => enrichPaymentForResponse(supabase, item)));
+      return res.json({ success: true, data: items });
     }
 
     if (pathname === '/api/chat/chat' && req.method === 'POST') {
@@ -1655,6 +2850,7 @@ export default async function handler(req, res) {
         return res.status(401).json({ success: false, error: 'Authentication required' });
       }
       const userRow = await ensureUserAccountRow(supabase, user);
+      await assertUserIsActive(supabase, user.id);
 
       const { message, transcript, videoId: providedVideoId } = body;
       if (!message || !transcript) {
@@ -1680,12 +2876,12 @@ export default async function handler(req, res) {
         });
       }
 
-      const completion = await createGroqChatCompletion({
+      const completion = await createMultiProviderChatCompletion({
+        supabase,
         messages: [
           { role: 'system', content: 'You are a helpful Arabic assistant for transcript Q&A.' },
           { role: 'user', content: `Transcript: ${transcriptForContext}\n\nQuestion: ${questionForModel}` }
         ],
-        model: 'llama-3.3-70b-versatile',
         temperature: 0.6,
         maxTokens: 600
       });
@@ -1706,6 +2902,13 @@ export default async function handler(req, res) {
     return res.status(404).json({ success: false, error: 'Not found' });
   } catch (error) {
     const message = String(error?.message || 'Internal error');
+    if (error?.code === 'USER_ACCESS_RESTRICTED') {
+      return res.status(403).json({
+        success: false,
+        error: message,
+        access: error?.access || null
+      });
+    }
     if (message.toLowerCase().includes('request too large') || message.toLowerCase().includes('rate limit')) {
       return res.status(413).json({
         success: false,
