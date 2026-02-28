@@ -22,7 +22,7 @@ function SavedLinks({ onSelectLink, apiUrl = defaultApiUrl, user, lang = LANG.ar
   const readCache = useCallback(() => {
     if (!cacheKey || typeof window === 'undefined') return null;
     try {
-      const raw = window.sessionStorage.getItem(cacheKey);
+      const raw = window.localStorage.getItem(cacheKey);
       if (!raw) return null;
       const parsed = JSON.parse(raw);
       if (!Array.isArray(parsed?.items)) return null;
@@ -36,7 +36,7 @@ function SavedLinks({ onSelectLink, apiUrl = defaultApiUrl, user, lang = LANG.ar
     (items) => {
       if (!cacheKey || typeof window === 'undefined') return;
       try {
-        window.sessionStorage.setItem(
+        window.localStorage.setItem(
           cacheKey,
           JSON.stringify({
             savedAt: Date.now(),
