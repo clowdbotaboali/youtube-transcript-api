@@ -233,13 +233,14 @@ function PricingModal({
   const methodName = lang === LANG.ar ? selectedMethodData.ar : lang === LANG.fr ? selectedMethodData.fr : selectedMethodData.en;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-8 overflow-y-auto">
-      <div
-        className={`rounded-2xl shadow-xl w-full max-w-6xl p-6 md:p-8 relative mt-10 md:mt-0 ${
-          isDark ? 'bg-slate-900 text-slate-100 border border-slate-700' : 'bg-gray-50 text-slate-900'
-        }`}
-        dir={lang === LANG.ar ? 'rtl' : 'ltr'}
-      >
+    <div className="fixed inset-0 z-50 bg-black/70 overflow-y-auto p-2 sm:p-4">
+      <div className="min-h-full flex items-start justify-center">
+        <div
+          className={`rounded-2xl shadow-xl w-full max-w-6xl p-4 sm:p-6 md:p-8 relative my-2 sm:my-6 max-h-[94vh] overflow-y-auto ${
+            isDark ? 'bg-slate-900 text-slate-100 border border-slate-700' : 'bg-gray-50 text-slate-900'
+          }`}
+          dir={lang === LANG.ar ? 'rtl' : 'ltr'}
+        >
         <button
           onClick={onClose}
           className={`absolute top-4 ${lang === LANG.ar ? 'left-4' : 'right-4'} rounded-full px-3 py-1 shadow-sm transition ${
@@ -477,6 +478,7 @@ function PricingModal({
               ))}
             </div>
           )}
+        </div>
         </div>
       </div>
     </div>
