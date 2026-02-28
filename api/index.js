@@ -37,6 +37,70 @@ const ADMIN_TOKEN_TTL_MS = 1000 * 60 * 60 * 12;
 const LINKS_MAX_ITEMS = 500;
 const PAYMENT_PROOF_BUCKET = process.env.PAYMENT_PROOF_BUCKET || 'payment-proofs';
 const MAX_PAYMENT_PROOF_BYTES = 3 * 1024 * 1024;
+const TRANSCRIPT_GLOBAL_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+const TRANSCRIPT_MEMORY_CACHE_MAX_ITEMS = 300;
+const VIDEO_ID_REGEX = /^[A-Za-z0-9_-]{11}$/;
+const PRO_SUBSCRIPTION_DAYS = 30;
+const DAILY_EXTRACT_LIMITS = {
+  free: 5,
+  pro: 500,
+  admin: 5000
+};
+const FEATURE_ACCESS_BY_TIER = {
+  free: { extract: true, ai: true, chat: true },
+  pro: { extract: true, ai: true, chat: true },
+  admin: { extract: true, ai: true, chat: true, admin: true }
+};
+const RATE_LIMIT_RULES = {
+  ipGlobal: { limit: 240, windowMs: 60 * 1000 },
+  adminLoginIp: { limit: 12, windowMs: 10 * 60 * 1000 },
+  transcriptByUser: { limit: 40, windowMs: 60 * 1000 },
+  aiByUser: { limit: 45, windowMs: 60 * 1000 },
+  chatByUser: { limit: 80, windowMs: 60 * 1000 },
+  genericByUser: { limit: 120, windowMs: 60 * 1000 }
+};
+const DEFAULT_ALLOWED_ORIGINS = [
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'https://youtube-transcript-api-lilac.vercel.app'
+];
+const STATUS_DEFAULT_ERROR_CODE = {
+  400: 'INVALID_INPUT',
+  401: 'UNAUTHENTICATED',
+  403: 'LIMIT_EXCEEDED',
+  404: 'NOT_FOUND',
+  429: 'RATE_LIMITED',
+  500: 'INTERNAL_ERROR'
+};
+const ENV_VALIDATION = validateEnvironment();
+
+const rateLimitStore = {
+  ipGlobal: new Map(),
+  adminLoginIp: new Map(),
+  transcriptByUser: new Map(),
+  aiByUser: new Map(),
+  chatByUser: new Map(),
+  genericByUser: new Map()
+};
+const transcriptMemoryCache = new Map();
+
+function validateEnvironment() {
+  const required = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'];
+  const recommended = ['ADMIN_TOKEN_SECRET'];
+  const missingRequired = required.filter((name) => !String(process.env[name] || '').trim());
+  const missingRecommended = recommended.filter((name) => !String(process.env[name] || '').trim());
+  if (missingRequired.length > 0) {
+    console.error(`[env] Missing required environment variables: ${missingRequired.join(', ')}`);
+  }
+  if (missingRecommended.length > 0) {
+    console.warn(`[env] Missing recommended environment variables: ${missingRecommended.join(', ')}`);
+  }
+  return {
+    valid: missingRequired.length === 0,
+    missingRequired,
+    missingRecommended
+  };
+}
 
 function withTimeout(promise, ms, label = 'Operation') {
   let timer;
@@ -125,19 +189,85 @@ async function createGroqChatCompletion({ messages, model = 'llama-3.3-70b-versa
   }
 }
 
-function extractVideoId(url) {
-  const patterns = [
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/,
-    /youtube\.com\/embed\/([^&\n?#]+)/,
-    /youtube\.com\/v\/([^&\n?#]+)/,
-    /youtube\.com\/shorts\/([^&\n?#]+)/
-  ];
+function isValidVideoId(value) {
+  return VIDEO_ID_REGEX.test(String(value || '').trim());
+}
 
-  for (const pattern of patterns) {
-    const match = String(url || '').match(pattern);
-    if (match && match[1]) return match[1];
+function parseYouTubeInput(rawValue) {
+  const raw = String(rawValue || '').trim();
+  if (!raw) {
+    return {
+      ok: false,
+      code: 'EMPTY_INPUT',
+      message: 'YouTube URL or video ID is required'
+    };
   }
-  return null;
+
+  if (isValidVideoId(raw)) {
+    return {
+      ok: true,
+      videoId: raw,
+      canonicalUrl: `https://www.youtube.com/watch?v=${raw}`
+    };
+  }
+
+  const candidate = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+  let parsed;
+  try {
+    parsed = new URL(candidate);
+  } catch {
+    return {
+      ok: false,
+      code: 'INVALID_URL',
+      message: 'Malformed YouTube URL'
+    };
+  }
+
+  const host = parsed.hostname.toLowerCase().replace(/^www\./, '');
+  const isYoutubeHost =
+    host === 'youtube.com' ||
+    host.endsWith('.youtube.com') ||
+    host === 'youtu.be' ||
+    host.endsWith('.youtu.be');
+
+  if (!isYoutubeHost) {
+    return {
+      ok: false,
+      code: 'INVALID_YOUTUBE_URL',
+      message: 'URL must be a valid YouTube link'
+    };
+  }
+
+  let videoId = '';
+  if (host === 'youtu.be' || host.endsWith('.youtu.be')) {
+    videoId = parsed.pathname.split('/').filter(Boolean)[0] || '';
+  } else if (parsed.pathname === '/watch') {
+    videoId = parsed.searchParams.get('v') || '';
+  } else {
+    const parts = parsed.pathname.split('/').filter(Boolean);
+    if (parts[0] === 'embed' || parts[0] === 'v' || parts[0] === 'shorts') {
+      videoId = parts[1] || '';
+    }
+  }
+
+  if (!isValidVideoId(videoId)) {
+    return {
+      ok: false,
+      code: 'INVALID_VIDEO_ID',
+      message: 'Invalid YouTube video ID format'
+    };
+  }
+
+  return {
+    ok: true,
+    videoId,
+    canonicalUrl: `https://www.youtube.com/watch?v=${videoId}`
+  };
+}
+
+function extractVideoId(value) {
+  const parsed = parseYouTubeInput(value);
+  return parsed.ok ? parsed.videoId : null;
 }
 
 async function getAuthedUser(req) {
@@ -149,6 +279,38 @@ async function getAuthedUser(req) {
   const { data, error } = await supabase.auth.getUser(token);
   if (error || !data?.user) return null;
   return data.user;
+}
+
+async function loadUserRow(supabase, userId) {
+  const preferredSelect = 'id, email, credits, subscription_tier, subscription_expires_at, created_at';
+  const { data, error } = await supabase
+    .from('users')
+    .select(preferredSelect)
+    .eq('id', userId)
+    .single();
+
+  if (!error && data) {
+    return {
+      ...data,
+      subscription_tier: normalizeTier(data.subscription_tier),
+      subscription_expires_at: data.subscription_expires_at || null
+    };
+  }
+
+  // Backward compatibility for projects where subscription columns are not migrated yet.
+  const legacy = await supabase
+    .from('users')
+    .select('id, email, credits, created_at')
+    .eq('id', userId)
+    .single();
+  if (legacy.error || !legacy.data) {
+    throw new Error('User account not found');
+  }
+  return {
+    ...legacy.data,
+    subscription_tier: 'free',
+    subscription_expires_at: null
+  };
 }
 
 async function ensureUserAccountRow(supabase, authUser) {
@@ -167,33 +329,14 @@ async function ensureUserAccountRow(supabase, authUser) {
     throw new Error('Failed to prepare user account');
   }
 
-  const { data, error } = await supabase
-    .from('users')
-    .select('id, email, credits')
-    .eq('id', authUser.id)
-    .single();
-
-  if (error || !data) {
-    throw new Error('User account not found');
-  }
-
+  const data = await loadUserRow(supabase, authUser.id);
   let credits = Number(data.credits || 0);
 
   // Enforce free-plan cap for non-paying users (legacy accounts may carry old higher values).
   if (credits > FREE_PLAN_CREDITS) {
-    const { data: approvedPayments, error: approvedPaymentsError } = await supabase
-      .from('payments')
-      .select('id')
-      .eq('user_id', authUser.id)
-      .eq('status', 'approved')
-      .limit(1);
-
-    if (approvedPaymentsError) {
-      throw new Error('Failed to validate payment plan');
-    }
-
-    const hasApprovedPayment = Array.isArray(approvedPayments) && approvedPayments.length > 0;
-    if (!hasApprovedPayment) {
+    const tier = normalizeTier(data.subscription_tier);
+    const isPaidTier = tier === 'pro' || tier === 'admin';
+    if (!isPaidTier) {
       const { error: capError } = await supabase
         .from('users')
         .update({ credits: FREE_PLAN_CREDITS })
@@ -207,7 +350,9 @@ async function ensureUserAccountRow(supabase, authUser) {
 
   return {
     ...data,
-    credits
+    credits,
+    subscription_tier: normalizeTier(data.subscription_tier),
+    subscription_expires_at: data.subscription_expires_at || null
   };
 }
 
@@ -285,12 +430,88 @@ async function getFreeLinksUsage(supabase, userId) {
   };
 }
 
+async function countDailyExtractUsage(supabase, userId, sinceIso) {
+  const { data, error } = await supabase
+    .from('transcripts_history')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('processing_type', QUOTA_MARKER_TYPE)
+    .gte('created_at', sinceIso)
+    .limit(10000);
+
+  if (error) {
+    throw new Error('Failed to load daily extraction usage');
+  }
+  return Array.isArray(data) ? data.length : 0;
+}
+
+async function resolveUserSubscriptionState(supabase, userRow, { isAdminUser = false } = {}) {
+  let tier = normalizeTier(userRow?.subscription_tier);
+  let expiresAt = userRow?.subscription_expires_at || null;
+
+  if (isAdminUser && tier !== 'admin') {
+    tier = 'admin';
+    expiresAt = null;
+    await supabase
+      .from('users')
+      .update({
+        subscription_tier: 'admin',
+        subscription_expires_at: null
+      })
+      .eq('id', userRow.id);
+  }
+
+  if (tier === 'pro' && expiresAt) {
+    const expiryTime = new Date(expiresAt).getTime();
+    if (Number.isFinite(expiryTime) && expiryTime <= Date.now()) {
+      tier = 'free';
+      expiresAt = null;
+      await supabase
+        .from('users')
+        .update({
+          subscription_tier: 'free',
+          subscription_expires_at: null
+        })
+        .eq('id', userRow.id);
+    }
+  }
+
+  const dailyLimit = getTierDailyLimit(tier);
+  const dailyExtractUsed = await countDailyExtractUsage(supabase, userRow.id, startOfUtcDay().toISOString());
+  const dailyExtractRemaining = Math.max(dailyLimit - dailyExtractUsed, 0);
+
+  return {
+    tier,
+    expiresAt,
+    dailyLimit,
+    dailyExtractUsed,
+    dailyExtractRemaining,
+    features: FEATURE_ACCESS_BY_TIER[tier] || FEATURE_ACCESS_BY_TIER.free
+  };
+}
+
 function makeHash(value) {
   return crypto.createHash('sha256').update(String(value || '')).digest('hex');
 }
 
 function makeChatKey(message) {
   return `${CHAT_TYPE_PREFIX}${makeHash(normalizeTextInput(message).toLowerCase())}`;
+}
+
+function normalizeTier(value) {
+  const tier = String(value || '').trim().toLowerCase();
+  if (tier === 'admin' || tier === 'pro') return tier;
+  return 'free';
+}
+
+function startOfUtcDay(date = new Date()) {
+  const clone = new Date(date);
+  clone.setUTCHours(0, 0, 0, 0);
+  return clone;
+}
+
+function getTierDailyLimit(tier) {
+  return DAILY_EXTRACT_LIMITS[normalizeTier(tier)] || DAILY_EXTRACT_LIMITS.free;
 }
 
 function getPathname(url) {
@@ -372,6 +593,19 @@ async function ensureAdminOwnerUser(supabase, email = ADMIN_DEFAULT_EMAIL, passw
   );
   if (ownerError) {
     throw new Error('Failed to link admin owner user');
+  }
+
+  // Best effort: persist admin subscription tier once migration is applied.
+  try {
+    await supabase
+      .from('users')
+      .update({
+        subscription_tier: 'admin',
+        subscription_expires_at: null
+      })
+      .eq('id', ownerId);
+  } catch {
+    // Ignore when subscription columns are not available yet.
   }
 
   return { id: ownerId, email: adminAuthUser.email || email };
@@ -1318,6 +1552,23 @@ async function getCachedExtractRecord(supabase, userId, videoId) {
   return Array.isArray(data) && data.length > 0 ? data[0] : null;
 }
 
+async function getRecentGlobalExtractRecord(supabase, videoId, ttlMs = TRANSCRIPT_GLOBAL_CACHE_TTL_MS) {
+  const cutoffIso = new Date(Date.now() - ttlMs).toISOString();
+  const { data, error } = await supabase
+    .from('transcripts_history')
+    .select('id, video_id, transcript, created_at, ai_result')
+    .eq('video_id', videoId)
+    .eq('processing_type', EXTRACT_TYPE)
+    .gte('created_at', cutoffIso)
+    .order('created_at', { ascending: false })
+    .limit(1);
+
+  if (error) {
+    throw new Error('Failed to load global cached extraction');
+  }
+  return Array.isArray(data) && data.length > 0 ? data[0] : null;
+}
+
 async function saveExtractionRecord(supabase, userId, videoId, transcript, method) {
   const { error } = await supabase
     .from('transcripts_history')
@@ -1510,6 +1761,81 @@ async function listAdminUsersWithStats(supabase, { limit, offset }) {
   }));
 }
 
+async function getAdminUsageSummary(supabase, { days = 7 } = {}) {
+  const safeDays = Math.min(Math.max(toInteger(days, 7), 1), 30);
+  const sinceIso = new Date(Date.now() - safeDays * 24 * 60 * 60 * 1000).toISOString();
+  const { data, error } = await supabase
+    .from('api_request_logs')
+    .select('route, user_id, ip, video_id, status_code, success, response_time_ms, error_code, created_at')
+    .gte('created_at', sinceIso)
+    .order('created_at', { ascending: false })
+    .limit(8000);
+  if (error) {
+    throw new Error('Failed to load usage analytics');
+  }
+
+  const rows = Array.isArray(data) ? data : [];
+  const byRoute = new Map();
+  const ipFailures = new Map();
+  const byUser = new Map();
+  let successCount = 0;
+  let failedCount = 0;
+  let responseTotal = 0;
+
+  for (const row of rows) {
+    const route = String(row.route || 'unknown');
+    const routeStats = byRoute.get(route) || {
+      route,
+      total: 0,
+      success: 0,
+      failed: 0,
+      avgResponseMs: 0
+    };
+    routeStats.total += 1;
+    if (row.success) {
+      routeStats.success += 1;
+      successCount += 1;
+    } else {
+      routeStats.failed += 1;
+      failedCount += 1;
+      const ipKey = String(row.ip || 'unknown');
+      ipFailures.set(ipKey, (ipFailures.get(ipKey) || 0) + 1);
+    }
+    const responseTime = toInteger(row.response_time_ms, 0);
+    responseTotal += responseTime;
+    routeStats.avgResponseMs = Math.round((routeStats.avgResponseMs * (routeStats.total - 1) + responseTime) / routeStats.total);
+    byRoute.set(route, routeStats);
+
+    const userKey = String(row.user_id || '');
+    if (userKey) {
+      byUser.set(userKey, (byUser.get(userKey) || 0) + 1);
+    }
+  }
+
+  const topAbusiveIps = Array.from(ipFailures.entries())
+    .map(([ip, failedRequests]) => ({ ip, failedRequests }))
+    .sort((a, b) => b.failedRequests - a.failedRequests)
+    .slice(0, 10);
+
+  const topActiveUsers = Array.from(byUser.entries())
+    .map(([userId, requests]) => ({ userId, requests }))
+    .sort((a, b) => b.requests - a.requests)
+    .slice(0, 10);
+
+  return {
+    days: safeDays,
+    totalRequests: rows.length,
+    successCount,
+    failedCount,
+    successRate: rows.length > 0 ? Number(((successCount / rows.length) * 100).toFixed(2)) : 0,
+    avgResponseMs: rows.length > 0 ? Math.round(responseTotal / rows.length) : 0,
+    byRoute: Array.from(byRoute.values()).sort((a, b) => b.total - a.total),
+    topAbusiveIps,
+    topActiveUsers,
+    generatedAt: new Date().toISOString()
+  };
+}
+
 function calculateTopupQuote(amountCents) {
   const amount = Number(amountCents || 0);
   if (!Number.isInteger(amount) || amount < 500 || amount % 500 !== 0) {
@@ -1547,10 +1873,220 @@ function readBody(req) {
   return {};
 }
 
-function applyCors(res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+function parseAllowedOrigins() {
+  const fromEnv = String(process.env.ALLOWED_ORIGINS || '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+  return Array.from(new Set([...DEFAULT_ALLOWED_ORIGINS, ...fromEnv]));
+}
+
+const ALLOWED_ORIGINS = parseAllowedOrigins();
+
+function isLocalhostOrigin(origin) {
+  return /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(String(origin || '').trim());
+}
+
+function isVercelPreviewOrigin(origin) {
+  return /^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(String(origin || '').trim());
+}
+
+function isOriginAllowed(origin) {
+  const value = String(origin || '').trim();
+  if (!value) return true;
+  if (isLocalhostOrigin(value)) return true;
+  if (isVercelPreviewOrigin(value)) return true;
+  return ALLOWED_ORIGINS.includes(value);
+}
+
+function getClientIp(req) {
+  const forwarded = req.headers?.['x-forwarded-for'];
+  const direct = req.headers?.['x-real-ip'];
+  if (typeof forwarded === 'string' && forwarded.trim()) {
+    return forwarded.split(',')[0].trim();
+  }
+  if (typeof direct === 'string' && direct.trim()) {
+    return direct.trim();
+  }
+  if (typeof req.socket?.remoteAddress === 'string' && req.socket.remoteAddress.trim()) {
+    return req.socket.remoteAddress.trim();
+  }
+  return 'unknown';
+}
+
+function applySecurityHeaders(res) {
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('Permissions-Policy', 'geolocation=(), camera=(), microphone=()');
+  res.setHeader('Content-Security-Policy', "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'");
+  res.setHeader('Cache-Control', 'no-store');
+}
+
+function applyCors(req, res) {
+  const origin = String(req.headers?.origin || '').trim();
+  if (origin && isOriginAllowed(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+  } else if (!origin) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Max-Age', '86400');
+}
+
+function makeErrorPayload(status, code, message, details) {
+  return {
+    success: false,
+    error: {
+      code: String(code || STATUS_DEFAULT_ERROR_CODE[status] || STATUS_DEFAULT_ERROR_CODE[500]),
+      message: String(message || 'Internal error'),
+      ...(details && typeof details === 'object' ? { details } : {})
+    }
+  };
+}
+
+function normalizeErrorPayload(payload, statusCode = 500) {
+  if (!payload || typeof payload !== 'object') {
+    return makeErrorPayload(statusCode, STATUS_DEFAULT_ERROR_CODE[statusCode], 'Internal error');
+  }
+  if (payload.success !== false) return payload;
+
+  const output = { ...payload };
+  if (typeof output.error === 'string') {
+    output.error = {
+      code: STATUS_DEFAULT_ERROR_CODE[statusCode] || STATUS_DEFAULT_ERROR_CODE[500],
+      message: output.error
+    };
+    return output;
+  }
+  if (!output.error || typeof output.error !== 'object') {
+    output.error = {
+      code: STATUS_DEFAULT_ERROR_CODE[statusCode] || STATUS_DEFAULT_ERROR_CODE[500],
+      message: 'Internal error'
+    };
+    return output;
+  }
+  output.error = {
+    code: String(output.error.code || STATUS_DEFAULT_ERROR_CODE[statusCode] || STATUS_DEFAULT_ERROR_CODE[500]),
+    message: String(output.error.message || output.error.error || 'Internal error'),
+    ...(output.error.details && typeof output.error.details === 'object' ? { details: output.error.details } : {})
+  };
+  return output;
+}
+
+function sendError(res, status, code, message, details) {
+  return res.status(status).json(makeErrorPayload(status, code, message, details));
+}
+
+function pruneRateLimitBucket(bucket, now = Date.now()) {
+  for (const [key, entry] of bucket.entries()) {
+    if (!entry || typeof entry !== 'object' || entry.resetAt <= now) {
+      bucket.delete(key);
+    }
+  }
+}
+
+function consumeRateLimit(ruleName, identity) {
+  const rule = RATE_LIMIT_RULES[ruleName];
+  const key = String(identity || '').trim();
+  if (!rule || !key) {
+    return { allowed: true, remaining: Infinity, resetAt: Date.now() };
+  }
+  const bucket = rateLimitStore[ruleName];
+  const now = Date.now();
+  if (bucket.size > 5000) {
+    pruneRateLimitBucket(bucket, now);
+  }
+
+  const entry = bucket.get(key);
+  if (!entry || entry.resetAt <= now) {
+    bucket.set(key, {
+      count: 1,
+      resetAt: now + rule.windowMs
+    });
+    return {
+      allowed: true,
+      remaining: rule.limit - 1,
+      resetAt: now + rule.windowMs
+    };
+  }
+
+  if (entry.count >= rule.limit) {
+    return {
+      allowed: false,
+      remaining: 0,
+      resetAt: entry.resetAt
+    };
+  }
+
+  entry.count += 1;
+  bucket.set(key, entry);
+  return {
+    allowed: true,
+    remaining: Math.max(rule.limit - entry.count, 0),
+    resetAt: entry.resetAt
+  };
+}
+
+function setRateLimitHeaders(res, check, ruleName) {
+  const rule = RATE_LIMIT_RULES[ruleName];
+  if (!rule) return;
+  res.setHeader('X-RateLimit-Limit', String(rule.limit));
+  res.setHeader('X-RateLimit-Remaining', String(Math.max(Number(check?.remaining || 0), 0)));
+  const retrySeconds = Math.max(Math.ceil((Number(check?.resetAt || Date.now()) - Date.now()) / 1000), 0);
+  res.setHeader('X-RateLimit-Reset', String(Math.floor(Number(check?.resetAt || Date.now()) / 1000)));
+  if (!check?.allowed && retrySeconds > 0) {
+    res.setHeader('Retry-After', String(retrySeconds));
+  }
+}
+
+function enforceRateLimit(res, ruleName, identity, message = 'Too many requests') {
+  const check = consumeRateLimit(ruleName, identity);
+  setRateLimitHeaders(res, check, ruleName);
+  if (check.allowed) return true;
+  sendError(res, 429, 'RATE_LIMITED', message, {
+    rule: ruleName,
+    retryAfterSeconds: Math.max(Math.ceil((check.resetAt - Date.now()) / 1000), 0)
+  });
+  return false;
+}
+
+function getCachedTranscriptFromMemory(videoId) {
+  const key = String(videoId || '').trim();
+  if (!key) return null;
+  const entry = transcriptMemoryCache.get(key);
+  if (!entry) return null;
+  if (entry.expiresAt <= Date.now()) {
+    transcriptMemoryCache.delete(key);
+    return null;
+  }
+  return entry;
+}
+
+function setCachedTranscriptInMemory(videoId, transcript, method) {
+  const key = String(videoId || '').trim();
+  const text = String(transcript || '').trim();
+  if (!key || !text) return;
+  transcriptMemoryCache.set(key, {
+    transcript: text,
+    method: String(method || 'unknown'),
+    expiresAt: Date.now() + TRANSCRIPT_GLOBAL_CACHE_TTL_MS
+  });
+  if (transcriptMemoryCache.size > TRANSCRIPT_MEMORY_CACHE_MAX_ITEMS) {
+    const firstKey = transcriptMemoryCache.keys().next().value;
+    if (firstKey) transcriptMemoryCache.delete(firstKey);
+  }
+}
+
+async function logApiRequestSafe(supabase, payload) {
+  if (!supabase || !payload || typeof payload !== 'object') return;
+  try {
+    await supabase.from('api_request_logs').insert([payload]);
+  } catch {
+    // Non-blocking analytics path.
+  }
 }
 
 function decodeXmlEntities(text) {
@@ -1707,14 +2243,69 @@ async function fetchWithYtdl(videoId) {
 }
 
 export default async function handler(req, res) {
-  applyCors(res);
+  const requestStartedAt = Date.now();
+  const url = req.url || '';
+  const pathname = getPathname(url);
+  const body = readBody(req);
+  const requestIp = getClientIp(req);
+
+  const audit = {
+    ip: requestIp,
+    route: pathname,
+    method: String(req.method || 'GET').toUpperCase(),
+    userId: null,
+    videoId: null,
+    tier: 'anonymous',
+    errorCode: null
+  };
+
+  applySecurityHeaders(res);
+  applyCors(req, res);
+
+  const originalJson = res.json.bind(res);
+  res.json = (payload) => {
+    const statusCode = Number(res.statusCode || 200);
+    const normalizedPayload = normalizeErrorPayload(payload, statusCode);
+    const success = normalizedPayload?.success !== false && statusCode < 400;
+    if (!success) {
+      audit.errorCode = normalizedPayload?.error?.code || STATUS_DEFAULT_ERROR_CODE[statusCode] || STATUS_DEFAULT_ERROR_CODE[500];
+    }
+    const responseTimeMs = Date.now() - requestStartedAt;
+    const supabase = getSupabase();
+    void logApiRequestSafe(supabase, {
+      user_id: audit.userId,
+      ip: audit.ip,
+      route: audit.route,
+      method: audit.method,
+      video_id: audit.videoId,
+      tier: audit.tier,
+      status_code: statusCode,
+      success,
+      response_time_ms: responseTimeMs,
+      error_code: audit.errorCode,
+      created_at: new Date().toISOString()
+    });
+    return originalJson(normalizedPayload);
+  };
+
+  const requestOrigin = String(req.headers?.origin || '').trim();
+  if (requestOrigin && !isOriginAllowed(requestOrigin)) {
+    return sendError(res, 403, 'CORS_FORBIDDEN', 'Request origin is not allowed');
+  }
+
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
 
-  const url = req.url || '';
-  const pathname = getPathname(url);
-  const body = readBody(req);
+  if (pathname.startsWith('/api/') && !enforceRateLimit(res, 'ipGlobal', requestIp, 'Too many requests from this IP')) {
+    return;
+  }
+
+  if (!ENV_VALIDATION.valid && pathname.startsWith('/api/') && pathname !== '/api/settings/status') {
+    return sendError(res, 500, 'SERVER_MISCONFIGURED', 'Server environment is not configured correctly', {
+      missing: ENV_VALIDATION.missingRequired
+    });
+  }
 
   try {
     if (pathname === '/api/settings/status') {
@@ -1730,16 +2321,31 @@ export default async function handler(req, res) {
       if (!user) {
         return res.status(401).json({ success: false, error: 'Authentication required' });
       }
+      if (!enforceRateLimit(res, 'genericByUser', user.id, 'Too many profile requests')) return;
+
       const userRow = await ensureUserAccountRow(supabase, user);
       await assertUserIsActive(supabase, user.id);
+      const adminConfig = await loadOrBootstrapAdminConfig(supabase);
+      const subscription = await resolveUserSubscriptionState(supabase, userRow, {
+        isAdminUser: user.id === adminConfig.userId
+      });
       const access = await getUserAccessState(supabase, user.id);
       const usage = await getFreeLinksUsage(supabase, user.id);
+      audit.userId = user.id;
+      audit.tier = subscription.tier;
+
       return res.json({
         success: true,
         data: {
           id: userRow.id,
           email: userRow.email,
           credits: Number(userRow.credits || 0),
+          subscriptionTier: subscription.tier,
+          subscriptionExpiresAt: subscription.expiresAt,
+          dailyExtractLimit: subscription.dailyLimit,
+          dailyExtractUsed: subscription.dailyExtractUsed,
+          dailyExtractRemaining: subscription.dailyExtractRemaining,
+          featureAccess: subscription.features,
           freePlanLimit: usage.freePlanLimit,
           freeLinksUsed: usage.freeLinksUsed,
           freeLinksRemaining: usage.freeLinksRemaining,
@@ -1754,6 +2360,7 @@ export default async function handler(req, res) {
       if (!supabase) {
         return res.status(500).json({ success: false, error: 'Server not configured: SUPABASE env vars missing' });
       }
+      if (!enforceRateLimit(res, 'adminLoginIp', requestIp, 'Too many admin login attempts')) return;
 
       const config = await loadOrBootstrapAdminConfig(supabase);
       const identifierRaw = String(body.identifier || body.username || body.email || '').trim().toLowerCase();
@@ -1769,6 +2376,7 @@ export default async function handler(req, res) {
       }
 
       const token = signAdminToken(config);
+      audit.tier = 'admin';
       return res.json({
         success: true,
         token,
@@ -1789,6 +2397,8 @@ export default async function handler(req, res) {
       if (!adminSession) {
         return res.status(401).json({ success: false, error: 'Admin authentication required' });
       }
+      audit.userId = adminSession.config.userId || null;
+      audit.tier = 'admin';
 
       const usersCountResponse = await supabase.from('users').select('id', { count: 'exact', head: true });
       if (usersCountResponse.error) throw usersCountResponse.error;
@@ -1860,6 +2470,23 @@ export default async function handler(req, res) {
           generatedAt: new Date().toISOString()
         }
       });
+    }
+
+    if (pathname === '/api/admin/usage' && req.method === 'GET') {
+      const supabase = getSupabase();
+      if (!supabase) {
+        return res.status(500).json({ success: false, error: 'Server not configured: SUPABASE env vars missing' });
+      }
+      const adminSession = await requireAdmin(req, supabase);
+      if (!adminSession) {
+        return res.status(401).json({ success: false, error: 'Admin authentication required' });
+      }
+      const { searchParams } = parsePaginationFromUrl(url, { limit: 1, maxLimit: 1 });
+      const days = toInteger(searchParams.get('days'), 7);
+      const usage = await getAdminUsageSummary(supabase, { days });
+      audit.userId = adminSession.config.userId || null;
+      audit.tier = 'admin';
+      return res.json({ success: true, data: usage });
     }
 
     if (pathname === '/api/admin/users' && req.method === 'GET') {
@@ -1965,9 +2592,18 @@ export default async function handler(req, res) {
       }
 
       let userCreditsAfter = null;
+      let subscriptionExpiresAt = null;
       const changedToApproved = payment.status !== 'approved' && decision === 'approved';
       if (changedToApproved) {
         userCreditsAfter = await addCreditsToUser(supabase, payment.user_id, payment.credits_added);
+        subscriptionExpiresAt = new Date(Date.now() + PRO_SUBSCRIPTION_DAYS * 24 * 60 * 60 * 1000).toISOString();
+        await supabase
+          .from('users')
+          .update({
+            subscription_tier: 'pro',
+            subscription_expires_at: subscriptionExpiresAt
+          })
+          .eq('id', payment.user_id);
       }
 
       const mergedNotes = appendPaymentAudit(payment.notes, {
@@ -1990,7 +2626,8 @@ export default async function handler(req, res) {
       return res.json({
         success: true,
         payment: await enrichPaymentForResponse(supabase, updatedPayment, { includeAudit: true }),
-        userCreditsAfter
+        userCreditsAfter,
+        subscriptionExpiresAt
       });
     }
 
@@ -2360,21 +2997,33 @@ export default async function handler(req, res) {
       if (!user) {
         return res.status(401).json({ success: false, error: 'Authentication required' });
       }
+      if (!enforceRateLimit(res, 'transcriptByUser', user.id, 'Too many transcript extraction requests')) return;
+
       const userRow = await ensureUserAccountRow(supabase, user);
       await assertUserIsActive(supabase, user.id);
+      const adminConfig = await loadOrBootstrapAdminConfig(supabase);
+      const subscription = await resolveUserSubscriptionState(supabase, userRow, {
+        isAdminUser: user.id === adminConfig.userId
+      });
+      audit.userId = user.id;
+      audit.tier = subscription.tier;
 
       const { url: videoUrl } = body;
-      if (!videoUrl) {
-        return res.status(400).json({ success: false, error: 'Please provide YouTube URL' });
+      const parsedVideo = parseYouTubeInput(videoUrl);
+      if (!parsedVideo.ok) {
+        return sendError(
+          res,
+          400,
+          parsedVideo.code === 'INVALID_VIDEO_ID' ? 'INVALID_VIDEO_ID' : 'INVALID_INPUT',
+          parsedVideo.message
+        );
       }
-
-      const videoId = extractVideoId(videoUrl);
-      if (!videoId) {
-        return res.status(400).json({ success: false, error: 'Invalid YouTube URL' });
-      }
+      const videoId = parsedVideo.videoId;
+      audit.videoId = videoId;
 
       const cachedExtract = await getCachedExtractRecord(supabase, user.id, videoId);
       if (cachedExtract?.transcript) {
+        console.info(`[cache] transcript user-hit video=${videoId} user=${user.id}`);
         return res.json({
           success: true,
           videoId,
@@ -2388,24 +3037,54 @@ export default async function handler(req, res) {
       }
 
       const alreadyUnlockedForUser = await hasQuotaMarkerForVideo(supabase, user.id, videoId);
+      if (!alreadyUnlockedForUser && subscription.dailyExtractRemaining <= 0) {
+        return sendError(res, 403, 'LIMIT_EXCEEDED', 'Daily extraction limit reached for your subscription tier', {
+          tier: subscription.tier,
+          dailyLimit: subscription.dailyLimit
+        });
+      }
       if (!alreadyUnlockedForUser && Number(userRow.credits || 0) < CREDIT_COST_PER_SUCCESS) {
-        return res.status(403).json({
-          success: false,
-          error: 'Insufficient credits for a new video link'
+        return sendError(res, 403, 'LIMIT_EXCEEDED', 'Insufficient credits for a new video link', {
+          credits: Number(userRow.credits || 0),
+          required: CREDIT_COST_PER_SUCCESS
         });
       }
 
       let transcript = null;
       let method = 'unknown';
+      let fetchedFromCache = false;
 
-      try {
-        transcript = await withTimeout(fetchWithTranscriptApi(videoUrl, supabase), EXTRACTION_TIMEOUT_MS, 'TranscriptAPI pipeline');
-        if (transcript && isUsableTranscript(transcript)) {
-          method = 'transcriptapi';
+      const memoryCache = getCachedTranscriptFromMemory(videoId);
+      if (memoryCache?.transcript) {
+        transcript = memoryCache.transcript;
+        method = memoryCache.method || 'memory-cache';
+        fetchedFromCache = true;
+        console.info(`[cache] transcript memory-hit video=${videoId}`);
+      }
+
+      if (!transcript) {
+        const globalCache = await getRecentGlobalExtractRecord(supabase, videoId, TRANSCRIPT_GLOBAL_CACHE_TTL_MS);
+        if (globalCache?.transcript) {
+          transcript = String(globalCache.transcript || '').trim();
+          method = 'global-db-cache';
+          fetchedFromCache = true;
+          setCachedTranscriptInMemory(videoId, transcript, method);
+          console.info(`[cache] transcript db-hit video=${videoId}`);
         } else {
-          transcript = null;
+          console.info(`[cache] transcript miss video=${videoId}`);
         }
-      } catch {}
+      }
+
+      if (!transcript) {
+        try {
+          transcript = await withTimeout(fetchWithTranscriptApi(parsedVideo.canonicalUrl, supabase), EXTRACTION_TIMEOUT_MS, 'TranscriptAPI pipeline');
+          if (transcript && isUsableTranscript(transcript)) {
+            method = 'transcriptapi';
+          } else {
+            transcript = null;
+          }
+        } catch {}
+      }
 
       if (!transcript) {
         try {
@@ -2470,10 +3149,11 @@ export default async function handler(req, res) {
       }
 
       if (!transcript) {
-        return res.status(404).json({ success: false, error: 'No transcript available for this video' });
+        return sendError(res, 404, 'TRANSCRIPT_UNAVAILABLE', 'No transcript available for this video');
       }
 
       await saveExtractionRecord(supabase, user.id, videoId, transcript.trim(), method);
+      setCachedTranscriptInMemory(videoId, transcript.trim(), method);
 
       let nextCredits = Number(userRow.credits || 0);
       const chargedForNewVideo = !alreadyUnlockedForUser;
@@ -2490,7 +3170,9 @@ export default async function handler(req, res) {
         method,
         creditsLeft: nextCredits,
         chargedForNewVideo,
-        cached: false
+        subscriptionTier: subscription.tier,
+        dailyExtractRemaining: chargedForNewVideo ? Math.max(subscription.dailyExtractRemaining - 1, 0) : subscription.dailyExtractRemaining,
+        cached: fetchedFromCache
       });
     }
 
@@ -2503,17 +3185,30 @@ export default async function handler(req, res) {
       if (!user) {
         return res.status(401).json({ success: false, error: 'Authentication required' });
       }
+      if (!enforceRateLimit(res, 'aiByUser', user.id, 'Too many AI processing requests')) return;
       const { transcript, type, videoId: providedVideoId } = body;
       if (!transcript) {
-        return res.status(400).json({ success: false, error: 'Please provide transcript text' });
+        return sendError(res, 400, 'INVALID_INPUT', 'Please provide transcript text');
       }
 
-      const videoId = extractVideoId(providedVideoId || '') || String(providedVideoId || '').trim();
-      if (!videoId) {
-        return res.status(400).json({ success: false, error: 'Please provide videoId for caching' });
+      const parsedVideo = parseYouTubeInput(providedVideoId || '');
+      if (!parsedVideo.ok) {
+        return sendError(res, 400, 'INVALID_VIDEO_ID', 'Invalid YouTube video ID format');
       }
+      const videoId = parsedVideo.videoId;
 
       const userRow = await ensureUserAccountRow(supabase, user);
+      await assertUserIsActive(supabase, user.id);
+      const adminConfig = await loadOrBootstrapAdminConfig(supabase);
+      const subscription = await resolveUserSubscriptionState(supabase, userRow, {
+        isAdminUser: user.id === adminConfig.userId
+      });
+      if (!subscription.features.ai) {
+        return sendError(res, 403, 'FEATURE_NOT_AVAILABLE', 'AI processing is not available for your current subscription tier');
+      }
+      audit.userId = user.id;
+      audit.videoId = videoId;
+      audit.tier = subscription.tier;
 
       const {
         text: transcriptForModel,
@@ -2522,7 +3217,7 @@ export default async function handler(req, res) {
       } = trimForModel(transcript, AI_TRANSCRIPT_CHAR_LIMIT);
 
       if (!transcriptForModel) {
-        return res.status(400).json({ success: false, error: 'Transcript text is empty after normalization' });
+        return sendError(res, 400, 'INVALID_INPUT', 'Transcript text is empty after normalization');
       }
 
       let systemPrompt = '';
@@ -2854,18 +3549,30 @@ export default async function handler(req, res) {
       if (!user) {
         return res.status(401).json({ success: false, error: 'Authentication required' });
       }
+      if (!enforceRateLimit(res, 'chatByUser', user.id, 'Too many chat requests')) return;
       const userRow = await ensureUserAccountRow(supabase, user);
       await assertUserIsActive(supabase, user.id);
+      const adminConfig = await loadOrBootstrapAdminConfig(supabase);
+      const subscription = await resolveUserSubscriptionState(supabase, userRow, {
+        isAdminUser: user.id === adminConfig.userId
+      });
+      if (!subscription.features.chat) {
+        return sendError(res, 403, 'FEATURE_NOT_AVAILABLE', 'Chat is not available for your current subscription tier');
+      }
+      audit.userId = user.id;
+      audit.tier = subscription.tier;
 
       const { message, transcript, videoId: providedVideoId } = body;
       if (!message || !transcript) {
-        return res.status(400).json({ success: false, error: 'Missing message or transcript' });
+        return sendError(res, 400, 'INVALID_INPUT', 'Missing message or transcript');
       }
 
-      const videoId = extractVideoId(providedVideoId || '') || String(providedVideoId || '').trim();
-      if (!videoId) {
-        return res.status(400).json({ success: false, error: 'Please provide videoId for chat caching' });
+      const parsedVideo = parseYouTubeInput(providedVideoId || '');
+      if (!parsedVideo.ok) {
+        return sendError(res, 400, 'INVALID_VIDEO_ID', 'Invalid YouTube video ID format');
       }
+      const videoId = parsedVideo.videoId;
+      audit.videoId = videoId;
 
       const { text: transcriptForContext } = trimForModel(transcript, CHAT_TRANSCRIPT_CHAR_LIMIT);
       const { text: questionForModel } = trimForModel(message, CHAT_QUESTION_CHAR_LIMIT);
@@ -2904,22 +3611,24 @@ export default async function handler(req, res) {
       return res.json({ success: true });
     }
 
-    return res.status(404).json({ success: false, error: 'Not found' });
+    return sendError(res, 404, 'NOT_FOUND', 'Not found');
   } catch (error) {
     const message = String(error?.message || 'Internal error');
     if (error?.code === 'USER_ACCESS_RESTRICTED') {
-      return res.status(403).json({
-        success: false,
-        error: message,
+      return sendError(res, 403, 'LIMIT_EXCEEDED', message, {
         access: error?.access || null
       });
     }
-    if (message.toLowerCase().includes('request too large') || message.toLowerCase().includes('rate limit')) {
-      return res.status(413).json({
-        success: false,
-        error: 'Input is too large for current AI limits. Please retry; the system now trims long transcripts automatically.'
-      });
+    const lowerMessage = message.toLowerCase();
+    if (lowerMessage.includes('rate limit')) {
+      return sendError(res, 429, 'RATE_LIMITED', 'Rate limit exceeded. Please retry later.');
     }
-    return res.status(500).json({ success: false, error: error.message || 'Internal error' });
+    if (lowerMessage.includes('request too large') || lowerMessage.includes('input is too large')) {
+      return sendError(res, 400, 'INVALID_INPUT', 'Input is too large for current limits.');
+    }
+    if (lowerMessage.includes('no transcript available')) {
+      return sendError(res, 404, 'TRANSCRIPT_UNAVAILABLE', 'No transcript available for this video');
+    }
+    return sendError(res, 500, 'INTERNAL_ERROR', error.message || 'Internal error');
   }
 }

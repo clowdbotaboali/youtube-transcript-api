@@ -24,6 +24,7 @@ const TABS = {
   overview: 'overview',
   users: 'users',
   payments: 'payments',
+  usage: 'usage',
   billing: 'billing',
   ai: 'ai',
   settings: 'settings'
@@ -118,6 +119,7 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
   const [overview, setOverview] = useState(null);
   const [users, setUsers] = useState([]);
   const [payments, setPayments] = useState([]);
+  const [usageStats, setUsageStats] = useState(null);
   const [settings, setSettings] = useState({ username: '', email: '', password: '' });
 
   const [billingConfig, setBillingConfig] = useState({
@@ -166,7 +168,11 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
 
       const data = await response.json().catch(() => ({}));
       if (!response.ok || !data.success) {
-        throw new Error(data.error || tr(lang, 'فشل الطلب', 'Request failed', 'Echec de la requete'));
+        const errMessage =
+          typeof data.error === 'string'
+            ? data.error
+            : (data.error && typeof data.error === 'object' ? data.error.message : '');
+        throw new Error(errMessage || tr(lang, 'فشل الطلب', 'Request failed', 'Echec de la requete'));
       }
       return data;
     },
@@ -186,6 +192,11 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
   const loadPayments = useCallback(async () => {
     const data = await authedFetch('/api/admin/payments?limit=200&page=1');
     setPayments(Array.isArray(data.data) ? data.data : []);
+  }, [authedFetch]);
+
+  const loadUsage = useCallback(async () => {
+    const data = await authedFetch('/api/admin/usage?days=7');
+    setUsageStats(data.data || null);
   }, [authedFetch]);
 
   const loadSettings = useCallback(async () => {
@@ -240,6 +251,7 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
         loadOverview(),
         loadUsers(),
         loadPayments(),
+        loadUsage(),
         loadSettings(),
         loadBillingConfig(),
         loadAiConfig(),
@@ -250,7 +262,7 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
     } finally {
       setLoading(false);
     }
-  }, [token, loadOverview, loadUsers, loadPayments, loadSettings, loadBillingConfig, loadAiConfig, loadTranscriptApiConfig, lang]);
+  }, [token, loadOverview, loadUsers, loadPayments, loadUsage, loadSettings, loadBillingConfig, loadAiConfig, loadTranscriptApiConfig, lang]);
 
   useEffect(() => {
     if (token) {
@@ -283,7 +295,11 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok || !data.success || !data.token) {
-        throw new Error(data.error || tr(lang, 'فشل تسجيل دخول الأدمن', 'Admin login failed', 'Connexion admin echouee'));
+        const loginError =
+          typeof data.error === 'string'
+            ? data.error
+            : (data.error && typeof data.error === 'object' ? data.error.message : '');
+        throw new Error(loginError || tr(lang, 'فشل تسجيل دخول الأدمن', 'Admin login failed', 'Connexion admin echouee'));
       }
       localStorage.setItem(ADMIN_TOKEN_KEY, data.token);
       setToken(data.token);
@@ -524,6 +540,7 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
   const modelsForSelectedProvider = Array.isArray(aiConfig.modelCatalog?.[aiConfig.selectedProvider])
     ? aiConfig.modelCatalog[aiConfig.selectedProvider].map((item) => normalizeModelOption(item)).filter(Boolean)
     : [];
+  const usageByRoute = Array.isArray(usageStats?.byRoute) ? usageStats.byRoute : [];
 
   const inputClass = 'w-full border rounded-lg px-3 py-2 border-slate-300 bg-white text-slate-900';
 
@@ -608,6 +625,7 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
               <button onClick={() => setTab(TABS.overview)} className={`rounded-lg px-3 py-2 text-sm ${tab === TABS.overview ? 'bg-slate-900 text-white' : 'border border-slate-300'}`}>{tr(lang, 'نظرة عامة', 'Overview', 'Apercu')}</button>
               <button onClick={() => setTab(TABS.users)} className={`rounded-lg px-3 py-2 text-sm ${tab === TABS.users ? 'bg-slate-900 text-white' : 'border border-slate-300'}`}>{tr(lang, 'المستخدمون', 'Users', 'Utilisateurs')}</button>
               <button onClick={() => setTab(TABS.payments)} className={`rounded-lg px-3 py-2 text-sm ${tab === TABS.payments ? 'bg-slate-900 text-white' : 'border border-slate-300'}`}>{tr(lang, 'المدفوعات', 'Payments', 'Paiements')}</button>
+              <button onClick={() => setTab(TABS.usage)} className={`rounded-lg px-3 py-2 text-sm ${tab === TABS.usage ? 'bg-slate-900 text-white' : 'border border-slate-300'}`}>{tr(lang, 'سجل الاستخدام', 'Usage Analytics', 'Analytique')}</button>
               <button onClick={() => setTab(TABS.billing)} className={`rounded-lg px-3 py-2 text-sm ${tab === TABS.billing ? 'bg-slate-900 text-white' : 'border border-slate-300'}`}>{tr(lang, 'بيانات الدفع', 'Billing', 'Paiement')}</button>
               <button onClick={() => setTab(TABS.ai)} className={`rounded-lg px-3 py-2 text-sm ${tab === TABS.ai ? 'bg-slate-900 text-white' : 'border border-slate-300'}`}>{tr(lang, 'إدارة APIs', 'AI & APIs', 'IA & APIs')}</button>
               <button onClick={() => setTab(TABS.settings)} className={`rounded-lg px-3 py-2 text-sm ${tab === TABS.settings ? 'bg-slate-900 text-white' : 'border border-slate-300'}`}>{tr(lang, 'الإعدادات', 'Settings', 'Parametres')}</button>
@@ -634,6 +652,56 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
               <article className="rounded-xl border border-slate-200 bg-white p-4">
                 <p className="text-xs text-slate-500 mb-1">{tr(lang, 'روابط فريدة مستخرجة', 'Unique Extracted Links')}</p>
                 <p className="text-2xl font-black text-cyan-700">{overview?.usage?.uniqueExtractedLinks ?? 0}</p>
+              </article>
+            </section>
+          )}
+          {tab === TABS.usage && (
+            <section className="space-y-4">
+              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <article className="rounded-xl border border-slate-200 bg-white p-4">
+                  <p className="text-xs text-slate-500 mb-1">{tr(lang, 'إجمالي الطلبات', 'Total Requests')}</p>
+                  <p className="text-2xl font-black text-slate-900">{usageStats?.totalRequests ?? 0}</p>
+                </article>
+                <article className="rounded-xl border border-slate-200 bg-white p-4">
+                  <p className="text-xs text-slate-500 mb-1">{tr(lang, 'نسبة النجاح', 'Success Rate')}</p>
+                  <p className="text-2xl font-black text-emerald-600">{usageStats?.successRate ?? 0}%</p>
+                </article>
+                <article className="rounded-xl border border-slate-200 bg-white p-4">
+                  <p className="text-xs text-slate-500 mb-1">{tr(lang, 'متوسط زمن الاستجابة', 'Avg Response Time')}</p>
+                  <p className="text-2xl font-black text-cyan-700">{usageStats?.avgResponseMs ?? 0}ms</p>
+                </article>
+                <article className="rounded-xl border border-slate-200 bg-white p-4">
+                  <p className="text-xs text-slate-500 mb-1">{tr(lang, 'فترة التقرير', 'Report Window')}</p>
+                  <p className="text-2xl font-black text-slate-900">{usageStats?.days ?? 7}d</p>
+                </article>
+              </div>
+
+              <article className="rounded-2xl border border-slate-200 bg-white p-4">
+                <h3 className="font-black text-slate-900 mb-3">{tr(lang, 'أكثر المسارات استخدامًا', 'Top Routes')}</h3>
+                <div className="overflow-auto">
+                  <table className="w-full min-w-[680px] text-sm">
+                    <thead className="bg-slate-50">
+                      <tr className={lang === LANG.ar ? 'text-right' : 'text-left'}>
+                        <th className="p-2">{tr(lang, 'المسار', 'Route')}</th>
+                        <th className="p-2">{tr(lang, 'إجمالي', 'Total')}</th>
+                        <th className="p-2">{tr(lang, 'نجاح', 'Success')}</th>
+                        <th className="p-2">{tr(lang, 'فشل', 'Failed')}</th>
+                        <th className="p-2">{tr(lang, 'متوسط الاستجابة', 'Avg ms')}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {usageByRoute.slice(0, 20).map((item) => (
+                        <tr key={item.route} className="border-t border-slate-100">
+                          <td className="p-2 font-mono text-xs">{item.route}</td>
+                          <td className="p-2">{item.total}</td>
+                          <td className="p-2 text-emerald-700">{item.success}</td>
+                          <td className="p-2 text-red-700">{item.failed}</td>
+                          <td className="p-2">{item.avgResponseMs}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </article>
             </section>
           )}
@@ -1003,3 +1071,4 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
 }
 
 export default AdminPage;
+

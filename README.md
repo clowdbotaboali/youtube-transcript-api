@@ -1,238 +1,218 @@
-# 🎥 YouTube Transcript Extractor & AI Processor
+# Transcript AI
 
-موقع ويب للاستخدام الشخصي لاستخراج النصوص من فيديوهات YouTube ومعالجتها باستخدام الذكاء الاصطناعي (Groq API).
+Production-ready SaaS application for YouTube transcript extraction, AI processing, account management, and manual top-up billing.
 
-## ✨ المميزات
+The platform supports:
+- Transcript extraction from YouTube links
+- AI summary/steps/resources/chat over extracted transcripts
+- Per-user history and saved links
+- Subscription tiers (`free`, `pro`, `admin`)
+- Manual payment flow (InstaPay / Vodafone Cash) with proof upload and admin review
+- Admin-managed API keys and model selection
 
-- 📝 **استخراج النصوص التلقائي** من فيديوهات YouTube (عربي/إنجليزي)
-- 🤖 **معالجة بالذكاء الاصطناعي** باستخدام Groq API (Llama 3):
-  - تلخيص شامل للمحتوى
-  - شرح الخطوات خطوة بخطوة
-  - استخراج الروابط والبرامج المذكورة
-  - معالجة كاملة (الكل في واحد)
-- 💾 **حفظ النتائج** في قاعدة بيانات محلية (JSON)
-- 📋 **نسخ وتحميل النتائج** كملفات نصية
-- 📚 **عرض السجل** واسترجاع النتائج السابقة
-- 🎨 **واجهة عصرية** متجاوبة مع جميع الأجهزة
-
-## 🛠️ التقنيات المستخدمة
-
-### Backend
-- **Node.js** + **Express.js**
-- **youtube-transcript** - استخراج النصوص
-- **Groq SDK** - معالجة النصوص بالذكاء الاصطناعي
-- **JSON Database** - تخزين بسيط وفعال
+## Architecture Overview
 
 ### Frontend
-- **React 18** + **Vite**
-- **Tailwind CSS** - تصميم احترافي
-- **React Icons** - أيقونات جميلة
-- **Axios** - طلبات HTTP
+- Stack: `React + Vite + Tailwind`
+- Location: `frontend/`
+- Responsibilities:
+  - Authentication UI (Supabase Auth)
+  - Client dashboard and workspace
+  - History and saved links UI
+  - Billing/top-up requests and proof upload
+  - Admin panel UI
 
-## 📋 المتطلبات
+### Backend API
+- Stack: Vercel serverless Node function
+- Entry: `api/index.js`
+- Responsibilities:
+  - Authenticated API endpoints
+  - Input validation and normalized error responses
+  - Tier enforcement and credit consumption
+  - Caching and transcript provider fallback
+  - Manual payment review workflow
+  - Admin configuration (billing + AI providers + transcript API keys)
+  - Request analytics logging (`api_request_logs`)
 
-- Node.js (الإصدار 18 أو أحدث)
-- حساب Groq API (مجاني) - [احصل عليه من هنا](https://console.groq.com)
+### Data Layer
+- Provider: Supabase (Postgres + Auth + Storage)
+- Core tables:
+  - `users`
+  - `transcripts_history`
+  - `payments`
+  - `api_request_logs`
+- Storage:
+  - Bucket for payment proof images (default: `payment-proofs`)
 
-## 🚀 التثبيت والتشغيل
+## Environment Variables
 
-### 1. تحميل المشروع
+### Backend / Vercel (`api/index.js`)
+Required:
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+
+Recommended:
+- `ADMIN_TOKEN_SECRET`
+
+Optional:
+- `ALLOWED_ORIGINS` (comma-separated)
+- `ADMIN_EMAIL`
+- `ADMIN_PASSWORD`
+- `PAYMENT_PROOF_BUCKET`
+
+### Frontend (`frontend`)
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+- `VITE_API_URL` (optional; defaults to same origin on production)
+
+## Database Setup
+
+Run schema/migrations in Supabase SQL editor:
+- `supabase_schema.sql`
+- `supabase_migrations/2026-02-22_bootstrap_core_tables.sql`
+- `supabase_migrations/2026-02-22_add_payments_table.sql`
+- `supabase_migrations/2026-02-28_add_subscription_and_api_logs.sql`
+
+## Local Development
+
+1. Install dependencies:
 
 ```bash
-git clone <repository-url>
-cd "Youtube Transcript2"
-```
-
-### 2. إعداد Backend
-
-```bash
-cd backend
 npm install
+npm install --prefix frontend
 ```
 
-أنشئ ملف `.env` وأضف مفتاح Groq API الخاص بك:
+2. Create env files from examples:
+- `backend/.env.example`
+- `frontend/.env.example`
 
-```env
-GROQ_API_KEY=your_groq_api_key_here
-PORT=5000
-```
-
-للحصول على مفتاح Groq API:
-1. اذهب إلى https://console.groq.com
-2. سجل دخول أو أنشئ حساب مجاني
-3. اذهب إلى API Keys
-4. أنشئ مفتاح جديد وانسخه
-
-### 3. إعداد Frontend
+3. Run frontend:
 
 ```bash
-cd ../frontend
-npm install
+npm run dev --prefix frontend
 ```
 
-### 4. تشغيل المشروع
+4. Run backend (optional local Express flow if you use `backend/server.js`), or use Vercel dev flow if configured.
 
-افتح نافذتين منفصلتين في Terminal:
+## API Endpoints (Primary)
 
-**النافذة الأولى - Backend:**
-```bash
-cd backend
-npm run dev
+Public/health:
+- `GET /api/health`
+- `GET /api/settings/status`
+
+User:
+- `GET /api/me`
+- `POST /api/transcript/extract`
+- `POST /api/ai/process`
+- `POST /api/chat/chat`
+- `GET /api/history`
+- `POST /api/history/save`
+- `DELETE /api/history/:id`
+- `GET /api/links`
+- `POST /api/links/save`
+- `DELETE /api/links/:id`
+
+Billing:
+- `GET /api/billing/config`
+- `POST /api/billing/create-topup-request`
+- `GET /api/billing/my-requests`
+
+Admin:
+- `POST /api/admin/login`
+- `GET /api/admin/overview`
+- `GET /api/admin/usage`
+- `GET /api/admin/users`
+- `POST /api/admin/users/:id/status`
+- `DELETE /api/admin/users/:id`
+- `GET /api/admin/payments`
+- `POST /api/admin/payments/:id/review`
+- `GET /api/admin/settings`
+- `POST /api/admin/settings`
+- `GET /api/admin/billing-config`
+- `POST /api/admin/billing-config`
+- `GET /api/admin/ai/config`
+- `POST /api/admin/ai/config`
+- `POST /api/admin/ai/models`
+- `GET /api/admin/transcript-api/config`
+- `POST /api/admin/transcript-api/config`
+
+## Error Response Schema
+
+All API errors are normalized to:
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "INVALID_VIDEO_ID",
+    "message": "Invalid YouTube video ID format"
+  }
+}
 ```
 
-**النافذة الثانية - Frontend:**
-```bash
-cd frontend
-npm run dev
-```
+Status mapping:
+- `400` invalid input
+- `401` unauthenticated
+- `403` limit/feature access denied
+- `404` not found or transcript unavailable
+- `429` rate limited
+- `500` internal/server misconfiguration
 
-افتح المتصفح على: `http://localhost:5173`
+Common error codes:
+- `INVALID_INPUT`
+- `INVALID_VIDEO_ID`
+- `UNAUTHENTICATED`
+- `FEATURE_NOT_AVAILABLE`
+- `LIMIT_EXCEEDED`
+- `TRANSCRIPT_UNAVAILABLE`
+- `RATE_LIMITED`
+- `SERVER_MISCONFIGURED`
+- `INTERNAL_ERROR`
 
-## 📖 كيفية الاستخدام
+## Caching and Rate Limiting
 
-### 1. استخراج النص
-1. الصق رابط فيديو YouTube في الحقل المخصص
-2. اضغط على "استخراج النص"
-3. انتظر حتى يتم استخراج النص (قد يستغرق بضع ثوانٍ)
+- Per-user transcript deduplication by `video_id`
+- Global transcript cache reuse from recent extraction records
+- In-memory hot cache with TTL
+- IP and user-level rate limits for extraction, AI processing, chat, and admin login
 
-### 2. معالجة النص بالذكاء الاصطناعي
-بعد استخراج النص، اختر نوع المعالجة:
+## Security Controls
 
-- **تلخيص فقط**: ملخص شامل للمحتوى
-- **شرح الخطوات**: استخراج الخطوات بالترتيب مع الشرح
-- **استخراج الموارد**: البرامج والروابط المذكورة
-- **معالجة كاملة**: كل ما سبق في تقرير واحد
+- Strict CORS allowlist with localhost + production origin support
+- Security headers on API responses:
+  - `X-Frame-Options`
+  - `X-Content-Type-Options`
+  - `Referrer-Policy`
+  - `Permissions-Policy`
+  - API CSP (`default-src 'none'`)
+- Environment validation on boot
+- Admin JWT token with expiry
+- No API secrets exposed in frontend
 
-### 3. حفظ النتائج
-- انقر على "حفظ" لحفظ النتيجة في السجل المحلي
-- يمكنك نسخ النص أو تحميله كملف .txt
+## CI/CD
 
-### 4. عرض السجل
-- في الشريط الجانبي، يمكنك رؤية جميع النتائج المحفوظة
-- انقر على "عرض" لفتح النتيجة
-- انقر على "حذف" لحذف النتيجة
+GitHub Actions workflow:
+- Node setup
+- Install dependencies
+- Syntax checks
+- Frontend lint
+- Frontend production build
+- Env example validation
 
-## 🔧 هيكل المشروع
+Workflow file:
+- `.github/workflows/ci.yml`
 
-```
-Youtube Transcript2/
-├── backend/
-│   ├── config/
-│   │   └── db.js                  # إدارة قاعدة البيانات (JSON)
-│   ├── routes/
-│   │   ├── transcript.js          # مسارات استخراج النصوص
-│   │   ├── ai.js                  # مسارات معالجة الذكاء الاصطناعي
-│   │   └── history.js             # مسارات السجل
-│   ├── utils/
-│   │   └── groqClient.js          # عميل Groq API
-│   ├── server.js                  # الخادم الرئيسي
-│   ├── package.json
-│   ├── .env                       # متغيرات البيئة (لا تشاركه!)
-│   └── database.json              # قاعدة البيانات (تُنشأ تلقائياً)
-│
-├── frontend/
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── VideoInput.jsx     # إدخال رابط الفيديو
-│   │   │   ├── TranscriptDisplay.jsx  # عرض النص الأصلي
-│   │   │   ├── ProcessingOptions.jsx  # خيارات المعالجة
-│   │   │   ├── ResultsDisplay.jsx     # عرض النتائج
-│   │   │   └── SavedHistory.jsx       # السجل المحفوظ
-│   │   ├── App.jsx                # التطبيق الرئيسي
-│   │   ├── main.jsx
-│   │   └── index.css              # الأنماط
-│   ├── package.json
-│   ├── tailwind.config.js
-│   └── vite.config.js
-│
-└── README.md
-```
+## Deployment Checklist
 
-## 🔒 الأمان والخصوصية
+1. Configure Vercel project for this repository.
+2. Add required backend and frontend environment variables.
+3. Run Supabase migrations.
+4. Deploy and verify:
+   - `/api/health`
+   - Auth flow (signup/login/logout)
+   - Transcript extraction
+   - AI processing and chat
+   - Billing proof upload and admin review
+   - Admin usage dashboard
+5. Confirm legal/footer/pricing pages on production routes.
 
-- ⚠️ **لا تشارك** ملف `.env` أو مفتاح Groq API مع أي شخص
-- 🏠 المشروع مصمم **للاستخدام المحلي فقط**
-- 🔐 جميع البيانات تُخزّن محلياً في جهازك
-
-## 🐛 حل المشاكل الشائعة
-
-### Backend لا يعمل
-
-```bash
-# تأكد من تثبيت التبعيات
-cd backend
-npm install
-
-# تأكد من وجود ملف .env ومفتاح صحيح
-cat .env
-```
-
-### Frontend يظهر خطأ CORS
-
-تأكد من أن Backend يعمل على `http://localhost:5000`
-
-### خطأ "فشل الاتصال بالخادم"
-
-1. **للإصدار المحلي:**
-   - تأكد من تشغيل Backend على المنفذ 5000
-   - تأكد من تشغيل Frontend على المنفذ 5173
-
-2. **للإصدار المنشور (GitHub Pages):**
-   - يجب نشر Backend على Render أولاً
-   - اذهب إلى الإعدادات وأدخل رابط Backend
-   - مثال: `https://youtube-transcript-backend.onrender.com`
-   - اضغط "حفظ الإعدادات"
-
-3. تحقق من Console في المتصفح (F12) للمزيد من التفاصيل
-
-### "لا يوجد نص متاح لهذا الفيديو"
-
-بعض الفيديوهات لا تحتوي على نصوص مكتوبة (Transcript). جرب فيديو آخر.
-
-### خطأ في Groq API
-
-1. تحقق من صحة مفتاح API في `.env`
-2. تأكد من عدم تجاوز الحد اليومي للطلبات المجانية
-3. راجع [Groq Console](https://console.groq.com) للتفاصيل
-
-## 📝 ملاحظات مهمة
-
-### حدود Groq API المجانية
-- Groq يوفر خطة مجانية سخية لكن لها حدود يومية
-- إذا وصلت للحد، انتظر 24 ساعة أو ترقية الحساب
-
-### جودة النصوص المستخرجة
-- النصوص المولدة تلقائياً من YouTube قد تحتوي على أخطاء
-- النصوص اليدوية (من صاحب الفيديو) تكون أدق
-
-### أداء المعالجة
-- **المعالجة الكاملة** قد تستغرق 10-30 ثانية حسب طول النص
-- النصوص الطويلة (>10,000 كلمة) قد تستغرق وقتاً أطول
-
-## 🎯 التطويرات المستقبلية
-
-- [ ] دعم قوائم التشغيل (Playlists)
-- [ ] تصدير النتائج بصيغة PDF
-- [ ] دعم لغات أخرى
-- [ ] إضافة نماذج AI بديلة (Gemini, Claude)
-- [ ] واجهة لإعدادات متقدمة
-- [ ] إحصائيات الاستخدام
-
-## 📄 الترخيص
-
-هذا المشروع للاستخدام الشخصي فقط.
-
-## 🤝 المساهمة
-
-المشروع مفتوح للتحسينات والاقتراحات!
-
-## 📞 الدعم
-
-إذا واجهت أي مشكلة:
-1. راجع قسم "حل المشاكل الشائعة" أعلاه
-2. تحقق من Logs في Terminal (Backend و Frontend)
-3. تحقق من Console في المتصفح (F12)
-
----
-
-**صُنع بـ ❤️ البياع للبرمجيات**
