@@ -667,7 +667,7 @@ function App() {
               <p className="text-sm text-slate-600">{tr(lang, 'راجع نتائجك السابقة واختر أي رابط محفوظ للعودة إلى مساحة الاستخراج.', 'Review saved runs and open any saved link back in the extraction workspace.')}</p>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <SavedHistory key={aiResult?.result || user?.id} apiUrl={apiUrl} user={user} lang={lang} onNotify={notify} />
+              <SavedHistory apiUrl={apiUrl} user={user} lang={lang} onNotify={notify} />
               <SavedLinks onSelectLink={handleSavedLinkSelect} apiUrl={apiUrl} user={user} lang={lang} onNotify={notify} />
             </div>
           </section>
