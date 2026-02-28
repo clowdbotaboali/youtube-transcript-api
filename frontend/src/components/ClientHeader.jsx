@@ -28,6 +28,7 @@ function ClientHeader({
   theme = 'light',
   userEmail,
   credits,
+  freeLinksRemaining = 5,
   freePlanRequests = 5,
   requestCost = 1,
   paidPlanCredits = 200,
@@ -66,6 +67,9 @@ function ClientHeader({
             <p className="text-[11px] opacity-90">
               {tr(lang, 'الخطة المجانية:', 'Free plan:', 'Plan gratuit:')} {freePlanRequests}{' '}
               {tr(lang, 'روابط فقط', 'links only', 'liens uniquement')}
+            </p>
+            <p className="text-[11px] opacity-90">
+              {tr(lang, 'المتبقي من المجانية:', 'Free links remaining:', 'Liens gratuits restants:')} {freeLinksRemaining} / {freePlanRequests}
             </p>
             <p className="text-[11px] opacity-90">
               {tr(lang, 'الشحن يبدأ من', 'Top-up starts at', 'Recharge a partir de')} ${paidPlanPrice} = {paidPlanCredits}{' '}

@@ -94,6 +94,7 @@ function App() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
   const [credits, setCredits] = useState(null);
+  const [freeLinksRemaining, setFreeLinksRemaining] = useState(FREE_PLAN_REQUESTS);
   const [clientPage, setClientPage] = useState(CLIENT_PAGES.dashboard);
   const [lang, setLang] = useState(() => (hasWindow ? localStorage.getItem('appLang') || LANG.ar : LANG.ar));
   const [theme, setTheme] = useState(() => (hasWindow ? localStorage.getItem('appTheme') || THEME.light : THEME.light));
@@ -138,6 +139,7 @@ function App() {
       const headers = await getAuthHeaders();
       if (!headers.Authorization) {
         setCredits(null);
+        setFreeLinksRemaining(FREE_PLAN_REQUESTS);
         return;
       }
       const response = await fetch(`${apiUrl}/api/me`, {
@@ -147,8 +149,14 @@ function App() {
       const data = await response.json().catch(() => ({}));
       if (response.ok && data.success) {
         setCredits(Number(data.data?.credits || 0));
+        setFreeLinksRemaining(
+          Number.isFinite(Number(data.data?.freeLinksRemaining))
+            ? Number(data.data.freeLinksRemaining)
+            : FREE_PLAN_REQUESTS
+        );
       } else if (response.status === 401) {
         setCredits(null);
+        setFreeLinksRemaining(FREE_PLAN_REQUESTS);
       }
     } catch {
       // Keep current credits value to avoid noisy UI resets on transient failures.
@@ -173,6 +181,7 @@ function App() {
       localStorage.removeItem(LOGOUT_MARKER_KEY);
       setSession(null);
       setCredits(null);
+      setFreeLinksRemaining(FREE_PLAN_REQUESTS);
     }
 
     (async () => {
@@ -208,6 +217,7 @@ function App() {
           await refreshAccount();
         } else {
           setCredits(null);
+          setFreeLinksRemaining(FREE_PLAN_REQUESTS);
         }
       })
       .catch(() => {
@@ -225,6 +235,7 @@ function App() {
       } else {
         setClientPage(CLIENT_PAGES.dashboard);
         setCredits(null);
+        setFreeLinksRemaining(FREE_PLAN_REQUESTS);
         setTranscriptData(null);
         setAiResult(null);
       }
@@ -277,6 +288,9 @@ function App() {
     setAiResult(null);
     if (typeof data?.creditsLeft === 'number') {
       setCredits(data.creditsLeft);
+    }
+    if (data?.chargedForNewVideo === true) {
+      setFreeLinksRemaining((prev) => Math.max(Number(prev || 0) - 1, 0));
     }
     setClientPage(CLIENT_PAGES.workspace);
   };
@@ -372,6 +386,7 @@ function App() {
     clearSupabaseAuthStorage();
     setSession(null);
     setCredits(null);
+    setFreeLinksRemaining(FREE_PLAN_REQUESTS);
     setTranscriptData(null);
     setAiResult(null);
     setClientPage(CLIENT_PAGES.dashboard);
@@ -540,6 +555,7 @@ function App() {
           theme={theme}
           userEmail={user?.email}
           credits={credits}
+          freeLinksRemaining={freeLinksRemaining}
           freePlanRequests={FREE_PLAN_REQUESTS}
           requestCost={CREDIT_COST_PER_SUCCESS}
           paidPlanCredits={PAID_PLAN_CREDITS}
@@ -556,7 +572,9 @@ function App() {
         {clientPage === CLIENT_PAGES.dashboard && (
           <ClientDashboard
             lang={lang}
+            theme={theme}
             credits={credits}
+            freeLinksRemaining={freeLinksRemaining}
             userEmail={user?.email}
             onStartExtract={() => setClientPage(CLIENT_PAGES.workspace)}
             onOpenHistory={() => setClientPage(CLIENT_PAGES.history)}
@@ -663,6 +681,7 @@ function App() {
                 <p><span className="font-bold">{tr(lang, 'البريد:', 'Email:')}</span> {user?.email || '-'}</p>
                 <p><span className="font-bold">{tr(lang, 'الرصيد:', 'Credits:')}</span> {credits ?? '...'}</p>
                 <p><span className="font-bold">{tr(lang, 'الخطة المجانية:', 'Free plan:')}</span> {FREE_PLAN_REQUESTS} {tr(lang, 'روابط فقط', 'links only')}</p>
+                <p><span className="font-bold">{tr(lang, 'المتبقي من المجانية:', 'Free links remaining:')}</span> {freeLinksRemaining} / {FREE_PLAN_REQUESTS}</p>
                 <p><span className="font-bold">{tr(lang, 'تكلفة الرابط:', 'Link cost:')}</span> {CREDIT_COST_PER_SUCCESS} {tr(lang, 'نقطة لكل رابط فيديو جديد', 'credit per new video link')}</p>
                 <p><span className="font-bold">{tr(lang, 'الحالة:', 'Session:')}</span> {tr(lang, 'متصل', 'Active')}</p>
               </div>
@@ -718,6 +737,7 @@ function App() {
           user={user}
           apiUrl={apiUrl}
           lang={lang}
+          theme={theme}
           onNotify={notify}
           requireLogin={() => {
             setIsPricingModalOpen(false);

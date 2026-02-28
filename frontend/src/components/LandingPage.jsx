@@ -55,6 +55,14 @@ function LandingPage({ onStart, lang = LANG.ar, theme = 'light' }) {
             >
               {tr(lang, 'تواصل', 'Contact', 'Contact')}
             </a>
+            <a
+              href="/admin"
+              className={`px-3 py-2 text-sm rounded-xl border transition ${
+                isDark ? 'border-slate-700 text-slate-200 hover:bg-slate-800' : 'border-slate-300 text-slate-700 hover:bg-white'
+              }`}
+            >
+              {tr(lang, 'أدمن', 'Admin', 'Admin')}
+            </a>
             <button
               onClick={onStart}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 transition font-bold"

@@ -219,14 +219,22 @@ function AuthModal({ isOpen, onClose, onAuthSuccess, lang = LANG.ar, onNotify })
             </form>
 
             {isLogin && (
-              <button
-                type="button"
-                onClick={handleForgotPassword}
-                className="mt-3 text-sm text-cyan-700 hover:text-cyan-800 hover:underline"
-                disabled={loading}
-              >
-                {tr(lang, 'نسيت كلمة المرور؟', 'Forgot password?')}
-              </button>
+              <div className="mt-3 flex items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  className="text-sm text-cyan-700 hover:text-cyan-800 hover:underline"
+                  disabled={loading}
+                >
+                  {tr(lang, 'نسيت كلمة المرور؟', 'Forgot password?', 'Mot de passe oublie ?')}
+                </button>
+                <a
+                  href="/admin"
+                  className="text-sm text-slate-600 hover:text-slate-900 hover:underline"
+                >
+                  {tr(lang, 'دخول الأدمن', 'Admin login', 'Connexion admin')}
+                </a>
+              </div>
             )}
 
             <div className="mt-6 text-sm text-slate-600 text-center">
