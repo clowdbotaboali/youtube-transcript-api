@@ -3,6 +3,7 @@ import { FaCopy, FaDownload, FaSave, FaCheck, FaTasks } from 'react-icons/fa';
 import TodoList from './TodoList';
 import { extractTodos, loadTodoState } from '../utils/todoExtractor';
 import { LANG, tr } from '../utils/lang';
+import { downloadTextAsPdf } from '../utils/pdf';
 
 function ResultsDisplay({ result, type, videoId, videoTitle, transcript, onSave, user, lang = LANG.ar, onNotify }) {
   const [copied, setCopied] = useState(false);
@@ -27,13 +28,16 @@ function ResultsDisplay({ result, type, videoId, videoTitle, transcript, onSave,
   };
 
   const handleDownload = () => {
-    const element = document.createElement('a');
-    const file = new Blob([result], { type: 'text/plain' });
-    element.href = URL.createObjectURL(file);
-    element.download = `ai-result-${type}-${videoId}.txt`;
-    document.body.appendChild(element);
-    element.click();
-    document.body.removeChild(element);
+    const label = typeLabels[type] || tr(lang, 'مخرجات الذكاء الاصطناعي', 'AI output', 'Sortie IA');
+    downloadTextAsPdf({
+      filename: `ai-result-${type}-${videoId || Date.now()}.pdf`,
+      title: `${tr(lang, 'النتيجة', 'Result', 'Resultat')}: ${label}`,
+      metadata: [
+        `${tr(lang, 'معرف الفيديو', 'Video ID', 'ID video')}: ${videoId || '-'}`,
+        `${tr(lang, 'نوع المعالجة', 'Processing type', 'Type de traitement')}: ${type || '-'}`
+      ],
+      body: result
+    });
   };
 
   const handleSave = async () => {
@@ -93,7 +97,7 @@ function ResultsDisplay({ result, type, videoId, videoTitle, transcript, onSave,
                     className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition"
                   >
                     <FaDownload />
-                    <span>{tr(lang, 'تحميل', 'Download')}</span>
+                    <span>{tr(lang, 'تحميل PDF', 'Download PDF', 'Telecharger PDF')}</span>
                   </button>
                   <button
                     onClick={handleSave}
@@ -144,7 +148,7 @@ function ResultsDisplay({ result, type, videoId, videoTitle, transcript, onSave,
                 className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition"
               >
                 <FaDownload />
-                <span>{tr(lang, 'تحميل', 'Download')}</span>
+                <span>{tr(lang, 'تحميل PDF', 'Download PDF', 'Telecharger PDF')}</span>
               </button>
               <button
                 onClick={handleSave}

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { FaSpinner } from 'react-icons/fa';
+import { FaMoon, FaSpinner, FaSun } from 'react-icons/fa';
 import VideoInput from './components/VideoInput';
 import TranscriptDisplay from './components/TranscriptDisplay';
 import ProcessingOptions from './components/ProcessingOptions';
@@ -17,15 +17,17 @@ import ClientHeader, { PAGES as CLIENT_PAGES } from './components/ClientHeader';
 import ClientDashboard from './components/ClientDashboard';
 import SiteFooter from './components/SiteFooter';
 import SeoMeta from './components/SeoMeta';
+import PublicHeader from './components/PublicHeader';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import TermsPage from './pages/TermsPage';
 import RefundPolicyPage from './pages/RefundPolicyPage';
 import ContactPage from './pages/ContactPage';
 import PricingPage from './pages/PricingPage';
+import AdminPage from './pages/AdminPage';
 import { supabase, SUPABASE_CONFIGURED } from './utils/supabase';
 import defaultApiUrl from './config';
 import { getAuthHeaders } from './utils/authHeaders';
-import { LANG, tr } from './utils/lang';
+import { LANG, langBadge, nextLang, tr } from './utils/lang';
 
 const normalizeApiUrl = (value) => String(value || '').trim().replace(/\/+$/, '');
 
@@ -49,11 +51,16 @@ const probeApiUrl = async (baseUrl) => {
 };
 
 const hasWindow = typeof window !== 'undefined';
-const STATIC_ROUTES = new Set(['/privacy-policy', '/terms', '/refund-policy', '/contact', '/pricing']);
+const STATIC_ROUTES = new Set(['/privacy-policy', '/terms', '/refund-policy', '/contact', '/pricing', '/admin']);
+const LOGOUT_MARKER_KEY = 'forceLoggedOut';
 const FREE_PLAN_REQUESTS = 5;
 const CREDIT_COST_PER_SUCCESS = 1;
 const PAID_PLAN_CREDITS = 200;
 const PAID_PLAN_PRICE_USD = 5;
+const THEME = {
+  light: 'light',
+  dark: 'dark'
+};
 
 const clearSupabaseAuthStorage = () => {
   if (!hasWindow) return;
@@ -88,7 +95,8 @@ function App() {
   const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
   const [credits, setCredits] = useState(null);
   const [clientPage, setClientPage] = useState(CLIENT_PAGES.dashboard);
-  const [lang, setLang] = useState(() => localStorage.getItem('appLang') || LANG.ar);
+  const [lang, setLang] = useState(() => (hasWindow ? localStorage.getItem('appLang') || LANG.ar : LANG.ar));
+  const [theme, setTheme] = useState(() => (hasWindow ? localStorage.getItem('appTheme') || THEME.light : THEME.light));
   const [toasts, setToasts] = useState([]);
   const [currentPath, setCurrentPath] = useState(() => (hasWindow ? window.location.pathname : '/'));
 
@@ -104,6 +112,13 @@ function App() {
     window.addEventListener('popstate', handler);
     return () => window.removeEventListener('popstate', handler);
   }, []);
+
+  useEffect(() => {
+    if (!hasWindow) return;
+    const nextTheme = theme === THEME.dark ? THEME.dark : THEME.light;
+    document.documentElement.setAttribute('data-theme', nextTheme);
+    localStorage.setItem('appTheme', nextTheme);
+  }, [theme]);
 
   const dismissToast = (id) => {
     setToasts((prev) => prev.filter((item) => item.id !== id));
@@ -153,6 +168,12 @@ function App() {
     const savedUrl = normalizeApiUrl(localStorage.getItem('serverUrl'));
     const savedGuideState = localStorage.getItem('showLocalGuide');
     if (canUseLocalGuide && savedGuideState === 'true') setShowLocalGuide(true);
+    const forceLoggedOut = localStorage.getItem(LOGOUT_MARKER_KEY) === '1';
+    if (forceLoggedOut) {
+      localStorage.removeItem(LOGOUT_MARKER_KEY);
+      setSession(null);
+      setCredits(null);
+    }
 
     (async () => {
       if (!savedUrl) return;
@@ -172,6 +193,14 @@ function App() {
     supabase.auth
       .getSession()
       .then(async ({ data: { session: initialSession } }) => {
+        if (forceLoggedOut) {
+          await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+          setSession(null);
+          setCredits(null);
+          setAuthReady(true);
+          clearTimeout(authSafetyTimer);
+          return;
+        }
         setSession(initialSession ?? null);
         setAuthReady(true);
         clearTimeout(authSafetyTimer);
@@ -234,9 +263,13 @@ function App() {
   };
 
   const toggleLang = () => {
-    const next = lang === LANG.ar ? LANG.en : LANG.ar;
+    const next = nextLang(lang);
     setLang(next);
-    localStorage.setItem('appLang', next);
+    if (hasWindow) localStorage.setItem('appLang', next);
+  };
+
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === THEME.dark ? THEME.light : THEME.dark));
   };
 
   const handleTranscriptExtracted = (data) => {
@@ -267,7 +300,8 @@ function App() {
         },
         body: JSON.stringify({
           transcript: transcriptData.transcript,
-          type
+          type,
+          videoId: transcriptData.videoId
         })
       });
 
@@ -354,7 +388,8 @@ function App() {
     // Best-effort Supabase sign-out; do not block logout flow on network/client issues.
     try {
       if (supabase?.auth) {
-        supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+        await supabase.auth.signOut({ scope: 'global' }).catch(() => {});
+        await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
       }
     } catch {
       // Intentionally ignored.
@@ -364,6 +399,7 @@ function App() {
 
     // Hard refresh to guarantee no in-memory auth state survives.
     if (hasWindow) {
+      localStorage.setItem(LOGOUT_MARKER_KEY, '1');
       window.location.replace('/');
     }
   };
@@ -371,26 +407,34 @@ function App() {
   const rootDir = useMemo(() => (lang === LANG.ar ? 'rtl' : 'ltr'), [lang]);
 
   const renderStaticRoute = () => {
-    if (currentPath === '/privacy-policy') return <PrivacyPolicyPage />;
-    if (currentPath === '/terms') return <TermsPage />;
-    if (currentPath === '/refund-policy') return <RefundPolicyPage />;
-    if (currentPath === '/contact') return <ContactPage />;
-    if (currentPath === '/pricing') return <PricingPage />;
+    if (currentPath === '/privacy-policy') return <PrivacyPolicyPage lang={lang} theme={theme} />;
+    if (currentPath === '/terms') return <TermsPage lang={lang} theme={theme} />;
+    if (currentPath === '/refund-policy') return <RefundPolicyPage lang={lang} theme={theme} />;
+    if (currentPath === '/contact') return <ContactPage lang={lang} theme={theme} />;
+    if (currentPath === '/pricing') return <PricingPage lang={lang} theme={theme} />;
+    if (currentPath === '/admin') return <AdminPage apiUrl={apiUrl} lang={lang} theme={theme} />;
     return null;
   };
 
   if (isStaticRoute) {
     return (
-      <div className="min-h-screen flex flex-col">
+      <div className={`min-h-screen flex flex-col ${theme === THEME.dark ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
+        <PublicHeader
+          lang={lang}
+          currentPath={currentPath}
+          onToggleLang={toggleLang}
+          onToggleTheme={toggleTheme}
+          theme={theme}
+        />
         <div className="flex-1">{renderStaticRoute()}</div>
-        <SiteFooter />
+        <SiteFooter lang={lang} theme={theme} />
       </div>
     );
   }
 
   if (!SUPABASE_CONFIGURED) {
     return (
-      <div className="min-h-screen flex flex-col">
+      <div className={`min-h-screen flex flex-col ${theme === THEME.dark ? 'bg-slate-950 text-slate-100' : ''}`}>
         <div className="flex-1 bg-slate-950 text-slate-100 flex items-center justify-center px-4" dir={rootDir}>
           <div className="max-w-lg w-full rounded-xl border border-slate-700 bg-slate-900/70 p-6 text-center">
             <h1 className="text-xl font-bold mb-3">
@@ -405,14 +449,14 @@ function App() {
             </p>
           </div>
         </div>
-        <SiteFooter />
+        <SiteFooter lang={lang} theme={theme} />
       </div>
     );
   }
 
   if (!authReady) {
     return (
-      <div className="min-h-screen flex flex-col" dir={rootDir}>
+      <div className={`min-h-screen flex flex-col ${theme === THEME.dark ? 'bg-slate-950 text-slate-100' : ''}`} dir={rootDir}>
         <SeoMeta
           title="Preparing Session | Transcript AI"
           description="Initializing authenticated session for Transcript AI."
@@ -424,27 +468,45 @@ function App() {
             <span>{tr(lang, 'جاري تجهيز الجلسة...', 'Preparing session...')}</span>
           </div>
         </div>
-        <SiteFooter />
+        <SiteFooter lang={lang} theme={theme} />
       </div>
     );
   }
 
   if (!user) {
     return (
-      <div className="min-h-screen flex flex-col">
+      <div className={`min-h-screen flex flex-col ${theme === THEME.dark ? 'bg-slate-950 text-slate-100' : ''}`}>
         <SeoMeta
           title="Transcript AI | YouTube Transcript Generation Service"
           description="Transcript AI is a digital service that converts YouTube links into text transcripts and provides optional AI text analysis."
           path="/"
         />
         <div className="flex-1">
-          <LandingPage onStart={() => setIsAuthModalOpen(true)} lang={lang} />
-          <button
-            onClick={toggleLang}
-            className="fixed top-4 right-4 z-50 px-3 py-1.5 rounded-full bg-white/90 text-slate-900 text-sm font-semibold"
-          >
-            {lang === LANG.ar ? 'EN' : 'AR'}
-          </button>
+          <LandingPage onStart={() => setIsAuthModalOpen(true)} lang={lang} theme={theme} />
+          <div className="fixed top-4 right-4 z-50 inline-flex items-center gap-2">
+            <button
+              onClick={toggleTheme}
+              className={`p-2.5 rounded-full border transition ${
+                theme === THEME.dark
+                  ? 'bg-slate-900 border-slate-700 text-amber-300 hover:bg-slate-800'
+                  : 'bg-white/90 border-slate-300 text-slate-900 hover:bg-white'
+              }`}
+              title={tr(lang, 'تبديل الوضع الليلي/النهاري', 'Toggle dark/light mode', 'Basculer mode sombre/clair')}
+            >
+              {theme === THEME.dark ? <FaSun /> : <FaMoon />}
+            </button>
+            <button
+              onClick={toggleLang}
+              className={`px-3 py-1.5 rounded-full border text-sm font-semibold transition ${
+                theme === THEME.dark
+                  ? 'bg-slate-900 border-slate-700 text-slate-100 hover:bg-slate-800'
+                  : 'bg-white/90 border-slate-300 text-slate-900 hover:bg-white'
+              }`}
+              title={tr(lang, 'تبديل اللغة', 'Switch language', 'Changer la langue')}
+            >
+              {langBadge(nextLang(lang))}
+            </button>
+          </div>
           <ToastStack items={toasts} onDismiss={dismissToast} />
           {isAuthModalOpen && (
             <AuthModal
@@ -456,13 +518,16 @@ function App() {
             />
           )}
         </div>
-        <SiteFooter />
+        <SiteFooter lang={lang} theme={theme} />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[linear-gradient(180deg,#f8fafc_0%,#eef2ff_65%,#ecfeff_100%)] flex flex-col" dir={rootDir}>
+    <div
+      className={`min-h-screen flex flex-col ${theme === THEME.dark ? 'bg-slate-950 text-slate-100' : 'bg-[linear-gradient(180deg,#f8fafc_0%,#eef2ff_65%,#ecfeff_100%)]'}`}
+      dir={rootDir}
+    >
       <SeoMeta
         title="Client Workspace | Transcript AI"
         description="Authenticated workspace for transcript extraction, AI text processing, and saved transcript history."
@@ -472,6 +537,7 @@ function App() {
       <div className="max-w-7xl mx-auto w-full px-3 sm:px-4 py-4 sm:py-6 flex-1">
         <ClientHeader
           lang={lang}
+          theme={theme}
           userEmail={user?.email}
           credits={credits}
           freePlanRequests={FREE_PLAN_REQUESTS}
@@ -481,6 +547,7 @@ function App() {
           currentPage={clientPage}
           onPageChange={setClientPage}
           onToggleLang={toggleLang}
+          onToggleTheme={toggleTheme}
           onOpenSettings={canUseLocalGuide ? () => setShowSettings(true) : undefined}
           onOpenPricing={() => setIsPricingModalOpen(true)}
           onLogout={handleLogout}
@@ -539,14 +606,17 @@ function App() {
                         transcript={transcriptData.transcript}
                         videoId={transcriptData.videoId}
                         wordCount={transcriptData.wordCount}
+                        lang={lang}
                       />
                     </div>
                     <div className="p-3 sm:p-4 h-[400px] sm:h-[600px] flex flex-col">
                       <ChatAssistant
                         transcript={transcriptData.transcript}
+                        videoId={transcriptData.videoId}
                         apiUrl={apiUrl}
                         onCreditsChange={setCredits}
                         onRequireTopup={() => setIsPricingModalOpen(true)}
+                        lang={lang}
                       />
                     </div>
                   </div>
@@ -579,8 +649,8 @@ function App() {
               <p className="text-sm text-slate-600">{tr(lang, 'راجع نتائجك السابقة واختر أي رابط محفوظ للعودة إلى مساحة الاستخراج.', 'Review saved runs and open any saved link back in the extraction workspace.')}</p>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <SavedHistory key={aiResult?.result || user?.id} apiUrl={apiUrl} user={user} />
-              <SavedLinks onSelectLink={handleSavedLinkSelect} apiUrl={apiUrl} lang={lang} onNotify={notify} />
+              <SavedHistory key={aiResult?.result || user?.id} apiUrl={apiUrl} user={user} lang={lang} onNotify={notify} />
+              <SavedLinks onSelectLink={handleSavedLinkSelect} apiUrl={apiUrl} user={user} lang={lang} onNotify={notify} />
             </div>
           </section>
         )}
@@ -606,7 +676,8 @@ function App() {
                 </div>
                 <div className="rounded-xl border border-orange-200 bg-orange-50 p-3">
                   <p className="font-black text-orange-900">{tr(lang, 'الخطة المدفوعة', 'Paid Plan')}</p>
-                  <p className="text-xs text-orange-800 mt-1">{PAID_PLAN_CREDITS} {tr(lang, 'نقطة مقابل', 'credits for')} ${PAID_PLAN_PRICE_USD}</p>
+                  <p className="text-xs text-orange-800 mt-1">{tr(lang, 'تبدأ من', 'Starts at')} {PAID_PLAN_CREDITS} {tr(lang, 'نقطة مقابل', 'credits for')} ${PAID_PLAN_PRICE_USD}</p>
+                  <p className="text-xs text-orange-800">{tr(lang, 'مع خصومات تلقائية للشحنات الأكبر.', 'With automatic bonus credits on larger top-ups.')}</p>
                 </div>
               </div>
               <h4 className="text-sm font-black text-slate-900 mb-3">{tr(lang, 'إجراءات سريعة', 'Quick Actions')}</h4>
@@ -656,7 +727,7 @@ function App() {
       )}
 
       {canUseLocalGuide && showSettings && <Settings onClose={() => setShowSettings(false)} lang={lang} />}
-      <SiteFooter />
+      <SiteFooter lang={lang} theme={theme} />
     </div>
   );
 }

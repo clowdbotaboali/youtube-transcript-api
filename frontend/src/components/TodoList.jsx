@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { FaCheckSquare, FaRegSquare, FaChevronDown, FaChevronLeft, FaDownload, FaRedo } from 'react-icons/fa';
 import { calculateProgress, saveTodoState, exportTodosAsMarkdown } from '../utils/todoExtractor';
 import { LANG, tr } from '../utils/lang';
+import { downloadTextAsPdf } from '../utils/pdf';
 
 function TodoList({ todos, videoId, videoTitle, lang = LANG.ar }) {
   const [todoState, setTodoState] = useState(todos);
@@ -60,13 +61,15 @@ function TodoList({ todos, videoId, videoTitle, lang = LANG.ar }) {
 
   const handleExport = () => {
     const markdown = exportTodosAsMarkdown(todoState, videoTitle || tr(lang, 'قائمة المهام', 'Todo List'));
-    const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `todo-list-${videoId || Date.now()}.md`;
-    link.click();
-    URL.revokeObjectURL(url);
+    downloadTextAsPdf({
+      filename: `todo-list-${videoId || Date.now()}.pdf`,
+      title: videoTitle || tr(lang, 'قائمة المهام', 'Todo List', 'Liste de taches'),
+      metadata: [
+        `${tr(lang, 'معرف الفيديو', 'Video ID', 'ID video')}: ${videoId || '-'}`,
+        `${tr(lang, 'نسبة الإنجاز', 'Completion', 'Progression')}: ${progress}%`
+      ],
+      body: markdown
+    });
   };
 
   if (!todoState || todoState.length === 0) {
@@ -89,7 +92,7 @@ function TodoList({ todos, videoId, videoTitle, lang = LANG.ar }) {
             <button onClick={resetProgress} className="p-2 hover:bg-blue-500 rounded-lg transition" title={tr(lang, 'إعادة تعيين', 'Reset')}>
               <FaRedo />
             </button>
-            <button onClick={handleExport} className="p-2 hover:bg-blue-500 rounded-lg transition" title={tr(lang, 'تصدير', 'Export')}>
+            <button onClick={handleExport} className="p-2 hover:bg-blue-500 rounded-lg transition" title={tr(lang, 'تصدير PDF', 'Export PDF', 'Exporter PDF')}>
               <FaDownload />
             </button>
           </div>

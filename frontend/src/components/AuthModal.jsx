@@ -130,7 +130,7 @@ function AuthModal({ isOpen, onClose, onAuthSuccess, lang = LANG.ar, onNotify })
 
           <div className="space-y-3 text-sm">
             <div className="rounded-xl bg-white/10 border border-white/15 p-3">{tr(lang, 'نظام رصيد واضح ومرن', 'Clear and flexible credit system')}</div>
-            <div className="rounded-xl bg-white/10 border border-white/15 p-3">{tr(lang, 'تجربة كاملة بالعربية والإنجليزية', 'Full bilingual experience (Arabic/English)')}</div>
+            <div className="rounded-xl bg-white/10 border border-white/15 p-3">{tr(lang, 'تجربة كاملة بالعربية والإنجليزية والفرنسية', 'Full multilingual experience (Arabic/English/French)', 'Experience complete en arabe/anglais/francais')}</div>
           </div>
         </div>
 
