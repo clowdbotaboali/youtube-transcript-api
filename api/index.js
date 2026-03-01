@@ -330,23 +330,7 @@ async function ensureUserAccountRow(supabase, authUser) {
   }
 
   const data = await loadUserRow(supabase, authUser.id);
-  let credits = Number(data.credits || 0);
-
-  // Enforce free-plan cap for non-paying users (legacy accounts may carry old higher values).
-  if (credits > FREE_PLAN_CREDITS) {
-    const tier = normalizeTier(data.subscription_tier);
-    const isPaidTier = tier === 'pro' || tier === 'admin';
-    if (!isPaidTier) {
-      const { error: capError } = await supabase
-        .from('users')
-        .update({ credits: FREE_PLAN_CREDITS })
-        .eq('id', authUser.id);
-      if (capError) {
-        throw new Error('Failed to normalize free plan credits');
-      }
-      credits = FREE_PLAN_CREDITS;
-    }
-  }
+  const credits = Number(data.credits || 0);
 
   return {
     ...data,
