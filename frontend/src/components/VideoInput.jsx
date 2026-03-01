@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { FaSpinner, FaYoutube } from 'react-icons/fa';
 import { getAuthHeaders } from '../utils/authHeaders';
 import { formatApiErrorMessage } from '../utils/apiError';
@@ -16,32 +16,6 @@ function VideoInput({
 }) {
   const [url, setUrl] = useState('');
   const [error, setError] = useState('');
-
-  const previewVideoId = useMemo(() => {
-    const value = String(url || '').trim();
-    if (!value) return '';
-    if (/^[A-Za-z0-9_-]{11}$/.test(value)) return value;
-
-    const candidate = /^https?:\/\//i.test(value) ? value : `https://${value}`;
-    try {
-      const parsed = new URL(candidate);
-      const host = parsed.hostname.toLowerCase().replace(/^www\./, '');
-      if (host === 'youtu.be' || host.endsWith('.youtu.be')) {
-        const id = parsed.pathname.split('/').filter(Boolean)[0] || '';
-        return /^[A-Za-z0-9_-]{11}$/.test(id) ? id : '';
-      }
-      if (host === 'youtube.com' || host.endsWith('.youtube.com')) {
-        const v = parsed.searchParams.get('v') || '';
-        if (/^[A-Za-z0-9_-]{11}$/.test(v)) return v;
-        const segments = parsed.pathname.split('/').filter(Boolean);
-        const shortId = segments.length >= 2 && ['embed', 'shorts', 'live', 'v'].includes(segments[0]) ? segments[1] : '';
-        return /^[A-Za-z0-9_-]{11}$/.test(shortId) ? shortId : '';
-      }
-      return '';
-    } catch {
-      return '';
-    }
-  }, [url]);
 
   const isLowQualityTranscript = (text = '', wordCount = 0) => {
     const normalized = String(text || '')
@@ -84,7 +58,7 @@ function VideoInput({
             lang,
             'انتهت المهلة. تأكد من تسجيل الدخول ثم حاول مرة أخرى.',
             'Request timed out. Please re-login and try again.',
-            'Delai depasse. Reconnectez-vous puis reessayez.'
+            'Délai dépassé. Reconnectez-vous puis réessayez.'
           )
         );
         setLoading(false);
@@ -155,7 +129,7 @@ function VideoInput({
             lang,
             'انتهت مهلة الاستخراج. جرّب مرة أخرى.',
             'Extraction timed out. Please try again.',
-            "Delai d'extraction depasse. Reessayez."
+            "Délai d'extraction dépassé. Réessayez."
           )
         );
       } else {
@@ -184,25 +158,6 @@ function VideoInput({
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {previewVideoId ? (
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-            <p className="text-xs font-bold text-slate-600 mb-2">
-              {tr(lang, 'معاينة الفيديو', 'Video preview', 'Aperçu vidéo')}
-            </p>
-            <div className="aspect-video w-full overflow-hidden rounded-lg border border-slate-200">
-              <iframe
-                title={previewVideoId}
-                src={`https://www.youtube.com/embed/${previewVideoId}`}
-                className="h-full w-full"
-                loading="lazy"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                referrerPolicy="strict-origin-when-cross-origin"
-                allowFullScreen
-              />
-            </div>
-          </div>
-        ) : null}
-
         <div>
           <input
             type="text"

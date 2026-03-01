@@ -1637,14 +1637,38 @@ function buildYouTubeThumbnailUrl(videoId) {
 function extractUrlsFromText(value) {
   const text = String(value || '');
   if (!text) return [];
-  const matches = text.match(/https?:\/\/[^\s)]+/gi) || [];
-  const unique = new Set();
-  for (const raw of matches) {
-    const url = String(raw || '').trim().replace(/[),.;]+$/, '');
+  const protocolMatches = text.match(/https?:\/\/[^\s<>"')\]]+/gi) || [];
+  const domainMatches = text.match(/\b(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:\/[^\s<>"')\]]*)?/gi) || [];
+  const candidates = [...protocolMatches, ...domainMatches];
+
+  const unique = new Map();
+  for (const raw of candidates) {
+    let url = String(raw || '').trim();
     if (!url) continue;
-    unique.add(url);
+    url = url.replace(/^[("'\[]+/, '').replace(/[),.;:\]]+$/, '').trim();
+    if (!url) continue;
+
+    if (!/^https?:\/\//i.test(url)) {
+      if (/^(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)+/i.test(url)) {
+        url = `https://${url}`;
+      } else {
+        continue;
+      }
+    }
+
+    try {
+      const parsed = new URL(url);
+      if (!parsed.hostname || !parsed.hostname.includes('.')) continue;
+      const normalized = parsed.toString();
+      const dedupeKey = normalized.toLowerCase();
+      if (!unique.has(dedupeKey)) {
+        unique.set(dedupeKey, normalized);
+      }
+    } catch {
+      // Skip malformed URL candidates.
+    }
   }
-  return Array.from(unique).slice(0, 20);
+  return Array.from(unique.values()).slice(0, 20);
 }
 
 function extractInstructionLines(value) {
@@ -1715,6 +1739,43 @@ function parseExtractMeta(rawMeta, videoId) {
   };
 }
 
+function shouldHydrateExtractMeta(meta = {}) {
+  const links = Array.isArray(meta.descriptionLinks) ? meta.descriptionLinks : [];
+  const instructions = Array.isArray(meta.descriptionInstructions) ? meta.descriptionInstructions : [];
+  const thumbnail = String(meta.thumbnailUrl || '').trim();
+  return links.length === 0 || instructions.length === 0 || !thumbnail;
+}
+
+function normalizeExtractMetaForSave(meta = {}, videoId, methodFallback = 'cached') {
+  return {
+    method: String(meta.method || '').trim() || methodFallback,
+    thumbnailUrl: String(meta.thumbnailUrl || '').trim() || buildYouTubeThumbnailUrl(videoId),
+    descriptionLinks: Array.isArray(meta.descriptionLinks)
+      ? meta.descriptionLinks.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 20)
+      : [],
+    descriptionInstructions: Array.isArray(meta.descriptionInstructions)
+      ? meta.descriptionInstructions.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 10)
+      : []
+  };
+}
+
+async function hydrateExtractMetaIfNeeded(videoId, currentMeta = {}, fallbackTitle = '') {
+  const normalizedCurrent = normalizeExtractMetaForSave(currentMeta, videoId, currentMeta.method || 'cached');
+  if (!shouldHydrateExtractMeta(normalizedCurrent)) {
+    return normalizedCurrent;
+  }
+  const fetched = await fetchYouTubeVideoMetadata(videoId, fallbackTitle);
+  const merged = {
+    ...normalizedCurrent,
+    thumbnailUrl: fetched.thumbnailUrl || normalizedCurrent.thumbnailUrl,
+    descriptionLinks: fetched.descriptionLinks?.length ? fetched.descriptionLinks : normalizedCurrent.descriptionLinks,
+    descriptionInstructions: fetched.descriptionInstructions?.length
+      ? fetched.descriptionInstructions
+      : normalizedCurrent.descriptionInstructions
+  };
+  return normalizeExtractMetaForSave(merged, videoId, normalizedCurrent.method || 'cached');
+}
+
 async function fetchYouTubeVideoTitle(videoId) {
   const canonicalUrl = `https://www.youtube.com/watch?v=${videoId}`;
   const oEmbedUrl = `https://www.youtube.com/oembed?url=${encodeURIComponent(canonicalUrl)}&format=json`;
@@ -1737,6 +1798,54 @@ async function fetchYouTubeVideoTitle(videoId) {
     return title || null;
   } catch {
     return null;
+  }
+}
+
+function decodeJsonEscapedString(raw) {
+  const value = String(raw || '').trim();
+  if (!value) return '';
+  try {
+    return String(JSON.parse(`"${value}"`) || '');
+  } catch {
+    return '';
+  }
+}
+
+async function fetchYouTubeWatchDescription(videoId) {
+  const canonicalUrl = `https://www.youtube.com/watch?v=${videoId}&hl=en`;
+  try {
+    const response = await fetchWithTimeout(
+      canonicalUrl,
+      {
+        method: 'GET',
+        headers: {
+          'User-Agent': USER_AGENT,
+          Accept: 'text/html,application/xhtml+xml',
+          'Accept-Language': 'en-US,en;q=0.9'
+        }
+      },
+      5000,
+      'YouTube watch page'
+    );
+    if (!response.ok) return '';
+
+    const html = await response.text();
+    if (!html) return '';
+
+    const candidates = [];
+    const regex = /"shortDescription":"((?:\\.|[^"\\])*)"/g;
+    let match;
+    while ((match = regex.exec(html)) !== null) {
+      if (match[1]) {
+        const decoded = decodeJsonEscapedString(match[1]);
+        if (decoded) candidates.push(decodeXmlEntities(decoded));
+      }
+      if (candidates.length >= 3) break;
+    }
+
+    return candidates.find((item) => item.length >= 20) || '';
+  } catch {
+    return '';
   }
 }
 
@@ -1774,6 +1883,16 @@ async function fetchYouTubeVideoMetadata(videoId, fallbackTitle = '') {
   }
 
   try {
+    const watchDescription = await fetchYouTubeWatchDescription(videoId);
+    if (watchDescription) {
+      metadata.descriptionLinks = extractUrlsFromText(watchDescription);
+      metadata.descriptionInstructions = extractInstructionLines(watchDescription);
+    }
+  } catch {
+    // Keep previously collected metadata.
+  }
+
+  try {
     const info = await withTimeout(ytdl.getInfo(videoId, { agent: YTDL_AGENT }), 8000, 'YouTube metadata ytdl');
     const details = info?.videoDetails || {};
     const detailTitle = sanitizeVideoTitle(details.title || '', metadata.title || videoId);
@@ -1787,8 +1906,12 @@ async function fetchYouTubeVideoMetadata(videoId, fallbackTitle = '') {
 
     const description = String(details.description || details.shortDescription || '').trim();
     if (description) {
-      metadata.descriptionLinks = extractUrlsFromText(description);
-      metadata.descriptionInstructions = extractInstructionLines(description);
+      if (!metadata.descriptionLinks.length) {
+        metadata.descriptionLinks = extractUrlsFromText(description);
+      }
+      if (!metadata.descriptionInstructions.length) {
+        metadata.descriptionInstructions = extractInstructionLines(description);
+      }
     }
   } catch {
     // Keep oEmbed/default values.
@@ -3429,6 +3552,21 @@ export default async function handler(req, res) {
       const cachedExtract = await getCachedExtractRecord(supabase, user.id, videoId);
       if (cachedExtract?.transcript) {
         const cachedMeta = parseExtractMeta(cachedExtract.ai_result, videoId);
+        const hydratedMeta = await hydrateExtractMetaIfNeeded(
+          videoId,
+          cachedMeta,
+          sanitizeVideoTitle(cachedExtract.video_title, videoId)
+        );
+        const normalizedCached = normalizeExtractMetaForSave(cachedMeta, videoId, cachedMeta.method || 'cached');
+        if (JSON.stringify(normalizedCached) !== JSON.stringify(hydratedMeta)) {
+          await supabase
+            .from('transcripts_history')
+            .update({
+              ai_result: JSON.stringify(hydratedMeta)
+            })
+            .eq('id', cachedExtract.id)
+            .eq('user_id', user.id);
+        }
         console.info(`[cache] transcript user-hit video=${videoId} user=${user.id}`);
         return res.json({
           success: true,
@@ -3436,10 +3574,10 @@ export default async function handler(req, res) {
           videoTitle: sanitizeVideoTitle(cachedExtract.video_title, videoId),
           transcript: cachedExtract.transcript,
           wordCount: cachedExtract.transcript.trim().split(/\s+/).length,
-          method: cachedMeta.method || 'cached',
-          thumbnailUrl: cachedMeta.thumbnailUrl || defaultExtractMeta.thumbnailUrl,
-          descriptionLinks: cachedMeta.descriptionLinks || [],
-          descriptionInstructions: cachedMeta.descriptionInstructions || [],
+          method: hydratedMeta.method || cachedMeta.method || 'cached',
+          thumbnailUrl: hydratedMeta.thumbnailUrl || defaultExtractMeta.thumbnailUrl,
+          descriptionLinks: hydratedMeta.descriptionLinks || [],
+          descriptionInstructions: hydratedMeta.descriptionInstructions || [],
           creditsLeft: Number(userRow.credits || 0),
           chargedForNewVideo: false,
           cached: true
@@ -3583,9 +3721,12 @@ export default async function handler(req, res) {
           descriptionLinks: videoMeta.descriptionLinks || [],
           descriptionInstructions: videoMeta.descriptionInstructions || []
         };
-      } else if (!resolvedVideoTitle || resolvedVideoTitle === videoId) {
-        const fetchedTitle = await fetchYouTubeVideoTitle(videoId);
-        if (fetchedTitle) resolvedVideoTitle = fetchedTitle;
+      } else {
+        extractMeta = await hydrateExtractMetaIfNeeded(videoId, extractMeta, resolvedVideoTitle || videoId);
+        if (!resolvedVideoTitle || resolvedVideoTitle === videoId) {
+          const fetchedTitle = await fetchYouTubeVideoTitle(videoId);
+          if (fetchedTitle) resolvedVideoTitle = fetchedTitle;
+        }
       }
       resolvedVideoTitle = sanitizeVideoTitle(resolvedVideoTitle, videoId);
 
