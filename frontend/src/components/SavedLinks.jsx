@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FaBookmark, FaExternalLinkAlt, FaLink, FaRedo, FaSearch } from 'react-icons/fa';
 import defaultApiUrl from '../config';
 import { getAuthHeaders } from '../utils/authHeaders';
@@ -12,12 +12,21 @@ function SavedLinks({ onSelectLink, apiUrl = defaultApiUrl, user, lang = LANG.ar
   const [search, setSearch] = useState('');
   const cacheKey = user?.id ? `saved-links:${apiUrl}:${user.id}` : '';
 
-  const notify = useCallback(
-    (type, message) => {
-      if (typeof onNotify === 'function') onNotify(type, message);
-    },
-    [onNotify]
-  );
+  const notifyRef = useRef(onNotify);
+  const langRef = useRef(lang);
+
+  useEffect(() => {
+    notifyRef.current = onNotify;
+  }, [onNotify]);
+
+  useEffect(() => {
+    langRef.current = lang;
+  }, [lang]);
+
+  const notify = useCallback((type, message) => {
+    const fn = notifyRef.current;
+    if (typeof fn === 'function') fn(type, message);
+  }, []);
 
   const readCache = useCallback(() => {
     if (!cacheKey || typeof window === 'undefined') return null;
@@ -79,15 +88,23 @@ function SavedLinks({ onSelectLink, apiUrl = defaultApiUrl, user, lang = LANG.ar
           setLinks(items);
           writeCache(items);
         } else {
-          notify('error', tr(lang, 'تعذر تحميل الروابط المحفوظة.', 'Failed to load saved links.', 'Echec du chargement des liens enregistres.'));
+          notify(
+            'error',
+            tr(
+              langRef.current,
+              'تعذر تحميل الروابط المحفوظة.',
+              'Failed to load saved links.',
+              'Echec du chargement des liens enregistres.'
+            )
+          );
         }
       } catch {
-        notify('error', tr(lang, 'فشل الاتصال بالخادم.', 'Connection failed.', 'Echec de connexion.'));
+        notify('error', tr(langRef.current, 'فشل الاتصال بالخادم.', 'Connection failed.', 'Echec de connexion.'));
       } finally {
         if (showLoader) setLoading(false);
       }
     },
-    [apiUrl, lang, notify, readCache, user?.id, writeCache]
+    [apiUrl, notify, readCache, user?.id, writeCache]
   );
 
   useEffect(() => {

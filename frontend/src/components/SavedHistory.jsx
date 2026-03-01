@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FaEye, FaFilter, FaHistory, FaRedo, FaTimes, FaTrash } from 'react-icons/fa';
 import defaultApiUrl from '../config';
 import { getAuthHeaders } from '../utils/authHeaders';
@@ -25,12 +25,21 @@ function SavedHistory({ apiUrl = defaultApiUrl, user, lang = LANG.ar, onNotify }
   const [activeFilter, setActiveFilter] = useState('all');
   const cacheKey = user?.id ? `saved-history:${apiUrl}:${user.id}` : '';
 
-  const notify = useCallback(
-    (type, message) => {
-      if (typeof onNotify === 'function') onNotify(type, message);
-    },
-    [onNotify]
-  );
+  const notifyRef = useRef(onNotify);
+  const langRef = useRef(lang);
+
+  useEffect(() => {
+    notifyRef.current = onNotify;
+  }, [onNotify]);
+
+  useEffect(() => {
+    langRef.current = lang;
+  }, [lang]);
+
+  const notify = useCallback((type, message) => {
+    const fn = notifyRef.current;
+    if (typeof fn === 'function') fn(type, message);
+  }, []);
 
   const readCache = useCallback(() => {
     if (!cacheKey || typeof window === 'undefined') return null;
@@ -91,15 +100,18 @@ function SavedHistory({ apiUrl = defaultApiUrl, user, lang = LANG.ar, onNotify }
           setHistory(items);
           writeCache(items);
         } else {
-          notify('error', tr(lang, 'تعذر تحميل السجل.', 'Failed to load history.', 'Echec du chargement de l historique.'));
+          notify(
+            'error',
+            tr(langRef.current, 'تعذر تحميل السجل.', 'Failed to load history.', 'Echec du chargement de l historique.')
+          );
         }
       } catch {
-        notify('error', tr(lang, 'فشل الاتصال بالخادم.', 'Connection failed.', 'Echec de connexion.'));
+        notify('error', tr(langRef.current, 'فشل الاتصال بالخادم.', 'Connection failed.', 'Echec de connexion.'));
       } finally {
         if (showLoader) setLoading(false);
       }
     },
-    [apiUrl, lang, notify, readCache, user?.id, writeCache]
+    [apiUrl, notify, readCache, user?.id, writeCache]
   );
 
   useEffect(() => {

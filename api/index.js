@@ -1755,6 +1755,21 @@ async function getAdminUsageSummary(supabase, { days = 7 } = {}) {
     .order('created_at', { ascending: false })
     .limit(8000);
   if (error) {
+    if (isMissingRelationError(error)) {
+      return {
+        days: safeDays,
+        totalRequests: 0,
+        successCount: 0,
+        failedCount: 0,
+        successRate: 0,
+        avgResponseMs: 0,
+        byRoute: [],
+        topAbusiveIps: [],
+        topActiveUsers: [],
+        generatedAt: new Date().toISOString(),
+        schemaReady: false
+      };
+    }
     throw new Error('Failed to load usage analytics');
   }
 
@@ -2062,6 +2077,14 @@ function setCachedTranscriptInMemory(videoId, transcript, method) {
     const firstKey = transcriptMemoryCache.keys().next().value;
     if (firstKey) transcriptMemoryCache.delete(firstKey);
   }
+}
+
+function isMissingRelationError(error) {
+  if (!error || typeof error !== 'object') return false;
+  const code = String(error.code || '').trim();
+  const message = String(error.message || '').toLowerCase();
+  if (code === '42P01') return true;
+  return message.includes('does not exist') || message.includes('relation');
 }
 
 async function logApiRequestSafe(supabase, payload) {
