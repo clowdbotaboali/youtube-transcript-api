@@ -1,12 +1,13 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { FaBolt, FaCheck, FaCrown, FaLeaf, FaUpload } from 'react-icons/fa';
 import defaultApiUrl from '../config';
 import { getAuthHeaders } from '../utils/authHeaders';
+import { formatApiErrorMessage } from '../utils/apiError';
 import { LANG, tr } from '../utils/lang';
 
 const METHODS = [
-  { value: 'instapay', ar: 'إنستا باي', en: 'InstaPay', fr: 'InstaPay' },
-  { value: 'vodafone_cash', ar: 'فودافون كاش', en: 'Vodafone Cash', fr: 'Vodafone Cash' }
+  { value: 'instapay', ar: 'Ø¥Ù†Ø³ØªØ§ Ø¨Ø§ÙŠ', en: 'InstaPay', fr: 'InstaPay' },
+  { value: 'vodafone_cash', ar: 'ÙÙˆØ¯Ø§ÙÙˆÙ† ÙƒØ§Ø´', en: 'Vodafone Cash', fr: 'Vodafone Cash' }
 ];
 
 const QUICK_AMOUNTS = [5, 10, 20, 50, 100];
@@ -44,9 +45,9 @@ function calculateQuote(amountUsd) {
 
 function statusBadge(status, lang) {
   const value = String(status || '').toLowerCase();
-  if (value === 'approved') return tr(lang, 'مقبول', 'Approved', 'Approuve');
-  if (value === 'rejected') return tr(lang, 'مرفوض', 'Rejected', 'Rejete');
-  return tr(lang, 'معلّق', 'Pending', 'En attente');
+  if (value === 'approved') return tr(lang, 'Ù…Ù‚Ø¨ÙˆÙ„', 'Approved', 'Approuve');
+  if (value === 'rejected') return tr(lang, 'Ù…Ø±ÙÙˆØ¶', 'Rejected', 'Rejete');
+  return tr(lang, 'Ù…Ø¹Ù„Ù‘Ù‚', 'Pending', 'En attente');
 }
 
 function PricingModal({
@@ -100,7 +101,7 @@ function PricingModal({
         setMyRequests(Array.isArray(requestsData.data) ? requestsData.data : []);
       }
     } catch {
-      notify('error', tr(lang, 'تعذر تحميل بيانات الدفع.', 'Failed to load billing data.', 'Echec du chargement des donnees de paiement.'));
+      notify('error', tr(lang, 'ØªØ¹Ø°Ø± ØªØ­Ù…ÙŠÙ„ Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø¯ÙØ¹.', 'Failed to load billing data.', 'Echec du chargement des donnees de paiement.'));
     } finally {
       setLoadingContext(false);
     }
@@ -121,12 +122,12 @@ function PricingModal({
       return;
     }
     if (!/^image\/(png|jpeg|jpg|webp)$/i.test(file.type)) {
-      notify('error', tr(lang, 'صيغة الصورة غير مدعومة (PNG/JPEG/WEBP).', 'Unsupported image type (PNG/JPEG/WEBP).', 'Format d image non pris en charge (PNG/JPEG/WEBP).'));
+      notify('error', tr(lang, 'ØµÙŠØºØ© Ø§Ù„ØµÙˆØ±Ø© ØºÙŠØ± Ù…Ø¯Ø¹ÙˆÙ…Ø© (PNG/JPEG/WEBP).', 'Unsupported image type (PNG/JPEG/WEBP).', 'Format d image non pris en charge (PNG/JPEG/WEBP).'));
       event.target.value = '';
       return;
     }
     if (file.size > MAX_PROOF_SIZE) {
-      notify('error', tr(lang, 'حجم الصورة أكبر من 3MB.', 'Image is larger than 3MB.', 'L image depasse 3 Mo.'));
+      notify('error', tr(lang, 'Ø­Ø¬Ù… Ø§Ù„ØµÙˆØ±Ø© Ø£ÙƒØ¨Ø± Ù…Ù† 3MB.', 'Image is larger than 3MB.', 'L image depasse 3 Mo.'));
       event.target.value = '';
       return;
     }
@@ -157,7 +158,7 @@ function PricingModal({
         'error',
         tr(
           lang,
-          'المبلغ يجب أن يكون مضاعفات 5 دولار (5، 10، 15...)',
+          'Ø§Ù„Ù…Ø¨Ù„Øº ÙŠØ¬Ø¨ Ø£Ù† ÙŠÙƒÙˆÙ† Ù…Ø¶Ø§Ø¹ÙØ§Øª 5 Ø¯ÙˆÙ„Ø§Ø± (5ØŒ 10ØŒ 15...)',
           'Amount must be in $5 increments (5, 10, 15...)',
           'Le montant doit etre par tranches de 5 $ (5, 10, 15...)'
         )
@@ -169,7 +170,7 @@ function PricingModal({
         'error',
         tr(
           lang,
-          'ارفع صورة إثبات التحويل قبل إرسال الطلب.',
+          'Ø§Ø±ÙØ¹ ØµÙˆØ±Ø© Ø¥Ø«Ø¨Ø§Øª Ø§Ù„ØªØ­ÙˆÙŠÙ„ Ù‚Ø¨Ù„ Ø¥Ø±Ø³Ø§Ù„ Ø§Ù„Ø·Ù„Ø¨.',
           'Upload transfer proof before submitting.',
           'Telechargez la preuve du transfert avant d envoyer.'
         )
@@ -202,7 +203,7 @@ function PricingModal({
           'success',
           tr(
             lang,
-            `تم إرسال طلب الشحن بنجاح (${data.quote?.credits ?? quote.credits} كريديت).`,
+            `ØªÙ… Ø¥Ø±Ø³Ø§Ù„ Ø·Ù„Ø¨ Ø§Ù„Ø´Ø­Ù† Ø¨Ù†Ø¬Ø§Ø­ (${data.quote?.credits ?? quote.credits} ÙƒØ±ÙŠØ¯ÙŠØª).`,
             `Top-up request submitted (${data.quote?.credits ?? quote.credits} credits).`,
             `Demande envoyee (${data.quote?.credits ?? quote.credits} credits).`
           )
@@ -213,16 +214,18 @@ function PricingModal({
       } else {
         notify(
           'error',
-          tr(
+          formatApiErrorMessage({
+            payload: data,
+            status: response.status,
             lang,
-            `خطأ: ${data.error || 'فشل إرسال الطلب'}`,
-            `Error: ${data.error || 'Request failed'}`,
-            `Erreur: ${data.error || 'Echec de la demande'}`
-          )
+            fallbackAr: 'فشل إرسال طلب الشحن.',
+            fallbackEn: 'Top-up request failed.',
+            fallbackFr: 'La demande de recharge a echoue.'
+          })
         );
       }
     } catch {
-      notify('error', tr(lang, 'فشل الاتصال بالخادم.', 'Connection failed.', 'Echec de connexion.'));
+      notify('error', tr(lang, 'ÙØ´Ù„ Ø§Ù„Ø§ØªØµØ§Ù„ Ø¨Ø§Ù„Ø®Ø§Ø¯Ù….', 'Connection failed.', 'Echec de connexion.'));
     } finally {
       setLoading(false);
     }
@@ -252,12 +255,12 @@ function PricingModal({
 
         <div className="text-center max-w-3xl mx-auto mb-7">
           <h2 className={`text-3xl font-extrabold mb-2 ${isDark ? 'text-slate-100' : 'text-gray-900'}`}>
-            {tr(lang, 'الخطط والشحن', 'Plans & Top-up', 'Plans et recharge')}
+            {tr(lang, 'Ø§Ù„Ø®Ø·Ø· ÙˆØ§Ù„Ø´Ø­Ù†', 'Plans & Top-up', 'Plans et recharge')}
           </h2>
           <p className={isDark ? 'text-slate-300' : 'text-gray-600'}>
             {tr(
               lang,
-              'الخطة المجانية: 5 روابط فيديو فقط. التلخيص والشات لنفس الفيديو بدون خصم إضافي.',
+              'Ø§Ù„Ø®Ø·Ø© Ø§Ù„Ù…Ø¬Ø§Ù†ÙŠØ©: 5 Ø±ÙˆØ§Ø¨Ø· ÙÙŠØ¯ÙŠÙˆ ÙÙ‚Ø·. Ø§Ù„ØªÙ„Ø®ÙŠØµ ÙˆØ§Ù„Ø´Ø§Øª Ù„Ù†ÙØ³ Ø§Ù„ÙÙŠØ¯ÙŠÙˆ Ø¨Ø¯ÙˆÙ† Ø®ØµÙ… Ø¥Ø¶Ø§ÙÙŠ.',
               'Free plan: 5 video links only. Summary and chat on the same video are free.',
               'Plan gratuit: 5 liens video uniquement. Resume et chat sur la meme video sans cout supplementaire.'
             )}
@@ -268,24 +271,24 @@ function PricingModal({
           <article className={`rounded-2xl border p-5 ${isDark ? 'border-emerald-800 bg-emerald-950/25' : 'border-emerald-200 bg-white'}`}>
             <div className="flex items-center justify-between mb-3">
               <h3 className={`text-xl font-black ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
-                {tr(lang, 'الخطة المجانية', 'Free Plan', 'Plan gratuit')}
+                {tr(lang, 'Ø§Ù„Ø®Ø·Ø© Ø§Ù„Ù…Ø¬Ø§Ù†ÙŠØ©', 'Free Plan', 'Plan gratuit')}
               </h3>
               <span className="inline-flex items-center gap-1 text-xs font-bold rounded-full px-2 py-1 bg-emerald-100 text-emerald-800">
-                <FaLeaf /> {tr(lang, 'نشطة', 'Active', 'Actif')}
+                <FaLeaf /> {tr(lang, 'Ù†Ø´Ø·Ø©', 'Active', 'Actif')}
               </span>
             </div>
             <ul className={`space-y-2 text-sm ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
               <li className="flex items-center gap-2">
                 <FaCheck className="text-emerald-600" />
-                {tr(lang, '5 روابط فيديو كبداية', '5 video links included', '5 liens video inclus')}
+                {tr(lang, '5 Ø±ÙˆØ§Ø¨Ø· ÙÙŠØ¯ÙŠÙˆ ÙƒØ¨Ø¯Ø§ÙŠØ©', '5 video links included', '5 liens video inclus')}
               </li>
               <li className="flex items-center gap-2">
                 <FaCheck className="text-emerald-600" />
-                {tr(lang, 'كل رابط فيديو جديد = 1 كريديت', 'Each new video link costs 1 credit', 'Chaque nouveau lien coute 1 credit')}
+                {tr(lang, 'ÙƒÙ„ Ø±Ø§Ø¨Ø· ÙÙŠØ¯ÙŠÙˆ Ø¬Ø¯ÙŠØ¯ = 1 ÙƒØ±ÙŠØ¯ÙŠØª', 'Each new video link costs 1 credit', 'Chaque nouveau lien coute 1 credit')}
               </li>
               <li className="flex items-center gap-2">
                 <FaCheck className="text-emerald-600" />
-                {tr(lang, 'نفس الفيديو: تلخيص وشات بدون خصم إضافي', 'Same-video summary/chat has no extra charge', 'Resume/chat sur la meme video sans cout supplementaire')}
+                {tr(lang, 'Ù†ÙØ³ Ø§Ù„ÙÙŠØ¯ÙŠÙˆ: ØªÙ„Ø®ÙŠØµ ÙˆØ´Ø§Øª Ø¨Ø¯ÙˆÙ† Ø®ØµÙ… Ø¥Ø¶Ø§ÙÙŠ', 'Same-video summary/chat has no extra charge', 'Resume/chat sur la meme video sans cout supplementaire')}
               </li>
             </ul>
           </article>
@@ -293,15 +296,15 @@ function PricingModal({
           <article className={`rounded-2xl border p-5 ${isDark ? 'border-amber-800 bg-amber-950/25' : 'border-amber-300 bg-white'}`}>
             <div className="flex items-center justify-between mb-3">
               <h3 className={`text-xl font-black ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
-                {tr(lang, 'الشحن المدفوع', 'Paid Top-up', 'Recharge payante')}
+                {tr(lang, 'Ø§Ù„Ø´Ø­Ù† Ø§Ù„Ù…Ø¯ÙÙˆØ¹', 'Paid Top-up', 'Recharge payante')}
               </h3>
               <span className="inline-flex items-center gap-1 text-xs font-bold rounded-full px-2 py-1 bg-amber-100 text-amber-800">
-                <FaCrown /> {tr(lang, 'مرن', 'Flexible', 'Flexible')}
+                <FaCrown /> {tr(lang, 'Ù…Ø±Ù†', 'Flexible', 'Flexible')}
               </span>
             </div>
 
             <label className="block text-sm font-semibold mb-2">
-              {tr(lang, 'المبلغ بالدولار (مضاعفات 5)', 'Amount in USD ($5 increments)', 'Montant en USD (tranches de 5 $)')}
+              {tr(lang, 'Ø§Ù„Ù…Ø¨Ù„Øº Ø¨Ø§Ù„Ø¯ÙˆÙ„Ø§Ø± (Ù…Ø¶Ø§Ø¹ÙØ§Øª 5)', 'Amount in USD ($5 increments)', 'Montant en USD (tranches de 5 $)')}
             </label>
             <input
               type="number"
@@ -333,16 +336,16 @@ function PricingModal({
 
             {!quote.valid ? (
               <p className="text-sm text-red-500">
-                {tr(lang, 'المبلغ غير صالح. اختر 5$ أو مضاعفاتها.', 'Invalid amount. Choose $5 or its multiples.', 'Montant invalide. Choisissez 5 $ ou ses multiples.')}
+                {tr(lang, 'Ø§Ù„Ù…Ø¨Ù„Øº ØºÙŠØ± ØµØ§Ù„Ø­. Ø§Ø®ØªØ± 5$ Ø£Ùˆ Ù…Ø¶Ø§Ø¹ÙØ§ØªÙ‡Ø§.', 'Invalid amount. Choose $5 or its multiples.', 'Montant invalide. Choisissez 5 $ ou ses multiples.')}
               </p>
             ) : (
               <div className={`rounded-xl border p-3 text-sm ${isDark ? 'border-amber-800 bg-amber-950/35 text-amber-100' : 'border-amber-200 bg-amber-50 text-slate-800'}`}>
                 <p className="font-bold text-base mb-1">
-                  {tr(lang, 'الإجمالي:', 'Total:', 'Total:')} {quote.credits} {tr(lang, 'كريديت', 'credits', 'credits')}
+                  {tr(lang, 'Ø§Ù„Ø¥Ø¬Ù…Ø§Ù„ÙŠ:', 'Total:', 'Total:')} {quote.credits} {tr(lang, 'ÙƒØ±ÙŠØ¯ÙŠØª', 'credits', 'credits')}
                 </p>
-                <p>{tr(lang, 'الأساسي:', 'Base:', 'Base:')} {quote.baseCredits} {tr(lang, 'كريديت', 'credits', 'credits')}</p>
-                <p>{tr(lang, 'المكافأة:', 'Bonus:', 'Bonus:')} {quote.bonusCredits} {tr(lang, 'كريديت', 'credits', 'credits')} ({Math.round(quote.bonusRate * 100)}%)</p>
-                <p>{tr(lang, 'السعر:', 'Price:', 'Prix:')} ${quote.amountUsd}</p>
+                <p>{tr(lang, 'Ø§Ù„Ø£Ø³Ø§Ø³ÙŠ:', 'Base:', 'Base:')} {quote.baseCredits} {tr(lang, 'ÙƒØ±ÙŠØ¯ÙŠØª', 'credits', 'credits')}</p>
+                <p>{tr(lang, 'Ø§Ù„Ù…ÙƒØ§ÙØ£Ø©:', 'Bonus:', 'Bonus:')} {quote.bonusCredits} {tr(lang, 'ÙƒØ±ÙŠØ¯ÙŠØª', 'credits', 'credits')} ({Math.round(quote.bonusRate * 100)}%)</p>
+                <p>{tr(lang, 'Ø§Ù„Ø³Ø¹Ø±:', 'Price:', 'Prix:')} ${quote.amountUsd}</p>
               </div>
             )}
           </article>
@@ -350,20 +353,20 @@ function PricingModal({
 
         <div className={`rounded-xl border p-4 mb-6 ${isDark ? 'border-slate-700 bg-slate-800/60' : 'border-slate-200 bg-white'}`}>
           <div className="flex items-center justify-between gap-2 mb-3">
-            <h3 className="font-black text-base">{tr(lang, 'بيانات الدفع ورفع الإثبات', 'Payment details & proof upload', 'Details de paiement et preuve')}</h3>
-            {loadingContext ? <span className="text-xs opacity-70">{tr(lang, 'جارٍ التحديث...', 'Refreshing...', 'Actualisation...')}</span> : null}
+            <h3 className="font-black text-base">{tr(lang, 'Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø¯ÙØ¹ ÙˆØ±ÙØ¹ Ø§Ù„Ø¥Ø«Ø¨Ø§Øª', 'Payment details & proof upload', 'Details de paiement et preuve')}</h3>
+            {loadingContext ? <span className="text-xs opacity-70">{tr(lang, 'Ø¬Ø§Ø±Ù Ø§Ù„ØªØ­Ø¯ÙŠØ«...', 'Refreshing...', 'Actualisation...')}</span> : null}
           </div>
 
           <div className={`rounded-lg border p-3 mb-4 ${isDark ? 'border-cyan-800 bg-cyan-950/20' : 'border-cyan-200 bg-cyan-50'}`}>
             <p className="text-sm font-semibold mb-2">
-              {tr(lang, 'بيانات الاستقبال الحالية', 'Current receiver info', 'Infos de reception actuelles')}
+              {tr(lang, 'Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø§Ø³ØªÙ‚Ø¨Ø§Ù„ Ø§Ù„Ø­Ø§Ù„ÙŠØ©', 'Current receiver info', 'Infos de reception actuelles')}
             </p>
             <div className="grid md:grid-cols-2 gap-3 text-sm">
-              <p><span className="font-bold">{tr(lang, 'اسم الحساب:', 'Account name:', 'Nom du compte:')}</span> {billingConfig?.accountName || '-'}</p>
-              <p><span className="font-bold">{tr(lang, 'طريقة الدفع:', 'Method:', 'Methode:')}</span> {methodName}</p>
+              <p><span className="font-bold">{tr(lang, 'Ø§Ø³Ù… Ø§Ù„Ø­Ø³Ø§Ø¨:', 'Account name:', 'Nom du compte:')}</span> {billingConfig?.accountName || '-'}</p>
+              <p><span className="font-bold">{tr(lang, 'Ø·Ø±ÙŠÙ‚Ø© Ø§Ù„Ø¯ÙØ¹:', 'Method:', 'Methode:')}</span> {methodName}</p>
               <p><span className="font-bold">InstaPay:</span> {billingConfig?.instapayHandle || '-'}</p>
               <p><span className="font-bold">Vodafone Cash:</span> {billingConfig?.vodafoneCashNumber || '-'}</p>
-              <p className="md:col-span-2"><span className="font-bold">{tr(lang, 'الدعم:', 'Support:', 'Support:')}</span> {billingConfig?.supportContact || '-'}</p>
+              <p className="md:col-span-2"><span className="font-bold">{tr(lang, 'Ø§Ù„Ø¯Ø¹Ù…:', 'Support:', 'Support:')}</span> {billingConfig?.supportContact || '-'}</p>
               <p className="md:col-span-2 text-xs opacity-90">
                 {lang === LANG.ar
                   ? billingConfig?.instructionsAr
@@ -376,7 +379,7 @@ function PricingModal({
 
           <div className="grid md:grid-cols-3 gap-3">
             <div>
-              <label className="block text-sm font-semibold mb-1">{tr(lang, 'وسيلة الدفع', 'Payment method', 'Methode de paiement')}</label>
+              <label className="block text-sm font-semibold mb-1">{tr(lang, 'ÙˆØ³ÙŠÙ„Ø© Ø§Ù„Ø¯ÙØ¹', 'Payment method', 'Methode de paiement')}</label>
               <select value={method} onChange={(e) => setMethod(e.target.value)} className={`w-full border rounded-lg px-3 py-2 ${isDark ? 'border-slate-700 bg-slate-900 text-slate-100' : ''}`}>
                 {METHODS.map((m) => (
                   <option key={m.value} value={m.value}>
@@ -386,28 +389,28 @@ function PricingModal({
               </select>
             </div>
             <div>
-              <label className="block text-sm font-semibold mb-1">{tr(lang, 'رقم المُرسل/المحفظة', 'Sender/wallet number', 'Numero expediteur/portefeuille')}</label>
+              <label className="block text-sm font-semibold mb-1">{tr(lang, 'Ø±Ù‚Ù… Ø§Ù„Ù…ÙØ±Ø³Ù„/Ø§Ù„Ù…Ø­ÙØ¸Ø©', 'Sender/wallet number', 'Numero expediteur/portefeuille')}</label>
               <input
                 value={payerContact}
                 onChange={(e) => setPayerContact(e.target.value)}
                 className={`w-full border rounded-lg px-3 py-2 ${isDark ? 'border-slate-700 bg-slate-900 text-slate-100' : ''}`}
-                placeholder={tr(lang, 'اختياري', 'Optional', 'Optionnel')}
+                placeholder={tr(lang, 'Ø§Ø®ØªÙŠØ§Ø±ÙŠ', 'Optional', 'Optionnel')}
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold mb-1">{tr(lang, 'مرجع التحويل', 'Transfer reference', 'Reference de transfert')}</label>
+              <label className="block text-sm font-semibold mb-1">{tr(lang, 'Ù…Ø±Ø¬Ø¹ Ø§Ù„ØªØ­ÙˆÙŠÙ„', 'Transfer reference', 'Reference de transfert')}</label>
               <input
                 value={transferReference}
                 onChange={(e) => setTransferReference(e.target.value)}
                 className={`w-full border rounded-lg px-3 py-2 ${isDark ? 'border-slate-700 bg-slate-900 text-slate-100' : ''}`}
-                placeholder={tr(lang, 'مطلوب لتسريع المراجعة', 'Recommended for faster approval', 'Recommande pour validation rapide')}
+                placeholder={tr(lang, 'Ù…Ø·Ù„ÙˆØ¨ Ù„ØªØ³Ø±ÙŠØ¹ Ø§Ù„Ù…Ø±Ø§Ø¬Ø¹Ø©', 'Recommended for faster approval', 'Recommande pour validation rapide')}
               />
             </div>
           </div>
 
           <div className="grid md:grid-cols-2 gap-3 mt-3">
             <div>
-              <label className="block text-sm font-semibold mb-1">{tr(lang, 'ملاحظة إضافية', 'Additional note', 'Note supplementaire')}</label>
+              <label className="block text-sm font-semibold mb-1">{tr(lang, 'Ù…Ù„Ø§Ø­Ø¸Ø© Ø¥Ø¶Ø§ÙÙŠØ©', 'Additional note', 'Note supplementaire')}</label>
               <textarea
                 value={userNote}
                 onChange={(e) => setUserNote(e.target.value)}
@@ -416,10 +419,10 @@ function PricingModal({
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold mb-1">{tr(lang, 'رفع صورة التحويل (إجباري)', 'Upload transfer proof (required)', 'Telecharger preuve de transfert (obligatoire)')}</label>
+              <label className="block text-sm font-semibold mb-1">{tr(lang, 'Ø±ÙØ¹ ØµÙˆØ±Ø© Ø§Ù„ØªØ­ÙˆÙŠÙ„ (Ø¥Ø¬Ø¨Ø§Ø±ÙŠ)', 'Upload transfer proof (required)', 'Telecharger preuve de transfert (obligatoire)')}</label>
               <label className={`w-full h-[92px] border-2 border-dashed rounded-lg flex items-center justify-center gap-2 cursor-pointer ${isDark ? 'border-slate-600 bg-slate-900/60 text-slate-200' : 'border-slate-300 bg-slate-50 text-slate-700'}`}>
                 <FaUpload />
-                <span className="text-sm">{proofFileName || tr(lang, 'اختر صورة', 'Choose image', 'Choisir une image')}</span>
+                <span className="text-sm">{proofFileName || tr(lang, 'Ø§Ø®ØªØ± ØµÙˆØ±Ø©', 'Choose image', 'Choisir une image')}</span>
                 <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={handleProofChange} />
               </label>
               {proofImageDataUrl ? (
@@ -440,21 +443,21 @@ function PricingModal({
           <FaBolt />
           <span>
             {loading
-              ? tr(lang, 'جارٍ إرسال الطلب...', 'Submitting request...', 'Envoi de la demande...')
-              : tr(lang, 'إرسال طلب الشحن', 'Submit top-up request', 'Envoyer la demande')}
+              ? tr(lang, 'Ø¬Ø§Ø±Ù Ø¥Ø±Ø³Ø§Ù„ Ø§Ù„Ø·Ù„Ø¨...', 'Submitting request...', 'Envoi de la demande...')
+              : tr(lang, 'Ø¥Ø±Ø³Ø§Ù„ Ø·Ù„Ø¨ Ø§Ù„Ø´Ø­Ù†', 'Submit top-up request', 'Envoyer la demande')}
           </span>
         </button>
 
         <div className={`rounded-xl border p-4 mt-6 ${isDark ? 'border-slate-700 bg-slate-800/50' : 'border-slate-200 bg-white'}`}>
-          <h4 className="font-black text-sm mb-3">{tr(lang, 'طلباتي الأخيرة', 'My recent requests', 'Mes demandes recentes')}</h4>
+          <h4 className="font-black text-sm mb-3">{tr(lang, 'Ø·Ù„Ø¨Ø§ØªÙŠ Ø§Ù„Ø£Ø®ÙŠØ±Ø©', 'My recent requests', 'Mes demandes recentes')}</h4>
           {myRequests.length === 0 ? (
-            <p className="text-sm opacity-70">{tr(lang, 'لا توجد طلبات شحن بعد.', 'No top-up requests yet.', 'Aucune demande de recharge pour le moment.')}</p>
+            <p className="text-sm opacity-70">{tr(lang, 'Ù„Ø§ ØªÙˆØ¬Ø¯ Ø·Ù„Ø¨Ø§Øª Ø´Ø­Ù† Ø¨Ø¹Ø¯.', 'No top-up requests yet.', 'Aucune demande de recharge pour le moment.')}</p>
           ) : (
             <div className="max-h-56 overflow-auto space-y-2 pr-1">
               {myRequests.slice(0, 10).map((item) => (
                 <div key={item.id} className={`rounded-lg border p-3 ${isDark ? 'border-slate-700 bg-slate-900/70' : 'border-slate-200 bg-slate-50'}`}>
                   <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                    <span className="font-semibold">${(Number(item.amount_cents || 0) / 100).toFixed(2)} / {item.credits_added} {tr(lang, 'كريديت', 'credits', 'credits')}</span>
+                    <span className="font-semibold">${(Number(item.amount_cents || 0) / 100).toFixed(2)} / {item.credits_added} {tr(lang, 'ÙƒØ±ÙŠØ¯ÙŠØª', 'credits', 'credits')}</span>
                     <span className={`text-xs rounded-full px-2 py-1 ${
                       item.status === 'approved'
                         ? 'bg-emerald-100 text-emerald-700'
@@ -471,7 +474,7 @@ function PricingModal({
                       rel="noopener noreferrer"
                       className="text-xs underline mt-1 inline-block"
                     >
-                      {tr(lang, 'عرض صورة التحويل', 'View transfer proof', 'Voir la preuve de transfert')}
+                      {tr(lang, 'Ø¹Ø±Ø¶ ØµÙˆØ±Ø© Ø§Ù„ØªØ­ÙˆÙŠÙ„', 'View transfer proof', 'Voir la preuve de transfert')}
                     </a>
                   ) : null}
                 </div>
@@ -486,3 +489,4 @@ function PricingModal({
 }
 
 export default PricingModal;
+

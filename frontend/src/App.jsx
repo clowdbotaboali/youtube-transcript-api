@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FaMoon, FaSpinner, FaSun } from 'react-icons/fa';
 import VideoInput from './components/VideoInput';
 import TranscriptDisplay from './components/TranscriptDisplay';
@@ -27,6 +27,7 @@ import AdminPage from './pages/AdminPage';
 import { supabase, SUPABASE_CONFIGURED } from './utils/supabase';
 import defaultApiUrl from './config';
 import { getAuthHeaders } from './utils/authHeaders';
+import { formatApiErrorMessage, parseApiError } from './utils/apiError';
 import { LANG, langBadge, nextLang, tr } from './utils/lang';
 
 const normalizeApiUrl = (value) => String(value || '').trim().replace(/\/+$/, '');
@@ -79,7 +80,19 @@ const clearSupabaseAuthStorage = () => {
     keysToRemove.forEach((key) => storage.removeItem(key));
   }
 };
-
+const normalizeUiMessage = (value) => {
+  if (typeof value === 'string') return value.trim();
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (value && typeof value === 'object') {
+    if (typeof value.message === 'string') return value.message.trim();
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return '';
+    }
+  }
+  return '';
+};
 function App() {
   const [transcriptData, setTranscriptData] = useState(null);
   const [aiResult, setAiResult] = useState(null);
@@ -122,18 +135,40 @@ function App() {
     localStorage.setItem('appTheme', nextTheme);
   }, [theme]);
 
-  const dismissToast = (id) => {
+  const dismissToast = useCallback((id) => {
     setToasts((prev) => prev.filter((item) => item.id !== id));
-  };
+  }, []);
 
-  const notify = (type, message) => {
-    if (!message) return;
+  const notify = useCallback((type, message) => {
+    const normalizedMessage = normalizeUiMessage(message);
+    if (!normalizedMessage) return;
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    setToasts((prev) => [...prev, { id, type, message }]);
+    setToasts((prev) => [...prev, { id, type, message: normalizedMessage }]);
     setTimeout(() => {
       setToasts((prev) => prev.filter((item) => item.id !== id));
     }, 4000);
-  };
+  }, []);
+
+  const accountRestrictionMessage = useMemo(() => {
+    if (accountAccess.status === 'active') return '';
+    return formatApiErrorMessage({
+      payload: {
+        error: {
+          details: {
+            access: {
+              status: accountAccess.status,
+              reason: accountAccess.reason || null
+            }
+          }
+        }
+      },
+      status: 403,
+      lang,
+      fallbackAr: 'الحساب غير متاح حاليًا. تواصل مع الدعم.',
+      fallbackEn: 'This account is currently restricted. Contact support.',
+      fallbackFr: 'Ce compte est actuellement restreint. Contactez le support.'
+    });
+  }, [accountAccess.reason, accountAccess.status, lang]);
 
   const refreshAccount = async () => {
     try {
@@ -159,6 +194,13 @@ function App() {
         setAccountAccess({
           status: data.data?.accessStatus || 'active',
           reason: data.data?.accessReason || null
+        });
+      } else if (response.status === 403) {
+        const parsed = parseApiError(data);
+        const access = parsed.details?.access || null;
+        setAccountAccess({
+          status: access?.status || 'restricted',
+          reason: access?.reason || parsed.message || null
         });
       } else if (response.status === 401) {
         setCredits(null);
@@ -331,6 +373,10 @@ function App() {
       notify('info', tr(lang, 'يرجى تسجيل الدخول لاستخدام المعالجة بالذكاء الاصطناعي.', 'Please sign in to use AI processing.'));
       return;
     }
+    if (accountAccess.status !== 'active') {
+      notify('error', accountRestrictionMessage);
+      return;
+    }
 
     setProcessLoading(true);
     try {
@@ -357,13 +403,47 @@ function App() {
         });
         setCredits(Number(data.creditsLeft ?? credits ?? 0));
       } else if (response.status === 403) {
-        notify('error', tr(lang, 'لا توجد نقاط كافية. يرجى شحن الرصيد.', 'No credits left. Please top up.'));
+        const parsed = parseApiError(data);
+        notify(
+          'error',
+          formatApiErrorMessage({
+            payload: data,
+            status: response.status,
+            lang,
+            fallbackAr: 'لا يمكن تنفيذ المعالجة حالياً.',
+            fallbackEn: 'AI processing is not available right now.',
+            fallbackFr: "Le traitement IA n'est pas disponible actuellement."
+          })
+        );
+        if (parsed.code === 'LIMIT_EXCEEDED' && typeof parsed.details?.required === 'number') {
+          setIsPricingModalOpen(true);
+        }
       } else if (response.status === 401) {
         setSession(null);
         supabase.auth.signOut().catch(() => {});
-        notify('error', tr(lang, 'انتهت الجلسة. يرجى تسجيل الدخول مرة أخرى.', 'Session expired. Please sign in again.'));
+        notify(
+          'error',
+          formatApiErrorMessage({
+            payload: data,
+            status: response.status,
+            lang,
+            fallbackAr: 'انتهت الجلسة. يرجى تسجيل الدخول مرة أخرى.',
+            fallbackEn: 'Session expired. Please sign in again.',
+            fallbackFr: 'Session expiree. Veuillez vous reconnecter.'
+          })
+        );
       } else {
-        notify('error', tr(lang, `خطأ: ${data.error || 'فشلت المعالجة'}`, `Error: ${data.error || 'Processing failed'}`));
+        notify(
+          'error',
+          formatApiErrorMessage({
+            payload: data,
+            status: response.status,
+            lang,
+            fallbackAr: 'فشلت المعالجة.',
+            fallbackEn: 'Processing failed.',
+            fallbackFr: 'Le traitement a echoue.'
+          })
+        );
       }
     } catch {
       notify('error', tr(lang, 'فشل الاتصال بالخادم', 'Connection failed'));
@@ -387,11 +467,11 @@ function App() {
       const data = await response.json().catch(() => ({}));
       const success = !!(response.ok && data.success);
       if (!success) {
-        notify('error', tr(lang, 'تعذر حفظ النتيجة.', 'Failed to save result.'));
+        notify('error', tr(lang, 'ØªØ¹Ø°Ø± Ø­ÙØ¸ Ø§Ù„Ù†ØªÙŠØ¬Ø©.', 'Failed to save result.'));
       }
       return success;
     } catch {
-      notify('error', tr(lang, 'فشل الاتصال بالخادم', 'Connection failed'));
+      notify('error', tr(lang, 'ÙØ´Ù„ Ø§Ù„Ø§ØªØµØ§Ù„ Ø¨Ø§Ù„Ø®Ø§Ø¯Ù…', 'Connection failed'));
       return false;
     }
   };
@@ -402,7 +482,7 @@ function App() {
     if (nextSession?.user) {
       setClientPage(CLIENT_PAGES.dashboard);
       await refreshAccount();
-      notify('success', tr(lang, 'تم تسجيل الدخول بنجاح.', 'Signed in successfully.'));
+      notify('success', tr(lang, 'ØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„ Ø¨Ù†Ø¬Ø§Ø­.', 'Signed in successfully.'));
     }
   };
 
@@ -441,7 +521,7 @@ function App() {
       // Intentionally ignored.
     }
 
-    notify('success', tr(lang, 'تم تسجيل الخروج بنجاح.', 'Signed out successfully.'));
+    notify('success', tr(lang, 'ØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø®Ø±ÙˆØ¬ Ø¨Ù†Ø¬Ø§Ø­.', 'Signed out successfully.'));
 
     // Hard refresh to guarantee no in-memory auth state survives.
     if (hasWindow) {
@@ -484,12 +564,12 @@ function App() {
         <div className="flex-1 bg-slate-950 text-slate-100 flex items-center justify-center px-4" dir={rootDir}>
           <div className="max-w-lg w-full rounded-xl border border-slate-700 bg-slate-900/70 p-6 text-center">
             <h1 className="text-xl font-bold mb-3">
-              {tr(lang, 'إعدادات المصادقة غير مكتملة', 'Authentication configuration is missing')}
+              {tr(lang, 'Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø§Ù„Ù…ØµØ§Ø¯Ù‚Ø© ØºÙŠØ± Ù…ÙƒØªÙ…Ù„Ø©', 'Authentication configuration is missing')}
             </h1>
             <p className="text-slate-300 text-sm">
               {tr(
                 lang,
-                'أضف متغيرات VITE_SUPABASE_URL و VITE_SUPABASE_ANON_KEY في بيئة Vercel ثم أعد النشر.',
+                'Ø£Ø¶Ù Ù…ØªØºÙŠØ±Ø§Øª VITE_SUPABASE_URL Ùˆ VITE_SUPABASE_ANON_KEY ÙÙŠ Ø¨ÙŠØ¦Ø© Vercel Ø«Ù… Ø£Ø¹Ø¯ Ø§Ù„Ù†Ø´Ø±.',
                 'Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in Vercel environment variables, then redeploy.'
               )}
             </p>
@@ -511,7 +591,7 @@ function App() {
         <div className="flex-1 bg-slate-950 text-slate-100 flex items-center justify-center">
           <div className="flex items-center gap-2 text-sm">
             <FaSpinner className="animate-spin" />
-            <span>{tr(lang, 'جاري تجهيز الجلسة...', 'Preparing session...')}</span>
+            <span>{tr(lang, 'Ø¬Ø§Ø±ÙŠ ØªØ¬Ù‡ÙŠØ² Ø§Ù„Ø¬Ù„Ø³Ø©...', 'Preparing session...')}</span>
           </div>
         </div>
         <SiteFooter lang={lang} theme={theme} />
@@ -537,7 +617,7 @@ function App() {
                   ? 'bg-slate-900 border-slate-700 text-amber-300 hover:bg-slate-800'
                   : 'bg-white/90 border-slate-300 text-slate-900 hover:bg-white'
               }`}
-              title={tr(lang, 'تبديل الوضع الليلي/النهاري', 'Toggle dark/light mode', 'Basculer mode sombre/clair')}
+              title={tr(lang, 'ØªØ¨Ø¯ÙŠÙ„ Ø§Ù„ÙˆØ¶Ø¹ Ø§Ù„Ù„ÙŠÙ„ÙŠ/Ø§Ù„Ù†Ù‡Ø§Ø±ÙŠ', 'Toggle dark/light mode', 'Basculer mode sombre/clair')}
             >
               {theme === THEME.dark ? <FaSun /> : <FaMoon />}
             </button>
@@ -548,7 +628,7 @@ function App() {
                   ? 'bg-slate-900 border-slate-700 text-slate-100 hover:bg-slate-800'
                   : 'bg-white/90 border-slate-300 text-slate-900 hover:bg-white'
               }`}
-              title={tr(lang, 'تبديل اللغة', 'Switch language', 'Changer la langue')}
+              title={tr(lang, 'ØªØ¨Ø¯ÙŠÙ„ Ø§Ù„Ù„ØºØ©', 'Switch language', 'Changer la langue')}
             >
               {langBadge(nextLang(lang))}
             </button>
@@ -616,10 +696,14 @@ function App() {
         {clientPage === CLIENT_PAGES.workspace && (
           <section className="space-y-4 sm:space-y-6">
             <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6">
-              <h2 className="text-xl sm:text-2xl font-black text-slate-900 mb-1">{tr(lang, 'مساحة استخراج السكريبت', 'Transcript Extraction Workspace')}</h2>
-              <p className="text-sm text-slate-600">{tr(lang, 'ضع الرابط، استخرج النص، ثم ابدأ المعالجة أو الدردشة.', 'Paste a URL, extract transcript, then process or chat.')}</p>
+              <h2 className="text-xl sm:text-2xl font-black text-slate-900 mb-1">{tr(lang, 'Ù…Ø³Ø§Ø­Ø© Ø§Ø³ØªØ®Ø±Ø§Ø¬ Ø§Ù„Ø³ÙƒØ±ÙŠØ¨Øª', 'Transcript Extraction Workspace')}</h2>
+              <p className="text-sm text-slate-600">{tr(lang, 'Ø¶Ø¹ Ø§Ù„Ø±Ø§Ø¨Ø·ØŒ Ø§Ø³ØªØ®Ø±Ø¬ Ø§Ù„Ù†ØµØŒ Ø«Ù… Ø§Ø¨Ø¯Ø£ Ø§Ù„Ù…Ø¹Ø§Ù„Ø¬Ø© Ø£Ùˆ Ø§Ù„Ø¯Ø±Ø¯Ø´Ø©.', 'Paste a URL, extract transcript, then process or chat.')}</p>
             </div>
-
+            {accountRestrictionMessage ? (
+              <div className="rounded-xl border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm font-medium">
+                {accountRestrictionMessage}
+              </div>
+            ) : null}
             {canUseLocalGuide && (
               <div className="mb-3 sm:mb-4">
                 <button
@@ -627,8 +711,8 @@ function App() {
                   onClick={toggleLocalGuide}
                   className="inline-flex items-center gap-2 text-xs sm:text-sm px-3 py-1.5 rounded-full border border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100 transition"
                 >
-                  <span>{showLocalGuide ? tr(lang, 'إخفاء', 'Hide') : tr(lang, 'إظهار', 'Show')}</span>
-                  <span>{tr(lang, 'دليل الخادم المحلي', 'Local backend guide')}</span>
+                  <span>{showLocalGuide ? tr(lang, 'Ø¥Ø®ÙØ§Ø¡', 'Hide') : tr(lang, 'Ø¥Ø¸Ù‡Ø§Ø±', 'Show')}</span>
+                  <span>{tr(lang, 'Ø¯Ù„ÙŠÙ„ Ø§Ù„Ø®Ø§Ø¯Ù… Ø§Ù„Ù…Ø­Ù„ÙŠ', 'Local backend guide')}</span>
                 </button>
               </div>
             )}
@@ -644,6 +728,7 @@ function App() {
               initialUrl={selectedUrl}
               apiUrl={apiUrl}
               lang={lang}
+              accessRestrictionMessage={accountRestrictionMessage}
             />
 
             {transcriptData && (
@@ -694,8 +779,8 @@ function App() {
         {clientPage === CLIENT_PAGES.history && (
           <section className="space-y-4 sm:space-y-6">
             <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6">
-              <h2 className="text-xl sm:text-2xl font-black text-slate-900 mb-1">{tr(lang, 'السجل والروابط', 'History & Saved Links')}</h2>
-              <p className="text-sm text-slate-600">{tr(lang, 'راجع نتائجك السابقة واختر أي رابط محفوظ للعودة إلى مساحة الاستخراج.', 'Review saved runs and open any saved link back in the extraction workspace.')}</p>
+              <h2 className="text-xl sm:text-2xl font-black text-slate-900 mb-1">{tr(lang, 'Ø§Ù„Ø³Ø¬Ù„ ÙˆØ§Ù„Ø±ÙˆØ§Ø¨Ø·', 'History & Saved Links')}</h2>
+              <p className="text-sm text-slate-600">{tr(lang, 'Ø±Ø§Ø¬Ø¹ Ù†ØªØ§Ø¦Ø¬Ùƒ Ø§Ù„Ø³Ø§Ø¨Ù‚Ø© ÙˆØ§Ø®ØªØ± Ø£ÙŠ Ø±Ø§Ø¨Ø· Ù…Ø­ÙÙˆØ¸ Ù„Ù„Ø¹ÙˆØ¯Ø© Ø¥Ù„Ù‰ Ù…Ø³Ø§Ø­Ø© Ø§Ù„Ø§Ø³ØªØ®Ø±Ø§Ø¬.', 'Review saved runs and open any saved link back in the extraction workspace.')}</p>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <SavedHistory apiUrl={apiUrl} user={user} lang={lang} onNotify={notify} />
@@ -707,43 +792,43 @@ function App() {
         {clientPage === CLIENT_PAGES.account && (
           <section className="grid gap-4 sm:gap-5 md:grid-cols-2">
             <article className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
-              <h2 className="text-xl font-black text-slate-900 mb-3">{tr(lang, 'بيانات الحساب', 'Account Details')}</h2>
+              <h2 className="text-xl font-black text-slate-900 mb-3">{tr(lang, 'Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø­Ø³Ø§Ø¨', 'Account Details')}</h2>
               <div className="space-y-2 text-sm">
-                <p><span className="font-bold">{tr(lang, 'البريد:', 'Email:')}</span> {user?.email || '-'}</p>
-                <p><span className="font-bold">{tr(lang, 'الرصيد:', 'Credits:')}</span> {credits ?? '...'}</p>
-                <p><span className="font-bold">{tr(lang, 'الخطة المجانية:', 'Free plan:')}</span> {FREE_PLAN_REQUESTS} {tr(lang, 'روابط فقط', 'links only')}</p>
-                <p><span className="font-bold">{tr(lang, 'المتبقي من المجانية:', 'Free links remaining:')}</span> {freeLinksRemaining} / {FREE_PLAN_REQUESTS}</p>
-                <p><span className="font-bold">{tr(lang, 'تكلفة الرابط:', 'Link cost:')}</span> {CREDIT_COST_PER_SUCCESS} {tr(lang, 'نقطة لكل رابط فيديو جديد', 'credit per new video link')}</p>
-                <p><span className="font-bold">{tr(lang, 'الحالة:', 'Session:')}</span> {tr(lang, 'متصل', 'Active')}</p>
+                <p><span className="font-bold">{tr(lang, 'Ø§Ù„Ø¨Ø±ÙŠØ¯:', 'Email:')}</span> {user?.email || '-'}</p>
+                <p><span className="font-bold">{tr(lang, 'Ø§Ù„Ø±ØµÙŠØ¯:', 'Credits:')}</span> {credits ?? '...'}</p>
+                <p><span className="font-bold">{tr(lang, 'Ø§Ù„Ø®Ø·Ø© Ø§Ù„Ù…Ø¬Ø§Ù†ÙŠØ©:', 'Free plan:')}</span> {FREE_PLAN_REQUESTS} {tr(lang, 'Ø±ÙˆØ§Ø¨Ø· ÙÙ‚Ø·', 'links only')}</p>
+                <p><span className="font-bold">{tr(lang, 'Ø§Ù„Ù…ØªØ¨Ù‚ÙŠ Ù…Ù† Ø§Ù„Ù…Ø¬Ø§Ù†ÙŠØ©:', 'Free links remaining:')}</span> {freeLinksRemaining} / {FREE_PLAN_REQUESTS}</p>
+                <p><span className="font-bold">{tr(lang, 'ØªÙƒÙ„ÙØ© Ø§Ù„Ø±Ø§Ø¨Ø·:', 'Link cost:')}</span> {CREDIT_COST_PER_SUCCESS} {tr(lang, 'Ù†Ù‚Ø·Ø© Ù„ÙƒÙ„ Ø±Ø§Ø¨Ø· ÙÙŠØ¯ÙŠÙˆ Ø¬Ø¯ÙŠØ¯', 'credit per new video link')}</p>
+                <p><span className="font-bold">{tr(lang, 'Ø§Ù„Ø­Ø§Ù„Ø©:', 'Session:')}</span> {tr(lang, 'Ù…ØªØµÙ„', 'Active')}</p>
                 {accountAccess.status !== 'active' ? (
                   <p>
-                    <span className="font-bold">{tr(lang, 'حالة الوصول:', 'Access status:')}</span>{' '}
+                    <span className="font-bold">{tr(lang, 'Ø­Ø§Ù„Ø© Ø§Ù„ÙˆØµÙˆÙ„:', 'Access status:')}</span>{' '}
                     {accountAccess.status} {accountAccess.reason ? `(${accountAccess.reason})` : ''}
                   </p>
                 ) : null}
               </div>
             </article>
             <article className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
-              <h3 className="text-lg font-black text-slate-900 mb-3">{tr(lang, 'الخطط والأسعار', 'Plans & Pricing')}</h3>
+              <h3 className="text-lg font-black text-slate-900 mb-3">{tr(lang, 'Ø§Ù„Ø®Ø·Ø· ÙˆØ§Ù„Ø£Ø³Ø¹Ø§Ø±', 'Plans & Pricing')}</h3>
               <div className="grid sm:grid-cols-2 gap-3 mb-4">
                 <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
-                  <p className="font-black text-emerald-900">{tr(lang, 'الخطة المجانية', 'Free Plan')}</p>
-                  <p className="text-xs text-emerald-800 mt-1">{tr(lang, 'ابدأ مجانًا ثم اشحن عند الحاجة.', 'Start free, then top up when needed.')}</p>
+                  <p className="font-black text-emerald-900">{tr(lang, 'Ø§Ù„Ø®Ø·Ø© Ø§Ù„Ù…Ø¬Ø§Ù†ÙŠØ©', 'Free Plan')}</p>
+                  <p className="text-xs text-emerald-800 mt-1">{tr(lang, 'Ø§Ø¨Ø¯Ø£ Ù…Ø¬Ø§Ù†Ù‹Ø§ Ø«Ù… Ø§Ø´Ø­Ù† Ø¹Ù†Ø¯ Ø§Ù„Ø­Ø§Ø¬Ø©.', 'Start free, then top up when needed.')}</p>
                 </div>
                 <div className="rounded-xl border border-orange-200 bg-orange-50 p-3">
-                  <p className="font-black text-orange-900">{tr(lang, 'الخطة المدفوعة', 'Paid Plan')}</p>
-                  <p className="text-xs text-orange-800 mt-1">{tr(lang, 'تبدأ من', 'Starts at')} {PAID_PLAN_CREDITS} {tr(lang, 'نقطة مقابل', 'credits for')} ${PAID_PLAN_PRICE_USD}</p>
-                  <p className="text-xs text-orange-800">{tr(lang, 'مع خصومات تلقائية للشحنات الأكبر.', 'With automatic bonus credits on larger top-ups.')}</p>
+                  <p className="font-black text-orange-900">{tr(lang, 'Ø§Ù„Ø®Ø·Ø© Ø§Ù„Ù…Ø¯ÙÙˆØ¹Ø©', 'Paid Plan')}</p>
+                  <p className="text-xs text-orange-800 mt-1">{tr(lang, 'ØªØ¨Ø¯Ø£ Ù…Ù†', 'Starts at')} {PAID_PLAN_CREDITS} {tr(lang, 'Ù†Ù‚Ø·Ø© Ù…Ù‚Ø§Ø¨Ù„', 'credits for')} ${PAID_PLAN_PRICE_USD}</p>
+                  <p className="text-xs text-orange-800">{tr(lang, 'Ù…Ø¹ Ø®ØµÙˆÙ…Ø§Øª ØªÙ„Ù‚Ø§Ø¦ÙŠØ© Ù„Ù„Ø´Ø­Ù†Ø§Øª Ø§Ù„Ø£ÙƒØ¨Ø±.', 'With automatic bonus credits on larger top-ups.')}</p>
                 </div>
               </div>
-              <h4 className="text-sm font-black text-slate-900 mb-3">{tr(lang, 'إجراءات سريعة', 'Quick Actions')}</h4>
+              <h4 className="text-sm font-black text-slate-900 mb-3">{tr(lang, 'Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª Ø³Ø±ÙŠØ¹Ø©', 'Quick Actions')}</h4>
               <div className="flex flex-wrap gap-3">
                 <button
                   type="button"
                   onClick={() => setIsPricingModalOpen(true)}
                   className="rounded-xl px-4 py-2 bg-orange-400 text-slate-950 font-extrabold hover:bg-orange-300 transition"
                 >
-                  {tr(lang, 'طلب شحن', 'Top-up request')}
+                  {tr(lang, 'Ø·Ù„Ø¨ Ø´Ø­Ù†', 'Top-up request')}
                 </button>
                 {canUseLocalGuide && (
                   <button
@@ -751,7 +836,7 @@ function App() {
                     onClick={() => setShowSettings(true)}
                     className="rounded-xl px-4 py-2 bg-slate-900 text-white font-bold hover:bg-slate-800 transition"
                   >
-                    {tr(lang, 'فتح الإعدادات', 'Open settings')}
+                    {tr(lang, 'ÙØªØ­ Ø§Ù„Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª', 'Open settings')}
                   </button>
                 )}
                 <button
@@ -759,7 +844,7 @@ function App() {
                   onClick={handleLogout}
                   className="rounded-xl px-4 py-2 bg-red-500 text-white font-bold hover:bg-red-600 transition"
                 >
-                  {tr(lang, 'تسجيل خروج', 'Sign out')}
+                  {tr(lang, 'ØªØ³Ø¬ÙŠÙ„ Ø®Ø±ÙˆØ¬', 'Sign out')}
                 </button>
               </div>
             </article>
@@ -793,3 +878,6 @@ function App() {
 }
 
 export default App;
+
+
+

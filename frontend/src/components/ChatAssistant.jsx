@@ -1,7 +1,8 @@
-import { useState, useRef, useEffect } from 'react';
-import { FaPaperPlane, FaRobot, FaUser, FaTrash, FaComments, FaLink, FaCheck, FaExternalLinkAlt } from 'react-icons/fa';
+import { useEffect, useRef, useState } from 'react';
+import { FaCheck, FaComments, FaExternalLinkAlt, FaLink, FaPaperPlane, FaRobot, FaTrash, FaUser } from 'react-icons/fa';
 import defaultApiUrl from '../config';
 import { getAuthHeaders } from '../utils/authHeaders';
+import { formatApiErrorMessage, parseApiError } from '../utils/apiError';
 import { LANG, tr } from '../utils/lang';
 
 const urlRegex = /(https?:\/\/[^\s]+)/g;
@@ -9,57 +10,35 @@ const urlRegex = /(https?:\/\/[^\s]+)/g;
 function ChatAssistant({ transcript, videoId, apiUrl = defaultApiUrl, onCreditsChange, onRequireTopup, lang = LANG.ar }) {
   const welcomeMessage = tr(
     lang,
-    'مرحباً! 👋 أنا مساعدك الذكي. يمكنك سؤالي أي شيء عن النص أعلاه وسأكون سعيداً بمساعدتك!',
-    "Hello! 👋 I'm your AI assistant. Ask me anything about the transcript and I will help you.",
-    "Bonjour ! 👋 Je suis votre assistant IA. Posez-moi vos questions sur la transcription."
+    'مرحباً! أنا مساعدك الذكي. اسأل أي شيء عن النص وسأجيبك بدقة.',
+    "Hello! I'm your AI assistant. Ask me anything about the transcript.",
+    "Bonjour ! Je suis votre assistant IA. Posez-moi vos questions sur la transcription."
   );
 
-  const [messages, setMessages] = useState([
-    {
-      id: 0,
-      role: 'assistant',
-      content: welcomeMessage
-    }
-  ]);
+  const [messages, setMessages] = useState([{ id: 0, role: 'assistant', content: welcomeMessage }]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [conversationId, setConversationId] = useState(null);
   const [savedLinks, setSavedLinks] = useState([]);
   const messagesContainerRef = useRef(null);
 
-  const scrollToBottom = () => {
+  useEffect(() => {
     if (messagesContainerRef.current) {
       messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
     }
-  };
-
-  useEffect(() => {
-    scrollToBottom();
   }, [messages]);
 
   useEffect(() => {
     setConversationId(null);
     setSavedLinks([]);
-    setMessages([
-      {
-        id: 0,
-        role: 'assistant',
-        content: welcomeMessage
-      }
-    ]);
+    setMessages([{ id: 0, role: 'assistant', content: welcomeMessage }]);
   }, [videoId, welcomeMessage]);
 
   const handleSend = async () => {
-    if (!input.trim() || loading) return;
-    if (!videoId) return;
+    if (!input.trim() || loading || !videoId) return;
 
-    const userMessage = {
-      id: Date.now(),
-      role: 'user',
-      content: input.trim()
-    };
-
-    setMessages(prev => [...prev, userMessage]);
+    const userMessage = { id: Date.now(), role: 'user', content: input.trim() };
+    setMessages((prev) => [...prev, userMessage]);
     setInput('');
     setLoading(true);
 
@@ -73,54 +52,54 @@ function ChatAssistant({ transcript, videoId, apiUrl = defaultApiUrl, onCreditsC
         },
         body: JSON.stringify({
           message: userMessage.content,
-          transcript: transcript,
+          transcript,
           videoId,
-          conversationId: conversationId,
+          conversationId,
           lang
         })
       });
 
-      const data = await response.json();
-
-      if (data.success) {
+      const data = await response.json().catch(() => ({}));
+      if (response.ok && data.success) {
         if (typeof data.creditsLeft === 'number' && typeof onCreditsChange === 'function') {
           onCreditsChange(data.creditsLeft);
         }
-        if (data.conversationId && !conversationId) {
-          setConversationId(data.conversationId);
-        }
-
-        setMessages(prev => [
-          ...prev,
-          {
-            id: Date.now() + 1,
-            role: 'assistant',
-            content: data.response
-          }
-        ]);
+        if (data.conversationId && !conversationId) setConversationId(data.conversationId);
+        setMessages((prev) => [...prev, { id: Date.now() + 1, role: 'assistant', content: data.response }]);
       } else {
-        if (response.status === 403 && typeof onRequireTopup === 'function') {
+        const parsed = parseApiError(data);
+        if (
+          response.status === 403 &&
+          parsed.code === 'LIMIT_EXCEEDED' &&
+          typeof parsed.details?.required === 'number' &&
+          typeof onRequireTopup === 'function'
+        ) {
           onRequireTopup();
         }
-        setMessages(prev => [
+
+        setMessages((prev) => [
           ...prev,
           {
             id: Date.now() + 1,
             role: 'assistant',
-            content:
-              tr(lang, 'عذراً، حدث خطأ:', 'Sorry, an error occurred:', 'Desole, une erreur est survenue:') +
-              ' ' +
-              (data.error || tr(lang, 'فشل في إرسال الرسالة', 'Failed to send message', "Echec de l'envoi du message"))
+            content: formatApiErrorMessage({
+              payload: data,
+              status: response.status,
+              lang,
+              fallbackAr: 'تعذر إرسال الرسالة.',
+              fallbackEn: 'Failed to send message.',
+              fallbackFr: "Echec de l'envoi du message."
+            })
           }
         ]);
       }
     } catch {
-      setMessages(prev => [
+      setMessages((prev) => [
         ...prev,
         {
           id: Date.now() + 1,
           role: 'assistant',
-          content: tr(lang, 'عذراً، فشل الاتصال بالخادم', 'Sorry, connection to server failed', 'Desole, echec de connexion au serveur')
+          content: tr(lang, 'فشل الاتصال بالخادم.', 'Connection to server failed.', 'Echec de connexion au serveur.')
         }
       ]);
     } finally {
@@ -141,16 +120,10 @@ function ChatAssistant({ transcript, videoId, apiUrl = defaultApiUrl, onCreditsC
           body: JSON.stringify({ conversationId })
         });
       } catch {
-        console.error('Failed to clear conversation');
+        // ignore
       }
     }
-    setMessages([
-      {
-        id: 0,
-        role: 'assistant',
-        content: welcomeMessage
-      }
-    ]);
+    setMessages([{ id: 0, role: 'assistant', content: welcomeMessage }]);
     setConversationId(null);
     setSavedLinks([]);
   };
@@ -162,23 +135,17 @@ function ChatAssistant({ transcript, videoId, apiUrl = defaultApiUrl, onCreditsC
     }
   };
 
-  const extractLinks = (text) => {
-    return text.match(urlRegex) || [];
-  };
+  const extractLinks = (text) => text.match(urlRegex) || [];
 
   const saveLink = (link) => {
-    if (!savedLinks.includes(link)) {
-      setSavedLinks(prev => [...prev, link]);
-    }
+    setSavedLinks((prev) => (prev.includes(link) ? prev : [...prev, link]));
   };
 
   const removeLink = (link) => {
-    setSavedLinks(prev => prev.filter(l => l !== link));
+    setSavedLinks((prev) => prev.filter((l) => l !== link));
   };
 
-  if (!transcript) {
-    return null;
-  }
+  if (!transcript) return null;
 
   return (
     <div className="flex flex-col h-full">
@@ -189,7 +156,7 @@ function ChatAssistant({ transcript, videoId, apiUrl = defaultApiUrl, onCreditsC
           </div>
           <div>
             <h3 className="font-bold text-gray-800">{tr(lang, 'مساعد الدردشة الذكي', 'AI Chat Assistant', 'Assistant IA')}</h3>
-            <p className="text-xs text-gray-600">{tr(lang, 'اسألني أي شيء عن الفيديو', 'Ask me anything about this video', 'Posez-moi vos questions sur cette video')}</p>
+            <p className="text-xs text-gray-600">{tr(lang, 'اسألني أي شيء عن هذا الفيديو', 'Ask anything about this video', 'Posez vos questions sur cette video')}</p>
           </div>
         </div>
         <button
@@ -206,34 +173,19 @@ function ChatAssistant({ transcript, videoId, apiUrl = defaultApiUrl, onCreditsC
         <div className="flex-1 bg-gray-50 rounded-lg p-3 overflow-y-auto mb-3" ref={messagesContainerRef}>
           {messages.map((msg) => {
             const links = msg.role === 'assistant' ? extractLinks(msg.content) : [];
-            const contentWithoutLinks = msg.content.replace(urlRegex, '').trim();
+            const contentWithoutLinks = String(msg.content || '').replace(urlRegex, '').trim();
 
             return (
-              <div
-                key={msg.id}
-                className={`flex gap-2 mb-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}
-              >
-                <div
-                  className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs ${msg.role === 'user'
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-indigo-500 text-white'
-                    }`}
-                >
+              <div key={msg.id} className={`flex gap-2 mb-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs ${msg.role === 'user' ? 'bg-blue-500 text-white' : 'bg-indigo-500 text-white'}`}>
                   {msg.role === 'user' ? <FaUser /> : <FaRobot />}
                 </div>
                 <div
-                  className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${msg.role === 'user'
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-white border border-gray-200 text-gray-800'
-                    }`}
+                  className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${msg.role === 'user' ? 'bg-blue-500 text-white' : 'bg-white border border-gray-200 text-gray-800'}`}
                   dir={lang === LANG.ar ? 'rtl' : 'ltr'}
                 >
-                  {contentWithoutLinks && (
-                    <p className="whitespace-pre-wrap leading-relaxed mb-2">
-                      {contentWithoutLinks}
-                    </p>
-                  )}
-                  {links.length > 0 && (
+                  {contentWithoutLinks ? <p className="whitespace-pre-wrap leading-relaxed mb-2">{contentWithoutLinks}</p> : null}
+                  {links.length > 0 ? (
                     <div className="flex flex-wrap gap-2 mt-2">
                       {links.map((link, idx) => (
                         <div key={idx} className="flex items-center gap-1">
@@ -255,28 +207,28 @@ function ChatAssistant({ transcript, videoId, apiUrl = defaultApiUrl, onCreditsC
                         </div>
                       ))}
                     </div>
-                  )}
+                  ) : null}
                 </div>
               </div>
             );
           })}
-          {loading && (
+          {loading ? (
             <div className="flex gap-2">
               <div className="w-7 h-7 rounded-full bg-indigo-500 text-white flex items-center justify-center text-xs">
                 <FaRobot />
               </div>
               <div className="bg-white border border-gray-200 rounded-lg px-3 py-2">
                 <div className="flex gap-1">
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                 </div>
               </div>
             </div>
-          )}
+          ) : null}
         </div>
 
-        {savedLinks.length > 0 && (
+        {savedLinks.length > 0 ? (
           <div className="bg-blue-50 rounded-lg p-2 mb-3">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-bold text-blue-700 flex items-center gap-1">
@@ -296,18 +248,14 @@ function ChatAssistant({ transcript, videoId, apiUrl = defaultApiUrl, onCreditsC
                     <FaExternalLinkAlt />
                     <span className="truncate max-w-[100px]">{link.substring(0, 20)}...</span>
                   </a>
-                  <button
-                    onClick={() => removeLink(link)}
-                    className="text-red-500 hover:text-red-700"
-                    title={tr(lang, 'حذف', 'Delete', 'Supprimer')}
-                  >
+                  <button onClick={() => removeLink(link)} className="text-red-500 hover:text-red-700" title={tr(lang, 'حذف', 'Delete', 'Supprimer')}>
                     ×
                   </button>
                 </div>
               ))}
             </div>
           </div>
-        )}
+        ) : null}
 
         <div className="flex gap-2">
           <input
@@ -322,10 +270,9 @@ function ChatAssistant({ transcript, videoId, apiUrl = defaultApiUrl, onCreditsC
           <button
             onClick={handleSend}
             disabled={loading || !input.trim()}
-            className={`px-4 py-2 rounded-lg font-medium transition flex items-center gap-1 text-sm ${loading || !input.trim()
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                : 'bg-indigo-600 hover:bg-indigo-700 text-white'
-              }`}
+            className={`px-4 py-2 rounded-lg font-medium transition flex items-center gap-1 text-sm ${
+              loading || !input.trim() ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+            }`}
           >
             <FaPaperPlane />
             <span>{tr(lang, 'إرسال', 'Send', 'Envoyer')}</span>

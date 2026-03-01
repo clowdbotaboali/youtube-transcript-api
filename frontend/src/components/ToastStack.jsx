@@ -16,7 +16,7 @@ function ToastStack({ items = [], onDismiss }) {
             key={item.id}
             className={`border rounded-lg px-4 py-3 shadow-sm flex items-start justify-between gap-3 ${tone}`}
           >
-            <p className="text-sm font-medium">{item.message}</p>
+            <p className="text-sm font-medium">{String(item.message || '')}</p>
             <button
               type="button"
               onClick={() => onDismiss(item.id)}
