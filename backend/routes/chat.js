@@ -12,6 +12,28 @@ const FREE_PLAN_CREDITS = 5;
 // Store conversation history per session
 const conversations = new Map();
 
+async function hasApprovedPayments(userId) {
+  const { count, error } = await supabase
+    .from('payments')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .eq('status', 'approved');
+
+  if (error) {
+    const message = `${error.message || ''} ${error.details || ''}`.toLowerCase();
+    if (
+      message.includes("relation 'payments' does not exist") ||
+      message.includes('relation "payments" does not exist') ||
+      message.includes('could not find the table')
+    ) {
+      return false;
+    }
+    throw new Error('Failed to verify payment history');
+  }
+
+  return Number(count || 0) > 0;
+}
+
 async function ensureUserAccountRow(user) {
   const { error: upsertError } = await supabase
     .from('users')
@@ -38,7 +60,25 @@ async function ensureUserAccountRow(user) {
     throw new Error('User account not found');
   }
 
-  return data;
+  let credits = Number(data.credits || 0);
+  if (credits === 10) {
+    const paidBefore = await hasApprovedPayments(user.id);
+    if (!paidBefore) {
+      const { error: normalizeError } = await supabase
+        .from('users')
+        .update({ credits: FREE_PLAN_CREDITS })
+        .eq('id', user.id);
+      if (normalizeError) {
+        throw new Error('Failed to normalize free plan credits');
+      }
+      credits = FREE_PLAN_CREDITS;
+    }
+  }
+
+  return {
+    ...data,
+    credits
+  };
 }
 
 router.post('/chat', requireAuth, async (req, res) => {

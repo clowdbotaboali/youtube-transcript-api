@@ -313,6 +313,26 @@ async function loadUserRow(supabase, userId) {
   };
 }
 
+async function hasApprovedPayments(supabase, userId) {
+  const { count, error } = await supabase
+    .from('payments')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .eq('status', 'approved');
+
+  if (error) {
+    const rawMessage = `${error.message || ''} ${error.details || ''}`.toLowerCase();
+    const tableMissing =
+      rawMessage.includes("relation 'payments' does not exist") ||
+      rawMessage.includes('relation "payments" does not exist') ||
+      rawMessage.includes('could not find the table');
+    if (tableMissing) return false;
+    throw new Error('Failed to verify payment history');
+  }
+
+  return Number(count || 0) > 0;
+}
+
 async function ensureUserAccountRow(supabase, authUser) {
   const { error: upsertError } = await supabase
     .from('users')
@@ -330,12 +350,30 @@ async function ensureUserAccountRow(supabase, authUser) {
   }
 
   const data = await loadUserRow(supabase, authUser.id);
-  const credits = Number(data.credits || 0);
+  const tier = normalizeTier(data.subscription_tier);
+  let credits = Number(data.credits || 0);
+
+  // Backward-compatibility fix:
+  // Some projects still have users.credits default = 10 from old schema.
+  // Keep paid users untouched, but normalize legacy free default (10) to the current free plan (5).
+  if (tier === 'free' && credits === 10) {
+    const paidBefore = await hasApprovedPayments(supabase, authUser.id);
+    if (!paidBefore) {
+      const { error: normalizeError } = await supabase
+        .from('users')
+        .update({ credits: FREE_PLAN_CREDITS })
+        .eq('id', authUser.id);
+      if (normalizeError) {
+        throw new Error('Failed to normalize free plan credits');
+      }
+      credits = FREE_PLAN_CREDITS;
+    }
+  }
 
   return {
     ...data,
     credits,
-    subscription_tier: normalizeTier(data.subscription_tier),
+    subscription_tier: tier,
     subscription_expires_at: data.subscription_expires_at || null
   };
 }
