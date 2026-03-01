@@ -2083,8 +2083,14 @@ function isMissingRelationError(error) {
   if (!error || typeof error !== 'object') return false;
   const code = String(error.code || '').trim();
   const message = String(error.message || '').toLowerCase();
-  if (code === '42P01') return true;
-  return message.includes('does not exist') || message.includes('relation');
+  if (code === '42P01' || code === '42703' || code === 'PGRST205' || code === 'PGRST204') return true;
+  return (
+    message.includes('does not exist') ||
+    message.includes('relation') ||
+    message.includes('schema cache') ||
+    message.includes('could not find the table') ||
+    message.includes('could not find the') && message.includes('column')
+  );
 }
 
 async function logApiRequestSafe(supabase, payload) {

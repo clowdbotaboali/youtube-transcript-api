@@ -195,8 +195,20 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
   }, [authedFetch]);
 
   const loadUsage = useCallback(async () => {
-    const data = await authedFetch('/api/admin/usage?days=7');
-    setUsageStats(data.data || null);
+    try {
+      const data = await authedFetch('/api/admin/usage?days=7');
+      setUsageStats(data.data || null);
+    } catch {
+      setUsageStats({
+        days: 7,
+        totalRequests: 0,
+        successCount: 0,
+        failedCount: 0,
+        successRate: 0,
+        avgResponseMs: 0,
+        byRoute: []
+      });
+    }
   }, [authedFetch]);
 
   const loadSettings = useCallback(async () => {
