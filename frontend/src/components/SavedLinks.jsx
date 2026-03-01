@@ -1,11 +1,24 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FaBookmark, FaCheck, FaEdit, FaExternalLinkAlt, FaLink, FaRedo, FaSearch, FaTimes } from 'react-icons/fa';
+import {
+  FaBookmark,
+  FaCheck,
+  FaEdit,
+  FaExternalLinkAlt,
+  FaLink,
+  FaRedo,
+  FaSearch,
+  FaTimes
+} from 'react-icons/fa';
 import defaultApiUrl from '../config';
 import { getAuthHeaders } from '../utils/authHeaders';
 import { cleanText, LANG, tr } from '../utils/lang';
 
 const LINKS_CACHE_TTL_MS = 1000 * 60 * 10;
 const TITLE_UPDATED_EVENT = 'video-title-updated';
+
+function defaultThumbnail(videoId) {
+  return videoId ? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg` : '';
+}
 
 function SavedLinks({ onSelectLink, apiUrl = defaultApiUrl, user, lang = LANG.ar, onNotify }) {
   const [links, setLinks] = useState([]);
@@ -115,7 +128,7 @@ function SavedLinks({ onSelectLink, apiUrl = defaultApiUrl, user, lang = LANG.ar
           setLinks(items);
           writeCache(items);
         } else {
-          notify('error', tr(langRef.current, 'تعذر تحميل الروابط المحفوظة.', 'Failed to load saved links.', 'Echec du chargement des liens enregistres.'));
+          notify('error', tr(langRef.current, 'تعذر تحميل الروابط المحفوظة.', 'Failed to load saved links.', 'Echec du chargement des liens enregistrés.'));
         }
       } catch {
         notify('error', tr(langRef.current, 'فشل الاتصال بالخادم.', 'Connection failed.', 'Echec de connexion.'));
@@ -164,11 +177,15 @@ function SavedLinks({ onSelectLink, apiUrl = defaultApiUrl, user, lang = LANG.ar
       if (response.ok && data.success && data.data?.videoId && data.data?.title) {
         applyVideoTitleUpdate(data.data.videoId, data.data.title);
         if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent(TITLE_UPDATED_EVENT, { detail: { videoId: data.data.videoId, title: data.data.title } }));
+          window.dispatchEvent(
+            new CustomEvent(TITLE_UPDATED_EVENT, {
+              detail: { videoId: data.data.videoId, title: data.data.title }
+            })
+          );
         }
         cancelRename();
       } else {
-        notify('error', tr(lang, 'تعذر تعديل الاسم.', 'Failed to rename link.', 'Echec de mise a jour du titre.'));
+        notify('error', tr(lang, 'تعذر تعديل الاسم.', 'Failed to rename link.', 'Echec de mise à jour du titre.'));
       }
     } catch {
       notify('error', tr(lang, 'فشل الاتصال بالخادم.', 'Connection failed.', 'Echec de connexion.'));
@@ -197,9 +214,9 @@ function SavedLinks({ onSelectLink, apiUrl = defaultApiUrl, user, lang = LANG.ar
             <FaBookmark />
           </span>
           <div>
-            <h3 className="text-lg font-black text-slate-900">{tr(lang, 'الروابط المحفوظة', 'Saved Links', 'Liens enregistres')}</h3>
+            <h3 className="text-lg font-black text-slate-900">{tr(lang, 'الروابط المحفوظة', 'Saved Links', 'Liens enregistrés')}</h3>
             <p className="text-xs text-slate-500">
-              {tr(lang, 'تُحفظ تلقائيًا بعد كل استخراج ناجح.', 'Automatically saved after each successful extraction.', 'Sauvegarde automatique apres chaque extraction reussie.')}
+              {tr(lang, 'تُحفظ تلقائيًا بعد كل استخراج ناجح.', 'Automatically saved after each successful extraction.', 'Sauvegarde automatique après chaque extraction réussie.')}
             </p>
           </div>
         </div>
@@ -219,7 +236,7 @@ function SavedLinks({ onSelectLink, apiUrl = defaultApiUrl, user, lang = LANG.ar
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder={tr(lang, 'ابحث بعنوان الفيديو أو المعرف...', 'Search by title or video ID...', 'Rechercher par titre ou ID video...')}
+          placeholder={tr(lang, 'ابحث بعنوان الفيديو أو المعرف...', 'Search by title or video ID...', 'Rechercher par titre ou ID vidéo...')}
           className="w-full bg-transparent outline-none text-sm"
         />
       </div>
@@ -231,76 +248,82 @@ function SavedLinks({ onSelectLink, apiUrl = defaultApiUrl, user, lang = LANG.ar
       {loading ? (
         <p className="text-sm text-slate-500 py-5 text-center">{tr(lang, 'جارٍ التحميل...', 'Loading...', 'Chargement...')}</p>
       ) : filteredLinks.length === 0 ? (
-        <p className="text-sm text-slate-500 py-5 text-center">{tr(lang, 'لا توجد روابط محفوظة بعد.', 'No saved links yet.', 'Aucun lien enregistre pour le moment.')}</p>
+        <p className="text-sm text-slate-500 py-5 text-center">{tr(lang, 'لا توجد روابط محفوظة بعد.', 'No saved links yet.', 'Aucun lien enregistré pour le moment.')}</p>
       ) : (
         <div className="space-y-2 max-h-[520px] overflow-y-auto pr-1">
           {filteredLinks.map((item) => (
             <article key={`${item.videoId}-${item.createdAt}`} className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
-              {editingVideoId === item.videoId ? (
-                <div className="flex items-center gap-2 mb-2">
-                  <input
-                    value={editingTitle}
-                    onChange={(e) => setEditingTitle(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-2 py-1 text-sm"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => submitRename(item.videoId)}
-                    disabled={renaming}
-                    className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs border border-emerald-200 text-emerald-700 hover:bg-emerald-50 disabled:opacity-60"
-                  >
-                    <FaCheck />
-                    <span>{tr(lang, 'حفظ', 'Save', 'Enregistrer')}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={cancelRename}
-                    disabled={renaming}
-                    className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs border border-slate-300 text-slate-700 hover:bg-white"
-                  >
-                    <FaTimes />
-                    <span>{tr(lang, 'إلغاء', 'Cancel', 'Annuler')}</span>
-                  </button>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => onSelectLink?.(item.url)}
-                  className="w-full text-left hover:opacity-90"
-                >
-                  <p className="font-semibold text-slate-900 truncate">{cleanText(item.title || item.videoId)}</p>
-                  <p className="text-xs text-slate-500 mt-1">{item.videoId}</p>
-                </button>
-              )}
+              <div className="flex items-start gap-3">
+                <img
+                  src={item.thumbnailUrl || defaultThumbnail(item.videoId)}
+                  alt={item.title || item.videoId}
+                  className="w-20 sm:w-24 h-12 sm:h-14 rounded-lg border border-slate-200 object-cover bg-slate-100 flex-shrink-0"
+                  loading="lazy"
+                />
+                <div className="min-w-0 flex-1">
+                  {editingVideoId === item.videoId ? (
+                    <div className="flex items-center gap-2 mb-2">
+                      <input
+                        value={editingTitle}
+                        onChange={(e) => setEditingTitle(e.target.value)}
+                        className="w-full rounded-lg border border-slate-300 px-2 py-1 text-sm"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => submitRename(item.videoId)}
+                        disabled={renaming}
+                        className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs border border-emerald-200 text-emerald-700 hover:bg-emerald-50 disabled:opacity-60"
+                      >
+                        <FaCheck />
+                        <span>{tr(lang, 'حفظ', 'Save', 'Enregistrer')}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={cancelRename}
+                        disabled={renaming}
+                        className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs border border-slate-300 text-slate-700 hover:bg-white"
+                      >
+                        <FaTimes />
+                        <span>{tr(lang, 'إلغاء', 'Cancel', 'Annuler')}</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <button type="button" onClick={() => onSelectLink?.(item.url)} className="w-full text-left hover:opacity-90">
+                      <p className="font-semibold text-slate-900 truncate">{cleanText(item.title || item.videoId)}</p>
+                      <p className="text-xs text-slate-500 mt-1">{item.videoId}</p>
+                    </button>
+                  )}
 
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                <span className="text-[11px] text-slate-500">{new Date(item.createdAt).toLocaleString(dateLocale)}</span>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => startRename(item)}
-                    className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs border border-amber-200 text-amber-700 hover:bg-amber-50"
-                  >
-                    <FaEdit />
-                    <span>{tr(lang, 'إعادة تسمية', 'Rename', 'Renommer')}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onSelectLink?.(item.url)}
-                    className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs bg-emerald-600 text-white hover:bg-emerald-700"
-                  >
-                    <FaLink />
-                    <span>{tr(lang, 'فتح في مساحة العمل', 'Open in workspace', "Ouvrir dans l'espace de travail")}</span>
-                  </button>
-                  <a
-                    href={item.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs border border-slate-300 text-slate-700 hover:bg-white"
-                  >
-                    <FaExternalLinkAlt />
-                    <span>{tr(lang, 'يوتيوب', 'YouTube', 'YouTube')}</span>
-                  </a>
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-[11px] text-slate-500">{new Date(item.createdAt).toLocaleString(dateLocale)}</span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => startRename(item)}
+                        className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs border border-amber-200 text-amber-700 hover:bg-amber-50"
+                      >
+                        <FaEdit />
+                        <span>{tr(lang, 'إعادة تسمية', 'Rename', 'Renommer')}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onSelectLink?.(item.url)}
+                        className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs bg-emerald-600 text-white hover:bg-emerald-700"
+                      >
+                        <FaLink />
+                        <span>{tr(lang, 'فتح في مساحة العمل', 'Open in workspace', "Ouvrir l'espace de travail")}</span>
+                      </button>
+                      <a
+                        href={item.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs border border-slate-300 text-slate-700 hover:bg-white"
+                      >
+                        <FaExternalLinkAlt />
+                        <span>{tr(lang, 'يوتيوب', 'YouTube', 'YouTube')}</span>
+                      </a>
+                    </div>
+                  </div>
                 </div>
               </div>
             </article>
@@ -312,3 +335,4 @@ function SavedLinks({ onSelectLink, apiUrl = defaultApiUrl, user, lang = LANG.ar
 }
 
 export default SavedLinks;
+

@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FaMoon, FaSpinner, FaSun } from 'react-icons/fa';
 import VideoInput from './components/VideoInput';
 import TranscriptDisplay from './components/TranscriptDisplay';
 import ProcessingOptions from './components/ProcessingOptions';
 import ResultsDisplay from './components/ResultsDisplay';
+import VideoPreviewCard from './components/VideoPreviewCard';
 import SavedHistory from './components/SavedHistory';
 import Settings from './components/Settings';
 import ChatAssistant from './components/ChatAssistant';
@@ -29,6 +30,11 @@ import defaultApiUrl from './config';
 import { getAuthHeaders } from './utils/authHeaders';
 import { formatApiErrorMessage, parseApiError } from './utils/apiError';
 import { cleanText, LANG, langBadge, nextLang, tr } from './utils/lang';
+import {
+  DEFAULT_OUTPUT_LANGUAGE,
+  getOutputLanguageLabel,
+  normalizeOutputLanguage
+} from './utils/outputLanguage';
 
 const normalizeApiUrl = (value) => String(value || '').trim().replace(/\/+$/, '');
 
@@ -61,6 +67,28 @@ const PAID_PLAN_PRICE_USD = 5;
 const THEME = {
   light: 'light',
   dark: 'dark'
+};
+
+const buildFallbackVideoBrief = (titleValue, langCode) => {
+  const title = cleanText(titleValue || '').trim();
+  if (!title) return '';
+  const compact = title.length > 90 ? `${title.slice(0, 87).trim()}...` : title;
+  const lang = normalizeOutputLanguage(langCode);
+  if (lang === 'ar') return `ملخص سريع: ${compact}`;
+  if (lang === 'fr') return `Résumé rapide: ${compact}`;
+  if (lang === 'es') return `Resumen breve: ${compact}`;
+  if (lang === 'de') return `Kurzzusammenfassung: ${compact}`;
+  if (lang === 'it') return `Sintesi rapida: ${compact}`;
+  if (lang === 'pt') return `Resumo rápido: ${compact}`;
+  if (lang === 'tr') return `Kisa ozet: ${compact}`;
+  if (lang === 'ru') return `Краткое резюме: ${compact}`;
+  if (lang === 'hi') return `संक्षिप्त सार: ${compact}`;
+  if (lang === 'id') return `Ringkasan singkat: ${compact}`;
+  if (lang === 'ur') return `خلاصہ مختصر: ${compact}`;
+  if (lang === 'zh') return `简要摘要：${compact}`;
+  if (lang === 'ja') return `要約: ${compact}`;
+  if (lang === 'ko') return `요약: ${compact}`;
+  return `Quick brief: ${compact}`;
 };
 
 const clearSupabaseAuthStorage = () => {
@@ -112,8 +140,15 @@ function App() {
   const [clientPage, setClientPage] = useState(CLIENT_PAGES.dashboard);
   const [lang, setLang] = useState(() => (hasWindow ? localStorage.getItem('appLang') || LANG.ar : LANG.ar));
   const [theme, setTheme] = useState(() => (hasWindow ? localStorage.getItem('appTheme') || THEME.light : THEME.light));
+  const [outputLang, setOutputLang] = useState(() =>
+    normalizeOutputLanguage(hasWindow ? localStorage.getItem('outputLang') || DEFAULT_OUTPUT_LANGUAGE : DEFAULT_OUTPUT_LANGUAGE)
+  );
+  const [videoBrief, setVideoBrief] = useState('');
+  const [videoBriefLoading, setVideoBriefLoading] = useState(false);
+  const [extraContext, setExtraContext] = useState('');
   const [toasts, setToasts] = useState([]);
   const [currentPath, setCurrentPath] = useState(() => (hasWindow ? window.location.pathname : '/'));
+  const videoBriefCacheRef = useRef(new Map());
 
   const canUseLocalGuide =
     import.meta.env.DEV || (hasWindow && new URLSearchParams(window.location.search).get('dev') === '1');
@@ -134,6 +169,11 @@ function App() {
     document.documentElement.setAttribute('data-theme', nextTheme);
     localStorage.setItem('appTheme', nextTheme);
   }, [theme]);
+
+  useEffect(() => {
+    if (!hasWindow) return;
+    localStorage.setItem('outputLang', normalizeOutputLanguage(outputLang));
+  }, [outputLang]);
 
   const dismissToast = useCallback((id) => {
     setToasts((prev) => prev.filter((item) => item.id !== id));
@@ -288,6 +328,9 @@ function App() {
         setAccountAccess({ status: 'active', reason: null });
         setTranscriptData(null);
         setAiResult(null);
+        setVideoBrief('');
+        setVideoBriefLoading(false);
+        setExtraContext('');
       }
     });
 
@@ -357,6 +400,8 @@ function App() {
   const handleTranscriptExtracted = (data) => {
     setTranscriptData(data);
     setAiResult(null);
+    setVideoBrief(buildFallbackVideoBrief(data?.videoTitle || data?.videoId, outputLang));
+    setExtraContext('');
     if (typeof data?.creditsLeft === 'number') {
       setCredits(data.creditsLeft);
     }
@@ -365,6 +410,71 @@ function App() {
     }
     setClientPage(CLIENT_PAGES.workspace);
   };
+
+  useEffect(() => {
+    const videoId = String(transcriptData?.videoId || '').trim();
+    const transcript = String(transcriptData?.transcript || '').trim();
+    const titleFallback = buildFallbackVideoBrief(transcriptData?.videoTitle || videoId, outputLang);
+    if (!user?.id || !videoId || !transcript) {
+      setVideoBrief(titleFallback);
+      setVideoBriefLoading(false);
+      return;
+    }
+
+    const normalizedLang = normalizeOutputLanguage(outputLang);
+    const cacheKey = `${videoId}:${normalizedLang}`;
+    const cached = videoBriefCacheRef.current.get(cacheKey);
+    if (cached) {
+      setVideoBrief(cached);
+      setVideoBriefLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    const controller = new AbortController();
+
+    const run = async () => {
+      setVideoBriefLoading(true);
+      try {
+        const authHeaders = await getAuthHeaders();
+        const response = await fetch(`${apiUrl}/api/ai/process`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...authHeaders
+          },
+          body: JSON.stringify({
+            transcript,
+            type: 'video-brief',
+            videoId,
+            lang: normalizedLang
+          }),
+          signal: controller.signal
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!cancelled && response.ok && data.success && data.result) {
+          const subtitle = cleanText(data.result).trim() || titleFallback;
+          videoBriefCacheRef.current.set(cacheKey, subtitle);
+          setVideoBrief(subtitle);
+        } else if (!cancelled) {
+          setVideoBrief(titleFallback);
+        }
+      } catch {
+        if (!cancelled) {
+          setVideoBrief(titleFallback);
+        }
+      } finally {
+        if (!cancelled) setVideoBriefLoading(false);
+      }
+    };
+
+    run();
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [apiUrl, outputLang, transcriptData?.transcript, transcriptData?.videoId, transcriptData?.videoTitle, user?.id]);
 
   const handleProcess = async (type) => {
     if (!transcriptData) return;
@@ -388,10 +498,10 @@ function App() {
           ...authHeaders
         },
         body: JSON.stringify({
-          transcript: transcriptData.transcript,
+          transcript: transcriptForProcessing || transcriptData.transcript,
           type,
           videoId: transcriptData.videoId,
-          lang
+          lang: normalizeOutputLanguage(outputLang)
         })
       });
 
@@ -500,6 +610,9 @@ function App() {
     setAccountAccess({ status: 'active', reason: null });
     setTranscriptData(null);
     setAiResult(null);
+    setVideoBrief('');
+    setVideoBriefLoading(false);
+    setExtraContext('');
     setClientPage(CLIENT_PAGES.dashboard);
     setIsAuthModalOpen(false);
     setIsPricingModalOpen(false);
@@ -531,6 +644,13 @@ function App() {
   };
 
   const rootDir = useMemo(() => (lang === LANG.ar ? 'rtl' : 'ltr'), [lang]);
+  const transcriptForProcessing = useMemo(() => {
+    const baseTranscript = String(transcriptData?.transcript || '').trim();
+    const context = String(extraContext || '').trim();
+    if (!baseTranscript) return '';
+    if (!context) return baseTranscript;
+    return `${baseTranscript}\n\nAdditional links/instructions from user:\n${context}`;
+  }, [extraContext, transcriptData?.transcript]);
 
   const renderStaticRoute = () => {
     if (currentPath === '/privacy-policy') return <PrivacyPolicyPage lang={lang} theme={theme} />;
@@ -733,6 +853,16 @@ function App() {
 
             {transcriptData && (
               <div className="space-y-4 sm:space-y-6">
+                <VideoPreviewCard
+                  data={transcriptData}
+                  localizedSubtitle={videoBrief}
+                  localizedSubtitleLoading={videoBriefLoading}
+                  outputLanguageLabel={getOutputLanguageLabel(outputLang, lang)}
+                  lang={lang}
+                  extraContext={extraContext}
+                  onExtraContextChange={setExtraContext}
+                />
+
                 <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
                   <div className="grid grid-cols-1 lg:grid-cols-2">
                     <div className="p-3 sm:p-4 border-b lg:border-b-0 lg:border-l border-gray-200">
@@ -745,7 +875,7 @@ function App() {
                     </div>
                     <div className="p-3 sm:p-4 h-[400px] sm:h-[600px] flex flex-col">
                       <ChatAssistant
-                        transcript={transcriptData.transcript}
+                        transcript={transcriptForProcessing || transcriptData.transcript}
                         videoId={transcriptData.videoId}
                         apiUrl={apiUrl}
                         onCreditsChange={setCredits}
@@ -756,7 +886,13 @@ function App() {
                   </div>
                 </div>
 
-                <ProcessingOptions onProcess={handleProcess} loading={processLoading} lang={lang} />
+                <ProcessingOptions
+                  onProcess={handleProcess}
+                  loading={processLoading}
+                  lang={lang}
+                  outputLang={outputLang}
+                  onOutputLangChange={(next) => setOutputLang(normalizeOutputLanguage(next))}
+                />
 
                 {aiResult && (
                   <ResultsDisplay
@@ -764,7 +900,7 @@ function App() {
                     type={aiResult.type}
                     videoId={transcriptData.videoId}
                     videoTitle={transcriptData.videoTitle || transcriptData.videoId}
-                    transcript={transcriptData.transcript}
+                    transcript={transcriptForProcessing || transcriptData.transcript}
                     onSave={handleSave}
                     user={user}
                     lang={lang}

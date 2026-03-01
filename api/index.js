@@ -41,6 +41,24 @@ const TRANSCRIPT_GLOBAL_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const TRANSCRIPT_MEMORY_CACHE_MAX_ITEMS = 300;
 const VIDEO_ID_REGEX = /^[A-Za-z0-9_-]{11}$/;
 const PRO_SUBSCRIPTION_DAYS = 30;
+const DEFAULT_OUTPUT_LANG = 'ar';
+const OUTPUT_LANG_CONFIG = {
+  ar: { label: 'Arabic', instruction: 'Write the final output in clear Modern Standard Arabic with natural phrasing (not literal translation).' },
+  en: { label: 'English', instruction: 'Write the final output in clear professional English with natural phrasing.' },
+  fr: { label: 'French', instruction: 'Write the final output in clear professional French with natural phrasing.' },
+  es: { label: 'Spanish', instruction: 'Write the final output in clear professional Spanish with natural phrasing.' },
+  de: { label: 'German', instruction: 'Write the final output in clear professional German with natural phrasing.' },
+  it: { label: 'Italian', instruction: 'Write the final output in clear professional Italian with natural phrasing.' },
+  pt: { label: 'Portuguese', instruction: 'Write the final output in clear professional Portuguese with natural phrasing.' },
+  tr: { label: 'Turkish', instruction: 'Write the final output in clear professional Turkish with natural phrasing.' },
+  ru: { label: 'Russian', instruction: 'Write the final output in clear professional Russian with natural phrasing.' },
+  hi: { label: 'Hindi', instruction: 'Write the final output in clear professional Hindi with natural phrasing.' },
+  id: { label: 'Indonesian', instruction: 'Write the final output in clear professional Indonesian with natural phrasing.' },
+  ur: { label: 'Urdu', instruction: 'Write the final output in clear professional Urdu with natural phrasing.' },
+  zh: { label: 'Chinese', instruction: 'Write the final output in clear professional Simplified Chinese with natural phrasing.' },
+  ja: { label: 'Japanese', instruction: 'Write the final output in clear professional Japanese with natural phrasing.' },
+  ko: { label: 'Korean', instruction: 'Write the final output in clear professional Korean with natural phrasing.' }
+};
 const DAILY_EXTRACT_LIMITS = {
   free: 5,
   pro: 500,
@@ -840,7 +858,8 @@ function buildDefaultBillingConfig() {
     instapayHandle: '',
     vodafoneCashNumber: '',
     supportContact: '',
-    instructionsAr: 'حوّل المبلغ ثم ارفع صورة التحويل ورقم المرجع وسيتم المراجعة خلال وقت قصير.',
+    instructionsAr:
+      '\u062d\u0648\u0651\u0644 \u0627\u0644\u0645\u0628\u0644\u063a \u062b\u0645 \u0627\u0631\u0641\u0639 \u0635\u0648\u0631\u0629 \u0627\u0644\u062a\u062d\u0648\u064a\u0644 \u0648\u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062c\u0639 \u0648\u0633\u064a\u062a\u0645 \u0627\u0644\u0645\u0631\u0627\u062c\u0639\u0629 \u062e\u0644\u0627\u0644 \u0648\u0642\u062a \u0642\u0635\u064a\u0631.',
     instructionsEn: 'Transfer the amount, upload transfer proof, and add the reference number for manual review.',
     instructionsFr: 'Effectuez le virement, telechargez la preuve et ajoutez la reference pour verification.',
     updatedAt: new Date().toISOString()
@@ -1611,6 +1630,91 @@ async function getPreferredVideoTitleForUser(supabase, userId, videoId, fallback
   }
 }
 
+function buildYouTubeThumbnailUrl(videoId) {
+  return `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+}
+
+function extractUrlsFromText(value) {
+  const text = String(value || '');
+  if (!text) return [];
+  const matches = text.match(/https?:\/\/[^\s)]+/gi) || [];
+  const unique = new Set();
+  for (const raw of matches) {
+    const url = String(raw || '').trim().replace(/[),.;]+$/, '');
+    if (!url) continue;
+    unique.add(url);
+  }
+  return Array.from(unique).slice(0, 20);
+}
+
+function extractInstructionLines(value) {
+  const text = String(value || '');
+  if (!text) return [];
+
+  const normalizeLine = (rawLine) => {
+    let line = decodeXmlEntities(String(rawLine || '').trim());
+    if (!line) return '';
+    line = line.replace(/https?:\/\/[^\s)]+/gi, ' ');
+    line = line.replace(/^\s*\d{1,2}:\d{2}(?::\d{2})?\s+/, '');
+    line = line.replace(/^\s*(?:\d+[.)-]|[-*]|\u2022)\s+/, '');
+    line = line.replace(/\s*(?:[\u2014\u2013-]|\.)\s*\d+\s*$/, '');
+    line = line.replace(/\s+/g, ' ').trim();
+    if (line.length < 12 || line.length > 180) return '';
+    return line;
+  };
+
+  const lines = text
+    .split(/\r?\n/)
+    .map(normalizeLine)
+    .filter(Boolean);
+
+  if (lines.length === 0) return [];
+
+  const actionHints =
+    /(step|install|open|create|set|run|configure|copy|paste|enable|disable|use|visit|click|download|upload|guide|tutorial|setup|command|issue|solution|\u0642\u0645|\u0627\u0641\u062a\u062d|\u062b\u0628\u062a|\u0634\u063a\u0644|\u0627\u0646\u0633\u062e|\u0627\u0644\u0635\u0642|\u0627\u0633\u062a\u062e\u062f\u0645|\u062a\u0623\u0643\u062f|\u0641\u0639\u0644|\u0639\u0637\u0644|\u0627\u0636\u0628\u0637|\u0627\u062e\u062a\u0631|\u0631\u0627\u062c\u0639|\u062e\u0637\u0648\u0629|\u0634\u0631\u062d|\u062f\u0644\u064a\u0644|\u0637\u0631\u064a\u0642\u0629)/i;
+  const ranked = lines
+    .map((line) => ({
+      line,
+      score:
+        (actionHints.test(line) ? 2 : 0) +
+        (/^\d+[.)-]\s*/.test(line) || /^[-*]\s+/.test(line) ? 2 : 0) +
+        (line.includes(':') ? 1 : 0)
+    }))
+    .sort((a, b) => b.score - a.score);
+
+  const picked = [];
+  const seen = new Set();
+  for (const item of ranked) {
+    const normalized = item.line
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}\s]/gu, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (!normalized || seen.has(normalized)) continue;
+    seen.add(normalized);
+    picked.push(item.line);
+    if (picked.length >= 10) break;
+  }
+  return picked;
+}
+
+function parseExtractMeta(rawMeta, videoId) {
+  const parsed = parseJsonSafe(rawMeta, {});
+  const links = Array.isArray(parsed.descriptionLinks)
+    ? parsed.descriptionLinks.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 20)
+    : [];
+  const instructions = Array.isArray(parsed.descriptionInstructions)
+    ? parsed.descriptionInstructions.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 10)
+    : [];
+
+  return {
+    method: String(parsed.method || '').trim() || null,
+    thumbnailUrl: String(parsed.thumbnailUrl || '').trim() || buildYouTubeThumbnailUrl(videoId),
+    descriptionLinks: links,
+    descriptionInstructions: instructions
+  };
+}
+
 async function fetchYouTubeVideoTitle(videoId) {
   const canonicalUrl = `https://www.youtube.com/watch?v=${videoId}`;
   const oEmbedUrl = `https://www.youtube.com/oembed?url=${encodeURIComponent(canonicalUrl)}&format=json`;
@@ -1636,7 +1740,71 @@ async function fetchYouTubeVideoTitle(videoId) {
   }
 }
 
-async function saveExtractionRecord(supabase, userId, videoId, transcript, method, videoTitle = '') {
+async function fetchYouTubeVideoMetadata(videoId, fallbackTitle = '') {
+  const canonicalUrl = `https://www.youtube.com/watch?v=${videoId}`;
+  const metadata = {
+    title: sanitizeVideoTitle(fallbackTitle, videoId),
+    thumbnailUrl: buildYouTubeThumbnailUrl(videoId),
+    descriptionLinks: [],
+    descriptionInstructions: []
+  };
+
+  try {
+    const oEmbedResponse = await fetchWithTimeout(
+      `https://www.youtube.com/oembed?url=${encodeURIComponent(canonicalUrl)}&format=json`,
+      {
+        method: 'GET',
+        headers: {
+          'User-Agent': USER_AGENT,
+          Accept: 'application/json'
+        }
+      },
+      4500,
+      'YouTube metadata oEmbed'
+    );
+    if (oEmbedResponse.ok) {
+      const payload = await oEmbedResponse.json().catch(() => null);
+      const title = sanitizeVideoTitle(payload?.title || '', metadata.title || videoId);
+      const thumbnail = String(payload?.thumbnail_url || '').trim();
+      if (title) metadata.title = title;
+      if (thumbnail) metadata.thumbnailUrl = thumbnail;
+    }
+  } catch {
+    // Best-effort only.
+  }
+
+  try {
+    const info = await withTimeout(ytdl.getInfo(videoId, { agent: YTDL_AGENT }), 8000, 'YouTube metadata ytdl');
+    const details = info?.videoDetails || {};
+    const detailTitle = sanitizeVideoTitle(details.title || '', metadata.title || videoId);
+    if (detailTitle) metadata.title = detailTitle;
+
+    const thumbList = Array.isArray(details.thumbnails) ? details.thumbnails : [];
+    const bestThumb = thumbList
+      .filter((item) => item?.url)
+      .sort((a, b) => Number(b.width || 0) - Number(a.width || 0))[0];
+    if (bestThumb?.url) metadata.thumbnailUrl = String(bestThumb.url);
+
+    const description = String(details.description || details.shortDescription || '').trim();
+    if (description) {
+      metadata.descriptionLinks = extractUrlsFromText(description);
+      metadata.descriptionInstructions = extractInstructionLines(description);
+    }
+  } catch {
+    // Keep oEmbed/default values.
+  }
+
+  return metadata;
+}
+
+async function saveExtractionRecord(supabase, userId, videoId, transcript, method, videoTitle = '', meta = {}) {
+  const normalizedMeta = {
+    method,
+    thumbnailUrl: String(meta.thumbnailUrl || '').trim() || buildYouTubeThumbnailUrl(videoId),
+    descriptionLinks: Array.isArray(meta.descriptionLinks) ? meta.descriptionLinks.slice(0, 20) : [],
+    descriptionInstructions: Array.isArray(meta.descriptionInstructions) ? meta.descriptionInstructions.slice(0, 10) : []
+  };
+
   const { error } = await supabase
     .from('transcripts_history')
     .insert([
@@ -1645,7 +1813,7 @@ async function saveExtractionRecord(supabase, userId, videoId, transcript, metho
         video_id: videoId,
         video_title: sanitizeVideoTitle(videoTitle, videoId),
         transcript,
-        ai_result: JSON.stringify({ method }),
+        ai_result: JSON.stringify(normalizedMeta),
         processing_type: EXTRACT_TYPE
       }
     ]);
@@ -2233,89 +2401,114 @@ function sanitizeVideoTitle(value, fallback = '') {
 
 function normalizeOutputLang(value) {
   const lang = String(value || '').trim().toLowerCase();
-  if (lang === 'en' || lang === 'fr') return lang;
-  return 'ar';
+  return OUTPUT_LANG_CONFIG[lang] ? lang : DEFAULT_OUTPUT_LANG;
 }
 
 function outputLanguageInstruction(langCode) {
-  if (langCode === 'en') return 'Write the final output in clear professional English.';
-  if (langCode === 'fr') return 'Write the final output in clear professional French.';
-  return 'اكتب الناتج النهائي باللغة العربية الفصحى الواضحة.';
+  const normalized = normalizeOutputLang(langCode);
+  return OUTPUT_LANG_CONFIG[normalized]?.instruction || OUTPUT_LANG_CONFIG[DEFAULT_OUTPUT_LANG].instruction;
 }
 
-function resolveAiProcessingProfile(type, outputLang = 'ar') {
+function outputFormattingInstruction() {
+  return (
+    'Return clean Markdown only. ' +
+    'Use clear section headings, and keep each bullet point on its own line. ' +
+    'Do not return JSON, code blocks, HTML tags, or escaped characters like <br> or \\n.'
+  );
+}
+
+function resolveAiProcessingProfile(type, outputLang = DEFAULT_OUTPUT_LANG) {
   const normalizedType = String(type || '').trim().toLowerCase();
   const langInstruction = outputLanguageInstruction(outputLang);
+  const formattingInstruction = outputFormattingInstruction();
+  const langSuffix = normalizeOutputLang(outputLang);
 
   const profiles = {
     summary: {
-      processingType: 'summary',
+      baseType: 'summary',
+      processingType: `summary:${langSuffix}`,
       maxTokens: 700,
       prompt:
-        `${langInstruction}\n` +
+        `${langInstruction}\n${formattingInstruction}\n` +
         'Create a concise executive summary with: (1) what the video is about, (2) who it helps, (3) key conclusion.'
     },
     'key-insights': {
-      processingType: 'key-insights',
+      baseType: 'key-insights',
+      processingType: `key-insights:${langSuffix}`,
       maxTokens: 850,
       prompt:
-        `${langInstruction}\n` +
+        `${langInstruction}\n${formattingInstruction}\n` +
         'Extract 7-12 key insights. For each insight provide: the insight, why it matters, and an actionable implication.'
     },
     'clean-transcript': {
-      processingType: 'clean-transcript',
+      baseType: 'clean-transcript',
+      processingType: `clean-transcript:${langSuffix}`,
       maxTokens: 1000,
       prompt:
-        `${langInstruction}\n` +
+        `${langInstruction}\n${formattingInstruction}\n` +
         'Rewrite this transcript into a clean readable script by removing filler words, repetitions, and noise while preserving meaning and sequence.'
     },
     'proper-notes': {
-      processingType: 'proper-notes',
+      baseType: 'proper-notes',
+      processingType: `proper-notes:${langSuffix}`,
       maxTokens: 900,
       prompt:
-        `${langInstruction}\n` +
+        `${langInstruction}\n${formattingInstruction}\n` +
         'Generate structured notes with headings, concise bullet points, definitions, and important examples from the transcript.'
     },
     steps: {
-      processingType: 'steps',
+      baseType: 'steps',
+      processingType: `steps:${langSuffix}`,
       maxTokens: 850,
       prompt:
-        `${langInstruction}\n` +
+        `${langInstruction}\n${formattingInstruction}\n` +
         'Extract an actionable step-by-step plan with ordered numbering, prerequisites, and expected result for each step.'
     },
     resources: {
-      processingType: 'resources',
+      baseType: 'resources',
+      processingType: `resources:${langSuffix}`,
       maxTokens: 800,
       prompt:
-        `${langInstruction}\n` +
+        `${langInstruction}\n${formattingInstruction}\n` +
         'Extract all tools, links, platforms, references, and resources mentioned. Group them by type and explain each item briefly.'
     },
     'study-kit': {
-      processingType: 'study-kit',
+      baseType: 'study-kit',
+      processingType: `study-kit:${langSuffix}`,
       maxTokens: 1050,
       prompt:
-        `${langInstruction}\n` +
+        `${langInstruction}\n${formattingInstruction}\n` +
         'Build a study pack: learning objectives, concept map, quick revision notes, and 8 quiz questions with short answers.'
     },
     'content-kit': {
-      processingType: 'content-kit',
+      baseType: 'content-kit',
+      processingType: `content-kit:${langSuffix}`,
       maxTokens: 1050,
       prompt:
-        `${langInstruction}\n` +
+        `${langInstruction}\n${formattingInstruction}\n` +
         'Build a content creator pack: 5 post hooks, 3 short-form script ideas, blog outline, and 10 SEO keywords from the transcript.'
     },
     all: {
-      processingType: 'all',
+      baseType: 'all',
+      processingType: `all:${langSuffix}`,
       maxTokens: 1200,
       prompt:
-        `${langInstruction}\n` +
+        `${langInstruction}\n${formattingInstruction}\n` +
         'Provide a comprehensive analysis package with sections: Summary, Key Insights, Steps, Resources, and final action checklist.'
+    },
+    'video-brief': {
+      baseType: 'video-brief',
+      processingType: `video-brief:${langSuffix}`,
+      maxTokens: 120,
+      saveHistory: false,
+      prompt:
+        `${langInstruction}\n${formattingInstruction}\n` +
+        'Generate one short subtitle line (max 14 words) that summarizes the video value in a natural, marketing-friendly style.'
     }
   };
 
   return profiles[normalizedType] || profiles.all;
 }
-
 function trimForModel(value, maxChars) {
   const text = normalizeTextInput(value);
   if (!text) {
@@ -3231,9 +3424,11 @@ export default async function handler(req, res) {
       }
       const videoId = parsedVideo.videoId;
       audit.videoId = videoId;
+      const defaultExtractMeta = parseExtractMeta(null, videoId);
 
       const cachedExtract = await getCachedExtractRecord(supabase, user.id, videoId);
       if (cachedExtract?.transcript) {
+        const cachedMeta = parseExtractMeta(cachedExtract.ai_result, videoId);
         console.info(`[cache] transcript user-hit video=${videoId} user=${user.id}`);
         return res.json({
           success: true,
@@ -3241,7 +3436,10 @@ export default async function handler(req, res) {
           videoTitle: sanitizeVideoTitle(cachedExtract.video_title, videoId),
           transcript: cachedExtract.transcript,
           wordCount: cachedExtract.transcript.trim().split(/\s+/).length,
-          method: 'cached',
+          method: cachedMeta.method || 'cached',
+          thumbnailUrl: cachedMeta.thumbnailUrl || defaultExtractMeta.thumbnailUrl,
+          descriptionLinks: cachedMeta.descriptionLinks || [],
+          descriptionInstructions: cachedMeta.descriptionInstructions || [],
           creditsLeft: Number(userRow.credits || 0),
           chargedForNewVideo: false,
           cached: true
@@ -3265,6 +3463,7 @@ export default async function handler(req, res) {
       let transcript = null;
       let method = 'unknown';
       let fetchedFromCache = false;
+      let extractMeta = { ...defaultExtractMeta };
 
       const memoryCache = getCachedTranscriptFromMemory(videoId);
       if (memoryCache?.transcript) {
@@ -3278,7 +3477,12 @@ export default async function handler(req, res) {
         const globalCache = await getRecentGlobalExtractRecord(supabase, videoId, TRANSCRIPT_GLOBAL_CACHE_TTL_MS);
         if (globalCache?.transcript) {
           transcript = String(globalCache.transcript || '').trim();
-          method = 'global-db-cache';
+          const globalMeta = parseExtractMeta(globalCache.ai_result, videoId);
+          method = globalMeta.method || 'global-db-cache';
+          extractMeta = {
+            ...extractMeta,
+            ...globalMeta
+          };
           fetchedFromCache = true;
           setCachedTranscriptInMemory(videoId, transcript, method);
           console.info(`[cache] transcript db-hit video=${videoId}`);
@@ -3370,13 +3574,22 @@ export default async function handler(req, res) {
         videoId,
         sanitizeVideoTitle(cachedExtract?.video_title || '')
       );
-      if (!resolvedVideoTitle || resolvedVideoTitle === videoId) {
+      if (!fetchedFromCache) {
+        const videoMeta = await fetchYouTubeVideoMetadata(videoId, resolvedVideoTitle);
+        resolvedVideoTitle = sanitizeVideoTitle(videoMeta.title, resolvedVideoTitle || videoId);
+        extractMeta = {
+          method,
+          thumbnailUrl: videoMeta.thumbnailUrl || buildYouTubeThumbnailUrl(videoId),
+          descriptionLinks: videoMeta.descriptionLinks || [],
+          descriptionInstructions: videoMeta.descriptionInstructions || []
+        };
+      } else if (!resolvedVideoTitle || resolvedVideoTitle === videoId) {
         const fetchedTitle = await fetchYouTubeVideoTitle(videoId);
         if (fetchedTitle) resolvedVideoTitle = fetchedTitle;
       }
       resolvedVideoTitle = sanitizeVideoTitle(resolvedVideoTitle, videoId);
 
-      await saveExtractionRecord(supabase, user.id, videoId, transcript.trim(), method, resolvedVideoTitle);
+      await saveExtractionRecord(supabase, user.id, videoId, transcript.trim(), method, resolvedVideoTitle, extractMeta);
       setCachedTranscriptInMemory(videoId, transcript.trim(), method);
 
       let nextCredits = Number(userRow.credits || 0);
@@ -3393,6 +3606,9 @@ export default async function handler(req, res) {
         transcript: transcript.trim(),
         wordCount: transcript.trim().split(/\s+/).length,
         method,
+        thumbnailUrl: extractMeta.thumbnailUrl || buildYouTubeThumbnailUrl(videoId),
+        descriptionLinks: extractMeta.descriptionLinks || [],
+        descriptionInstructions: extractMeta.descriptionInstructions || [],
         creditsLeft: nextCredits,
         chargedForNewVideo,
         subscriptionTier: subscription.tier,
@@ -3449,17 +3665,20 @@ export default async function handler(req, res) {
       const profile = resolveAiProcessingProfile(type, outputLang);
       const systemPrompt = profile.prompt;
       const processingType = profile.processingType;
+      const shouldPersistResult = profile.saveHistory !== false;
 
-      const cachedAi = await getCachedAiRecord(supabase, user.id, videoId, processingType);
-      if (cachedAi?.ai_result) {
-        return res.json({
-          success: true,
-          type: processingType,
-          result: cachedAi.ai_result,
-          creditsLeft: Number(userRow.credits || 0),
-          inputTrimmed: transcriptTruncated,
-          cached: true
-        });
+      if (shouldPersistResult) {
+        const cachedAi = await getCachedAiRecord(supabase, user.id, videoId, processingType);
+        if (cachedAi?.ai_result) {
+          return res.json({
+            success: true,
+            type: profile.baseType || processingType,
+            result: cachedAi.ai_result,
+            creditsLeft: Number(userRow.credits || 0),
+            inputTrimmed: transcriptTruncated,
+            cached: true
+          });
+        }
       }
 
       const completion = await createMultiProviderChatCompletion({
@@ -3479,11 +3698,13 @@ export default async function handler(req, res) {
 
       const result = completion.choices?.[0]?.message?.content || '';
       const resolvedVideoTitle = await getPreferredVideoTitleForUser(supabase, user.id, videoId, videoId);
-      await saveAiRecord(supabase, user.id, videoId, processingType, transcriptForModel, result, resolvedVideoTitle);
+      if (shouldPersistResult) {
+        await saveAiRecord(supabase, user.id, videoId, processingType, transcriptForModel, result, resolvedVideoTitle);
+      }
 
       return res.json({
         success: true,
-        type: processingType,
+        type: profile.baseType || processingType,
         result,
         creditsLeft: Number(userRow.credits || 0),
         inputTrimmed: transcriptTruncated,
@@ -3654,7 +3875,7 @@ export default async function handler(req, res) {
 
       const { data, error } = await supabase
         .from('transcripts_history')
-        .select('video_id, video_title, created_at')
+        .select('video_id, video_title, created_at, ai_result')
         .eq('user_id', user.id)
         .eq('processing_type', EXTRACT_TYPE)
         .order('created_at', { ascending: false })
@@ -3666,11 +3887,13 @@ export default async function handler(req, res) {
       for (const row of data || []) {
         const key = row.video_id;
         if (!key || unique.has(key)) continue;
+        const meta = parseExtractMeta(row.ai_result, row.video_id);
         unique.set(key, {
           videoId: row.video_id,
           title: row.video_title || row.video_id,
           url: `https://www.youtube.com/watch?v=${row.video_id}`,
-          createdAt: row.created_at
+          createdAt: row.created_at,
+          thumbnailUrl: meta.thumbnailUrl || buildYouTubeThumbnailUrl(row.video_id)
         });
       }
 
@@ -3919,3 +4142,4 @@ export default async function handler(req, res) {
     return sendError(res, 500, 'INTERNAL_ERROR', error.message || 'Internal error');
   }
 }
+
