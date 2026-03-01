@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FaCheck, FaEdit, FaEye, FaFilter, FaHistory, FaRedo, FaSearch, FaTimes, FaTrash } from 'react-icons/fa';
 import defaultApiUrl from '../config';
 import { getAuthHeaders } from '../utils/authHeaders';
-import { LANG, tr } from '../utils/lang';
+import { cleanText, LANG, tr } from '../utils/lang';
 
 const FILTERS = ['all', 'extract', 'summary', 'key-insights', 'clean-transcript', 'proper-notes', 'steps', 'resources', 'study-kit', 'content-kit', 'all-analysis', 'chat'];
 const HISTORY_CACHE_TTL_MS = 1000 * 60 * 10;
@@ -181,7 +181,7 @@ function SavedHistory({ apiUrl = defaultApiUrl, user, lang = LANG.ar, onNotify }
 
   const startRename = (item) => {
     setEditingItemId(item.id);
-    setEditingTitle(item.video_title || item.video_id || '');
+    setEditingTitle(cleanText(item.video_title || item.video_id || ''));
   };
 
   const cancelRename = () => {
@@ -233,7 +233,7 @@ function SavedHistory({ apiUrl = defaultApiUrl, user, lang = LANG.ar, onNotify }
     const query = search.trim().toLowerCase();
     if (!query) return typeFilteredHistory;
     return typeFilteredHistory.filter((item) => {
-      const title = String(item.video_title || '').toLowerCase();
+      const title = cleanText(item.video_title || '').toLowerCase();
       const videoId = String(item.video_id || '').toLowerCase();
       const type = String(item.processing_type || '').toLowerCase();
       return title.includes(query) || videoId.includes(query) || type.includes(query);
@@ -355,7 +355,7 @@ function SavedHistory({ apiUrl = defaultApiUrl, user, lang = LANG.ar, onNotify }
                     </div>
                   ) : (
                     <>
-                      <p className="font-semibold text-slate-900 truncate">{item.video_title || item.video_id}</p>
+                      <p className="font-semibold text-slate-900 truncate">{cleanText(item.video_title || item.video_id)}</p>
                       <p className="text-xs text-slate-500 mt-1">{item.video_id}</p>
                     </>
                   )}

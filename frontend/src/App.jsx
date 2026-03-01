@@ -28,7 +28,7 @@ import { supabase, SUPABASE_CONFIGURED } from './utils/supabase';
 import defaultApiUrl from './config';
 import { getAuthHeaders } from './utils/authHeaders';
 import { formatApiErrorMessage, parseApiError } from './utils/apiError';
-import { LANG, langBadge, nextLang, tr } from './utils/lang';
+import { cleanText, LANG, langBadge, nextLang, tr } from './utils/lang';
 
 const normalizeApiUrl = (value) => String(value || '').trim().replace(/\/+$/, '');
 
@@ -81,12 +81,12 @@ const clearSupabaseAuthStorage = () => {
   }
 };
 const normalizeUiMessage = (value) => {
-  if (typeof value === 'string') return value.trim();
-  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (typeof value === 'string') return cleanText(value);
+  if (typeof value === 'number' || typeof value === 'boolean') return cleanText(String(value));
   if (value && typeof value === 'object') {
-    if (typeof value.message === 'string') return value.message.trim();
+    if (typeof value.message === 'string') return cleanText(value.message);
     try {
-      return JSON.stringify(value);
+      return cleanText(JSON.stringify(value));
     } catch {
       return '';
     }

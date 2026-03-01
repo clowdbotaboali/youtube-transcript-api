@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FaBookmark, FaCheck, FaEdit, FaExternalLinkAlt, FaLink, FaRedo, FaSearch, FaTimes } from 'react-icons/fa';
 import defaultApiUrl from '../config';
 import { getAuthHeaders } from '../utils/authHeaders';
-import { LANG, tr } from '../utils/lang';
+import { cleanText, LANG, tr } from '../utils/lang';
 
 const LINKS_CACHE_TTL_MS = 1000 * 60 * 10;
 const TITLE_UPDATED_EVENT = 'video-title-updated';
@@ -136,7 +136,7 @@ function SavedLinks({ onSelectLink, apiUrl = defaultApiUrl, user, lang = LANG.ar
 
   const startRename = (item) => {
     setEditingVideoId(item.videoId);
-    setEditingTitle(item.title || item.videoId);
+    setEditingTitle(cleanText(item.title || item.videoId));
   };
 
   const cancelRename = () => {
@@ -181,7 +181,7 @@ function SavedLinks({ onSelectLink, apiUrl = defaultApiUrl, user, lang = LANG.ar
     const query = search.trim().toLowerCase();
     if (!query) return links;
     return links.filter((item) => {
-      const title = String(item.title || '').toLowerCase();
+      const title = cleanText(item.title || '').toLowerCase();
       const videoId = String(item.videoId || '').toLowerCase();
       return title.includes(query) || videoId.includes(query);
     });
@@ -268,7 +268,7 @@ function SavedLinks({ onSelectLink, apiUrl = defaultApiUrl, user, lang = LANG.ar
                   onClick={() => onSelectLink?.(item.url)}
                   className="w-full text-left hover:opacity-90"
                 >
-                  <p className="font-semibold text-slate-900 truncate">{item.title || item.videoId}</p>
+                  <p className="font-semibold text-slate-900 truncate">{cleanText(item.title || item.videoId)}</p>
                   <p className="text-xs text-slate-500 mt-1">{item.videoId}</p>
                 </button>
               )}

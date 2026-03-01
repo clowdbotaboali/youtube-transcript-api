@@ -17,7 +17,7 @@ import {
 } from 'react-icons/fa';
 import SeoMeta from '../components/SeoMeta';
 import defaultApiUrl from '../config';
-import { LANG, tr } from '../utils/lang';
+import { cleanText, LANG, tr } from '../utils/lang';
 
 const ADMIN_TOKEN_KEY = 'adminToken';
 const TABS = {
@@ -33,17 +33,17 @@ const PROVIDERS = ['groq', 'openrouter', 'openai', 'google', 'anthropic'];
 
 function normalizeModelOption(model) {
   if (typeof model === 'string') {
-    const id = model.trim();
+    const id = cleanText(model);
     if (!id) return null;
     return { id, label: id, tier: '' };
   }
   if (!model || typeof model !== 'object') return null;
 
-  const id = String(model.id || model.model || model.name || model.value || '').trim();
+  const id = cleanText(model.id || model.model || model.name || model.value || '');
   if (!id) return null;
 
-  const label = String(model.label || model.displayName || model.name || id).trim() || id;
-  const tier = String(model.tier || model.category || '').trim();
+  const label = cleanText(model.label || model.displayName || model.name || id, id);
+  const tier = cleanText(model.tier || model.category || '');
   return { id, label, tier };
 }
 
@@ -168,10 +168,11 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
 
       const data = await response.json().catch(() => ({}));
       if (!response.ok || !data.success) {
-        const errMessage =
+        const errMessage = cleanText(
           typeof data.error === 'string'
             ? data.error
-            : (data.error && typeof data.error === 'object' ? data.error.message : '');
+            : (data.error && typeof data.error === 'object' ? data.error.message : '')
+        );
         throw new Error(errMessage || tr(lang, 'فشل الطلب', 'Request failed', 'Echec de la requete'));
       }
       return data;
@@ -223,13 +224,13 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
   const loadBillingConfig = useCallback(async () => {
     const data = await authedFetch('/api/admin/billing-config');
     setBillingConfig({
-      accountName: data.data?.accountName || '',
-      instapayHandle: data.data?.instapayHandle || '',
-      vodafoneCashNumber: data.data?.vodafoneCashNumber || '',
-      supportContact: data.data?.supportContact || '',
-      instructionsAr: data.data?.instructionsAr || '',
-      instructionsEn: data.data?.instructionsEn || '',
-      instructionsFr: data.data?.instructionsFr || ''
+      accountName: cleanText(data.data?.accountName),
+      instapayHandle: cleanText(data.data?.instapayHandle),
+      vodafoneCashNumber: cleanText(data.data?.vodafoneCashNumber),
+      supportContact: cleanText(data.data?.supportContact),
+      instructionsAr: cleanText(data.data?.instructionsAr),
+      instructionsEn: cleanText(data.data?.instructionsEn),
+      instructionsFr: cleanText(data.data?.instructionsFr)
     });
   }, [authedFetch]);
 
@@ -270,7 +271,7 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
         loadTranscriptApiConfig()
       ]);
     } catch (err) {
-      setError(err.message || tr(lang, 'تعذر تحميل بيانات الأدمن', 'Failed to load admin data', 'Echec du chargement admin'));
+      setError(cleanText(err.message) || tr(lang, 'تعذر تحميل بيانات الأدمن', 'Failed to load admin data', 'Echec du chargement admin'));
     } finally {
       setLoading(false);
     }
@@ -289,7 +290,7 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
     try {
       await fn();
     } catch (err) {
-      setError(err.message || tr(lang, 'حدث خطأ غير متوقع', 'Unexpected error', 'Erreur inattendue'));
+      setError(cleanText(err.message) || tr(lang, 'حدث خطأ غير متوقع', 'Unexpected error', 'Erreur inattendue'));
     } finally {
       setBusyAction('');
     }
@@ -307,17 +308,18 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok || !data.success || !data.token) {
-        const loginError =
+        const loginError = cleanText(
           typeof data.error === 'string'
             ? data.error
-            : (data.error && typeof data.error === 'object' ? data.error.message : '');
+            : (data.error && typeof data.error === 'object' ? data.error.message : '')
+        );
         throw new Error(loginError || tr(lang, 'فشل تسجيل دخول الأدمن', 'Admin login failed', 'Connexion admin echouee'));
       }
       localStorage.setItem(ADMIN_TOKEN_KEY, data.token);
       setToken(data.token);
       setLoginForm((prev) => ({ ...prev, password: '' }));
     } catch (err) {
-      setError(err.message || tr(lang, 'فشل تسجيل دخول الأدمن', 'Admin login failed', 'Connexion admin echouee'));
+      setError(cleanText(err.message) || tr(lang, 'فشل تسجيل دخول الأدمن', 'Admin login failed', 'Connexion admin echouee'));
     } finally {
       setLoading(false);
     }

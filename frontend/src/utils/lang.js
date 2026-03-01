@@ -242,10 +242,20 @@ const CP1252_REVERSE = {
 };
 
 function looksLikeMojibake(value) {
-  return /[ÃÂØÙÐÑ]|Ã¯Â¿Â½/.test(String(value || ''));
+  return /[ÃÂØÙÐÑâ€]|Ã¯Â¿Â½/.test(String(value || ''));
 }
 
-function decodeMojibake(value) {
+function decodeUnicodeEscapes(value) {
+  const raw = String(value || '');
+  if (!raw.includes('\\u')) return raw;
+  try {
+    return raw.replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+  } catch {
+    return raw;
+  }
+}
+
+function decodeMojibakePass(value) {
   const raw = String(value || '');
   if (!raw || !looksLikeMojibake(raw)) return raw;
   try {
@@ -269,8 +279,25 @@ function decodeMojibake(value) {
   }
 }
 
+function decodeMojibake(value) {
+  let current = String(value || '');
+  for (let i = 0; i < 4; i += 1) {
+    const next = decodeMojibakePass(current);
+    if (!next || next === current) break;
+    current = next;
+  }
+  return current;
+}
+
 function normalize(value) {
-  return decodeMojibake(String(value || '').trim());
+  const trimmed = String(value || '').trim();
+  const fromEscapes = decodeUnicodeEscapes(trimmed);
+  return decodeMojibake(fromEscapes).trim();
+}
+
+export function cleanText(value, fallback = '') {
+  const normalized = normalize(value);
+  return normalized || fallback;
 }
 
 function frenchFallback(value) {

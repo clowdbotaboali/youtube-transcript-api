@@ -1,9 +1,9 @@
-import { LANG } from './lang';
+import { cleanText, LANG } from './lang';
 
 function localize(lang, ar, en, fr) {
-  if (lang === LANG.en) return en;
-  if (lang === LANG.fr) return fr || en;
-  return ar;
+  if (lang === LANG.en) return cleanText(en);
+  if (lang === LANG.fr) return cleanText(fr || en);
+  return cleanText(ar);
 }
 
 export function parseApiError(payload) {
@@ -14,7 +14,7 @@ export function parseApiError(payload) {
   if (typeof payload.error === 'string') {
     return {
       code: '',
-      message: payload.error,
+      message: cleanText(payload.error),
       details: null
     };
   }
@@ -22,7 +22,7 @@ export function parseApiError(payload) {
   if (payload.error && typeof payload.error === 'object') {
     return {
       code: String(payload.error.code || '').trim(),
-      message: String(payload.error.message || payload.error.error || '').trim(),
+      message: cleanText(payload.error.message || payload.error.error || ''),
       details: payload.error.details && typeof payload.error.details === 'object' ? payload.error.details : null
     };
   }
@@ -46,22 +46,23 @@ export function formatApiErrorMessage({
   const code = String(parsed.code || '').toUpperCase();
   const details = parsed.details || {};
   const access = details.access && typeof details.access === 'object' ? details.access : null;
+  const accessReason = cleanText(access?.reason || '');
 
   if (access?.status === 'blocked') {
     return localize(
       lang,
-      `تم حظر الحساب بواسطة الإدارة.${access.reason ? ` السبب: ${access.reason}` : ''}`,
-      `Your account is blocked by admin.${access.reason ? ` Reason: ${access.reason}` : ''}`,
-      `Votre compte est bloque par l'administration.${access.reason ? ` Raison: ${access.reason}` : ''}`
+      `تم حظر الحساب بواسطة الإدارة.${accessReason ? ` السبب: ${accessReason}` : ''}`,
+      `Your account is blocked by admin.${accessReason ? ` Reason: ${accessReason}` : ''}`,
+      `Votre compte est bloque par l'administration.${accessReason ? ` Raison: ${accessReason}` : ''}`
     );
   }
 
   if (access?.status === 'suspended') {
     return localize(
       lang,
-      `تم تعليق الحساب بواسطة الإدارة.${access.reason ? ` السبب: ${access.reason}` : ''}`,
-      `Your account is suspended by admin.${access.reason ? ` Reason: ${access.reason}` : ''}`,
-      `Votre compte est suspendu par l'administration.${access.reason ? ` Raison: ${access.reason}` : ''}`
+      `تم تعليق الحساب بواسطة الإدارة.${accessReason ? ` السبب: ${accessReason}` : ''}`,
+      `Your account is suspended by admin.${accessReason ? ` Reason: ${accessReason}` : ''}`,
+      `Votre compte est suspendu par l'administration.${accessReason ? ` Raison: ${accessReason}` : ''}`
     );
   }
 
@@ -144,8 +145,8 @@ export function formatApiErrorMessage({
     );
   }
 
-  const raw = String(parsed.message || '').trim();
+  const raw = cleanText(parsed.message || '');
   if (raw) return raw;
 
-  return localize(lang, fallbackAr, fallbackEn, fallbackFr);
+  return localize(lang, cleanText(fallbackAr), cleanText(fallbackEn), cleanText(fallbackFr));
 }

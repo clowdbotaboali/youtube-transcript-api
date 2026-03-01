@@ -3,11 +3,11 @@ import { FaBolt, FaCheck, FaCrown, FaLeaf, FaUpload } from 'react-icons/fa';
 import defaultApiUrl from '../config';
 import { getAuthHeaders } from '../utils/authHeaders';
 import { formatApiErrorMessage } from '../utils/apiError';
-import { LANG, tr } from '../utils/lang';
+import { cleanText, LANG, tr } from '../utils/lang';
 
 const METHODS = [
-  { value: 'instapay', ar: 'Ø¥Ù†Ø³ØªØ§ Ø¨Ø§ÙŠ', en: 'InstaPay', fr: 'InstaPay' },
-  { value: 'vodafone_cash', ar: 'ÙÙˆØ¯Ø§ÙÙˆÙ† ÙƒØ§Ø´', en: 'Vodafone Cash', fr: 'Vodafone Cash' }
+  { value: 'instapay', ar: '\u0625\u0646\u0633\u062A\u0627 \u0628\u0627\u064A', en: 'InstaPay', fr: 'InstaPay' },
+  { value: 'vodafone_cash', ar: '\u0641\u0648\u062F\u0627\u0641\u0648\u0646 \u0643\u0627\u0634', en: 'Vodafone Cash', fr: 'Vodafone Cash' }
 ];
 
 const QUICK_AMOUNTS = [5, 10, 20, 50, 100];
@@ -76,7 +76,7 @@ function PricingModal({
   const isDark = theme === 'dark';
 
   const notify = (type, message) => {
-    if (typeof onNotify === 'function') onNotify(type, message);
+    if (typeof onNotify === 'function') onNotify(type, cleanText(message));
   };
 
   const quote = useMemo(() => calculateQuote(amountUsd), [amountUsd]);
@@ -95,7 +95,21 @@ function PricingModal({
       const requestsData = await requestsResponse.json().catch(() => ({}));
 
       if (configResponse.ok && configData.success) {
-        setBillingConfig(configData.data || null);
+        const incoming = configData.data || null;
+        setBillingConfig(
+          incoming
+            ? {
+                ...incoming,
+                accountName: cleanText(incoming.accountName),
+                instapayHandle: cleanText(incoming.instapayHandle),
+                vodafoneCashNumber: cleanText(incoming.vodafoneCashNumber),
+                supportContact: cleanText(incoming.supportContact),
+                instructionsAr: cleanText(incoming.instructionsAr),
+                instructionsEn: cleanText(incoming.instructionsEn),
+                instructionsFr: cleanText(incoming.instructionsFr)
+              }
+            : null
+        );
       }
       if (requestsResponse.ok && requestsData.success) {
         setMyRequests(Array.isArray(requestsData.data) ? requestsData.data : []);
@@ -233,7 +247,9 @@ function PricingModal({
 
   const requestLocale = lang === LANG.ar ? 'ar-EG' : lang === LANG.fr ? 'fr-FR' : 'en-US';
   const selectedMethodData = METHODS.find((item) => item.value === method) || METHODS[0];
-  const methodName = lang === LANG.ar ? selectedMethodData.ar : lang === LANG.fr ? selectedMethodData.fr : selectedMethodData.en;
+  const methodName = cleanText(
+    lang === LANG.ar ? selectedMethodData.ar : lang === LANG.fr ? selectedMethodData.fr : selectedMethodData.en
+  );
 
   return (
     <div className="fixed inset-0 z-50 bg-black/70 overflow-y-auto p-2 sm:p-4">
@@ -362,17 +378,17 @@ function PricingModal({
               {tr(lang, 'Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø§Ø³ØªÙ‚Ø¨Ø§Ù„ Ø§Ù„Ø­Ø§Ù„ÙŠØ©', 'Current receiver info', 'Infos de reception actuelles')}
             </p>
             <div className="grid md:grid-cols-2 gap-3 text-sm">
-              <p><span className="font-bold">{tr(lang, 'Ø§Ø³Ù… Ø§Ù„Ø­Ø³Ø§Ø¨:', 'Account name:', 'Nom du compte:')}</span> {billingConfig?.accountName || '-'}</p>
+              <p><span className="font-bold">{tr(lang, 'Ø§Ø³Ù… Ø§Ù„Ø­Ø³Ø§Ø¨:', 'Account name:', 'Nom du compte:')}</span> {cleanText(billingConfig?.accountName, '-')}</p>
               <p><span className="font-bold">{tr(lang, 'Ø·Ø±ÙŠÙ‚Ø© Ø§Ù„Ø¯ÙØ¹:', 'Method:', 'Methode:')}</span> {methodName}</p>
-              <p><span className="font-bold">InstaPay:</span> {billingConfig?.instapayHandle || '-'}</p>
-              <p><span className="font-bold">Vodafone Cash:</span> {billingConfig?.vodafoneCashNumber || '-'}</p>
-              <p className="md:col-span-2"><span className="font-bold">{tr(lang, 'Ø§Ù„Ø¯Ø¹Ù…:', 'Support:', 'Support:')}</span> {billingConfig?.supportContact || '-'}</p>
+              <p><span className="font-bold">InstaPay:</span> {cleanText(billingConfig?.instapayHandle, '-')}</p>
+              <p><span className="font-bold">Vodafone Cash:</span> {cleanText(billingConfig?.vodafoneCashNumber, '-')}</p>
+              <p className="md:col-span-2"><span className="font-bold">{tr(lang, 'Ø§Ù„Ø¯Ø¹Ù…:', 'Support:', 'Support:')}</span> {cleanText(billingConfig?.supportContact, '-')}</p>
               <p className="md:col-span-2 text-xs opacity-90">
-                {lang === LANG.ar
+                {cleanText(lang === LANG.ar
                   ? billingConfig?.instructionsAr
                   : lang === LANG.fr
                     ? billingConfig?.instructionsFr
-                    : billingConfig?.instructionsEn}
+                    : billingConfig?.instructionsEn)}
               </p>
             </div>
           </div>
@@ -383,7 +399,7 @@ function PricingModal({
               <select value={method} onChange={(e) => setMethod(e.target.value)} className={`w-full border rounded-lg px-3 py-2 ${isDark ? 'border-slate-700 bg-slate-900 text-slate-100' : ''}`}>
                 {METHODS.map((m) => (
                   <option key={m.value} value={m.value}>
-                    {lang === LANG.ar ? m.ar : lang === LANG.fr ? m.fr : m.en}
+                    {cleanText(lang === LANG.ar ? m.ar : lang === LANG.fr ? m.fr : m.en)}
                   </option>
                 ))}
               </select>
