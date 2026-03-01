@@ -75,7 +75,8 @@ function ChatAssistant({ transcript, videoId, apiUrl = defaultApiUrl, onCreditsC
           message: userMessage.content,
           transcript: transcript,
           videoId,
-          conversationId: conversationId
+          conversationId: conversationId,
+          lang
         })
       });
 

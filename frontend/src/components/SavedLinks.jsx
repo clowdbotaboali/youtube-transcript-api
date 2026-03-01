@@ -1,15 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FaBookmark, FaExternalLinkAlt, FaLink, FaRedo, FaSearch } from 'react-icons/fa';
+import { FaBookmark, FaCheck, FaEdit, FaExternalLinkAlt, FaLink, FaRedo, FaSearch, FaTimes } from 'react-icons/fa';
 import defaultApiUrl from '../config';
 import { getAuthHeaders } from '../utils/authHeaders';
 import { LANG, tr } from '../utils/lang';
 
 const LINKS_CACHE_TTL_MS = 1000 * 60 * 10;
+const TITLE_UPDATED_EVENT = 'video-title-updated';
 
 function SavedLinks({ onSelectLink, apiUrl = defaultApiUrl, user, lang = LANG.ar, onNotify }) {
   const [links, setLinks] = useState([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
+  const [editingVideoId, setEditingVideoId] = useState('');
+  const [editingTitle, setEditingTitle] = useState('');
+  const [renaming, setRenaming] = useState(false);
   const cacheKey = user?.id ? `saved-links:${apiUrl}:${user.id}` : '';
 
   const notifyRef = useRef(onNotify);
@@ -59,6 +63,29 @@ function SavedLinks({ onSelectLink, apiUrl = defaultApiUrl, user, lang = LANG.ar
     [cacheKey]
   );
 
+  const applyVideoTitleUpdate = useCallback(
+    (videoId, title) => {
+      setLinks((prev) => {
+        const next = prev.map((item) => (item.videoId === videoId ? { ...item, title } : item));
+        writeCache(next);
+        return next;
+      });
+    },
+    [writeCache]
+  );
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const handler = (event) => {
+      const videoId = event?.detail?.videoId;
+      const title = event?.detail?.title;
+      if (!videoId || !title) return;
+      applyVideoTitleUpdate(videoId, title);
+    };
+    window.addEventListener(TITLE_UPDATED_EVENT, handler);
+    return () => window.removeEventListener(TITLE_UPDATED_EVENT, handler);
+  }, [applyVideoTitleUpdate]);
+
   const loadLinks = useCallback(
     async (force = false) => {
       if (!user?.id) return;
@@ -88,15 +115,7 @@ function SavedLinks({ onSelectLink, apiUrl = defaultApiUrl, user, lang = LANG.ar
           setLinks(items);
           writeCache(items);
         } else {
-          notify(
-            'error',
-            tr(
-              langRef.current,
-              'تعذر تحميل الروابط المحفوظة.',
-              'Failed to load saved links.',
-              'Echec du chargement des liens enregistres.'
-            )
-          );
+          notify('error', tr(langRef.current, 'تعذر تحميل الروابط المحفوظة.', 'Failed to load saved links.', 'Echec du chargement des liens enregistres.'));
         }
       } catch {
         notify('error', tr(langRef.current, 'فشل الاتصال بالخادم.', 'Connection failed.', 'Echec de connexion.'));
@@ -114,6 +133,49 @@ function SavedLinks({ onSelectLink, apiUrl = defaultApiUrl, user, lang = LANG.ar
       setLinks([]);
     }
   }, [loadLinks, user?.id]);
+
+  const startRename = (item) => {
+    setEditingVideoId(item.videoId);
+    setEditingTitle(item.title || item.videoId);
+  };
+
+  const cancelRename = () => {
+    setEditingVideoId('');
+    setEditingTitle('');
+  };
+
+  const submitRename = async (videoId) => {
+    const trimmed = String(editingTitle || '').trim();
+    if (!trimmed) {
+      notify('error', tr(lang, 'اكتب اسمًا صالحًا.', 'Enter a valid title.', 'Saisissez un titre valide.'));
+      return;
+    }
+    setRenaming(true);
+    try {
+      const response = await fetch(`${apiUrl}/api/links/${encodeURIComponent(videoId)}/title`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(await getAuthHeaders())
+        },
+        body: JSON.stringify({ title: trimmed })
+      });
+      const data = await response.json().catch(() => ({}));
+      if (response.ok && data.success && data.data?.videoId && data.data?.title) {
+        applyVideoTitleUpdate(data.data.videoId, data.data.title);
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent(TITLE_UPDATED_EVENT, { detail: { videoId: data.data.videoId, title: data.data.title } }));
+        }
+        cancelRename();
+      } else {
+        notify('error', tr(lang, 'تعذر تعديل الاسم.', 'Failed to rename link.', 'Echec de mise a jour du titre.'));
+      }
+    } catch {
+      notify('error', tr(lang, 'فشل الاتصال بالخادم.', 'Connection failed.', 'Echec de connexion.'));
+    } finally {
+      setRenaming(false);
+    }
+  };
 
   const filteredLinks = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -157,7 +219,7 @@ function SavedLinks({ onSelectLink, apiUrl = defaultApiUrl, user, lang = LANG.ar
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder={tr(lang, 'ابحث بعنوان الفيديو أو المعرّف...', 'Search by title or video ID...', 'Rechercher par titre ou ID video...')}
+          placeholder={tr(lang, 'ابحث بعنوان الفيديو أو المعرف...', 'Search by title or video ID...', 'Rechercher par titre ou ID video...')}
           className="w-full bg-transparent outline-none text-sm"
         />
       </div>
@@ -169,32 +231,66 @@ function SavedLinks({ onSelectLink, apiUrl = defaultApiUrl, user, lang = LANG.ar
       {loading ? (
         <p className="text-sm text-slate-500 py-5 text-center">{tr(lang, 'جارٍ التحميل...', 'Loading...', 'Chargement...')}</p>
       ) : filteredLinks.length === 0 ? (
-        <p className="text-sm text-slate-500 py-5 text-center">
-          {tr(lang, 'لا توجد روابط محفوظة بعد.', 'No saved links yet.', 'Aucun lien enregistre pour le moment.')}
-        </p>
+        <p className="text-sm text-slate-500 py-5 text-center">{tr(lang, 'لا توجد روابط محفوظة بعد.', 'No saved links yet.', 'Aucun lien enregistre pour le moment.')}</p>
       ) : (
         <div className="space-y-2 max-h-[520px] overflow-y-auto pr-1">
           {filteredLinks.map((item) => (
             <article key={`${item.videoId}-${item.createdAt}`} className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
-              <button
-                type="button"
-                onClick={() => onSelectLink?.(item.url)}
-                className="w-full text-left hover:opacity-90"
-              >
-                <p className="font-semibold text-slate-900 truncate">{item.title || item.videoId}</p>
-                <p className="text-xs text-slate-500 mt-1">{item.videoId}</p>
-              </button>
+              {editingVideoId === item.videoId ? (
+                <div className="flex items-center gap-2 mb-2">
+                  <input
+                    value={editingTitle}
+                    onChange={(e) => setEditingTitle(e.target.value)}
+                    className="w-full rounded-lg border border-slate-300 px-2 py-1 text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => submitRename(item.videoId)}
+                    disabled={renaming}
+                    className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs border border-emerald-200 text-emerald-700 hover:bg-emerald-50 disabled:opacity-60"
+                  >
+                    <FaCheck />
+                    <span>{tr(lang, 'حفظ', 'Save', 'Enregistrer')}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={cancelRename}
+                    disabled={renaming}
+                    className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs border border-slate-300 text-slate-700 hover:bg-white"
+                  >
+                    <FaTimes />
+                    <span>{tr(lang, 'إلغاء', 'Cancel', 'Annuler')}</span>
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => onSelectLink?.(item.url)}
+                  className="w-full text-left hover:opacity-90"
+                >
+                  <p className="font-semibold text-slate-900 truncate">{item.title || item.videoId}</p>
+                  <p className="text-xs text-slate-500 mt-1">{item.videoId}</p>
+                </button>
+              )}
 
               <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
                 <span className="text-[11px] text-slate-500">{new Date(item.createdAt).toLocaleString(dateLocale)}</span>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
+                    onClick={() => startRename(item)}
+                    className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs border border-amber-200 text-amber-700 hover:bg-amber-50"
+                  >
+                    <FaEdit />
+                    <span>{tr(lang, 'إعادة تسمية', 'Rename', 'Renommer')}</span>
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => onSelectLink?.(item.url)}
                     className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs bg-emerald-600 text-white hover:bg-emerald-700"
                   >
                     <FaLink />
-                    <span>{tr(lang, 'فتح في مساحة العمل', 'Open in workspace', 'Ouvrir dans l espace de travail')}</span>
+                    <span>{tr(lang, 'فتح في مساحة العمل', 'Open in workspace', "Ouvrir dans l'espace de travail")}</span>
                   </button>
                   <a
                     href={item.url}

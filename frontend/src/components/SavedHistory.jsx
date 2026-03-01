@@ -1,19 +1,25 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FaEye, FaFilter, FaHistory, FaRedo, FaTimes, FaTrash } from 'react-icons/fa';
+import { FaCheck, FaEdit, FaEye, FaFilter, FaHistory, FaRedo, FaSearch, FaTimes, FaTrash } from 'react-icons/fa';
 import defaultApiUrl from '../config';
 import { getAuthHeaders } from '../utils/authHeaders';
 import { LANG, tr } from '../utils/lang';
 
-const FILTERS = ['all', 'extract', 'summary', 'steps', 'resources', 'all-analysis', 'chat'];
+const FILTERS = ['all', 'extract', 'summary', 'key-insights', 'clean-transcript', 'proper-notes', 'steps', 'resources', 'study-kit', 'content-kit', 'all-analysis', 'chat'];
 const HISTORY_CACHE_TTL_MS = 1000 * 60 * 10;
+const TITLE_UPDATED_EVENT = 'video-title-updated';
 
 function mapTypeLabel(type, lang) {
   const value = String(type || '').trim();
   if (value === 'extract') return tr(lang, 'استخراج', 'Extraction', 'Extraction');
   if (value === 'summary') return tr(lang, 'تلخيص', 'Summary', 'Resume');
+  if (value === 'key-insights') return tr(lang, 'أهم الأفكار', 'Key Insights', 'Idees cle');
+  if (value === 'clean-transcript') return tr(lang, 'تنظيف النص', 'Clean Transcript', 'Texte nettoye');
+  if (value === 'proper-notes') return tr(lang, 'ملاحظات مرتبة', 'Proper Notes', 'Notes structurees');
   if (value === 'steps') return tr(lang, 'خطوات', 'Steps', 'Etapes');
   if (value === 'resources') return tr(lang, 'موارد', 'Resources', 'Ressources');
-  if (value === 'all') return tr(lang, 'معالجة كاملة', 'Full Analysis', 'Analyse complete');
+  if (value === 'study-kit') return tr(lang, 'حزمة دراسة', 'Study Kit', 'Pack etude');
+  if (value === 'content-kit') return tr(lang, 'حزمة محتوى', 'Content Kit', 'Pack contenu');
+  if (value === 'all') return tr(lang, 'تحليل متكامل', 'Comprehensive Analysis', 'Analyse complete');
   if (value.startsWith('chat:')) return tr(lang, 'شات', 'Chat', 'Chat');
   return value || tr(lang, 'أخرى', 'Other', 'Autre');
 }
@@ -23,6 +29,10 @@ function SavedHistory({ apiUrl = defaultApiUrl, user, lang = LANG.ar, onNotify }
   const [loading, setLoading] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [activeFilter, setActiveFilter] = useState('all');
+  const [search, setSearch] = useState('');
+  const [editingItemId, setEditingItemId] = useState(null);
+  const [editingTitle, setEditingTitle] = useState('');
+  const [renaming, setRenaming] = useState(false);
   const cacheKey = user?.id ? `saved-history:${apiUrl}:${user.id}` : '';
 
   const notifyRef = useRef(onNotify);
@@ -72,6 +82,30 @@ function SavedHistory({ apiUrl = defaultApiUrl, user, lang = LANG.ar, onNotify }
     [cacheKey]
   );
 
+  const applyVideoTitleUpdate = useCallback(
+    (videoId, title) => {
+      setHistory((prev) => {
+        const next = prev.map((item) => (item.video_id === videoId ? { ...item, video_title: title } : item));
+        writeCache(next);
+        return next;
+      });
+      setSelectedItem((prev) => (prev && prev.video_id === videoId ? { ...prev, video_title: title } : prev));
+    },
+    [writeCache]
+  );
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const handler = (event) => {
+      const videoId = event?.detail?.videoId;
+      const title = event?.detail?.title;
+      if (!videoId || !title) return;
+      applyVideoTitleUpdate(videoId, title);
+    };
+    window.addEventListener(TITLE_UPDATED_EVENT, handler);
+    return () => window.removeEventListener(TITLE_UPDATED_EVENT, handler);
+  }, [applyVideoTitleUpdate]);
+
   const loadHistory = useCallback(
     async (force = false) => {
       if (!user?.id) return;
@@ -100,10 +134,7 @@ function SavedHistory({ apiUrl = defaultApiUrl, user, lang = LANG.ar, onNotify }
           setHistory(items);
           writeCache(items);
         } else {
-          notify(
-            'error',
-            tr(langRef.current, 'تعذر تحميل السجل.', 'Failed to load history.', 'Echec du chargement de l historique.')
-          );
+          notify('error', tr(langRef.current, 'تعذر تحميل السجل.', 'Failed to load history.', "Echec du chargement de l'historique."));
         }
       } catch {
         notify('error', tr(langRef.current, 'فشل الاتصال بالخادم.', 'Connection failed.', 'Echec de connexion.'));
@@ -148,12 +179,66 @@ function SavedHistory({ apiUrl = defaultApiUrl, user, lang = LANG.ar, onNotify }
     }
   };
 
-  const filteredHistory = useMemo(() => {
+  const startRename = (item) => {
+    setEditingItemId(item.id);
+    setEditingTitle(item.video_title || item.video_id || '');
+  };
+
+  const cancelRename = () => {
+    setEditingItemId(null);
+    setEditingTitle('');
+  };
+
+  const submitRename = async (item) => {
+    const trimmed = String(editingTitle || '').trim();
+    if (!trimmed) {
+      notify('error', tr(lang, 'اكتب اسمًا صالحًا.', 'Enter a valid title.', 'Saisissez un titre valide.'));
+      return;
+    }
+    setRenaming(true);
+    try {
+      const response = await fetch(`${apiUrl}/api/history/${item.id}/title`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(await getAuthHeaders())
+        },
+        body: JSON.stringify({ title: trimmed })
+      });
+      const data = await response.json().catch(() => ({}));
+      if (response.ok && data.success && data.data?.videoId && data.data?.title) {
+        applyVideoTitleUpdate(data.data.videoId, data.data.title);
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent(TITLE_UPDATED_EVENT, { detail: { videoId: data.data.videoId, title: data.data.title } }));
+        }
+        cancelRename();
+      } else {
+        notify('error', tr(lang, 'تعذر تعديل الاسم.', 'Failed to rename item.', "Echec de mise a jour du titre."));
+      }
+    } catch {
+      notify('error', tr(lang, 'فشل الاتصال بالخادم.', 'Connection failed.', 'Echec de connexion.'));
+    } finally {
+      setRenaming(false);
+    }
+  };
+
+  const typeFilteredHistory = useMemo(() => {
     if (activeFilter === 'all') return history;
     if (activeFilter === 'all-analysis') return history.filter((item) => item.processing_type === 'all');
     if (activeFilter === 'chat') return history.filter((item) => String(item.processing_type || '').startsWith('chat:'));
     return history.filter((item) => item.processing_type === activeFilter);
   }, [activeFilter, history]);
+
+  const filteredHistory = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return typeFilteredHistory;
+    return typeFilteredHistory.filter((item) => {
+      const title = String(item.video_title || '').toLowerCase();
+      const videoId = String(item.video_id || '').toLowerCase();
+      const type = String(item.processing_type || '').toLowerCase();
+      return title.includes(query) || videoId.includes(query) || type.includes(query);
+    });
+  }, [search, typeFilteredHistory]);
 
   const dateLocale = lang === LANG.ar ? 'ar-EG' : lang === LANG.fr ? 'fr-FR' : 'en-US';
 
@@ -166,7 +251,7 @@ function SavedHistory({ apiUrl = defaultApiUrl, user, lang = LANG.ar, onNotify }
           </span>
           <div>
             <h3 className="text-lg font-black text-slate-900">{tr(lang, 'السجل المحفوظ', 'Saved History', 'Historique')}</h3>
-            <p className="text-xs text-slate-500">{tr(lang, 'نتائج الاستخراج والمعالجات والدردشة.', 'Extraction, AI processing, and chat records.', 'Resultats extraction, analyse et chat.')}</p>
+            <p className="text-xs text-slate-500">{tr(lang, 'نتائج الاستخراج والمعالجات والدردشة.', 'Extraction, AI processing, and chat records.', 'Extraction, analyse IA et chat.')}</p>
           </div>
         </div>
         <button
@@ -180,6 +265,16 @@ function SavedHistory({ apiUrl = defaultApiUrl, user, lang = LANG.ar, onNotify }
         </button>
       </div>
 
+      <div className="rounded-xl border border-slate-200 px-3 py-2 mb-3 flex items-center gap-2">
+        <FaSearch className="text-slate-400" />
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder={tr(lang, 'ابحث بالاسم أو معرف الفيديو أو نوع المعالجة...', 'Search by title, video ID, or processing type...', 'Rechercher par titre, ID video ou type...')}
+          className="w-full bg-transparent outline-none text-sm"
+        />
+      </div>
+
       <div className="mb-3">
         <div className="inline-flex items-center gap-2 text-xs text-slate-500 mb-2">
           <FaFilter />
@@ -191,9 +286,14 @@ function SavedHistory({ apiUrl = defaultApiUrl, user, lang = LANG.ar, onNotify }
               all: tr(lang, 'الكل', 'All', 'Tout'),
               extract: tr(lang, 'استخراج', 'Extraction', 'Extraction'),
               summary: tr(lang, 'تلخيص', 'Summary', 'Resume'),
+              'key-insights': tr(lang, 'أهم الأفكار', 'Key Insights', 'Idees cle'),
+              'clean-transcript': tr(lang, 'تنظيف النص', 'Clean Transcript', 'Texte nettoye'),
+              'proper-notes': tr(lang, 'ملاحظات مرتبة', 'Proper Notes', 'Notes structurees'),
               steps: tr(lang, 'خطوات', 'Steps', 'Etapes'),
               resources: tr(lang, 'موارد', 'Resources', 'Ressources'),
-              'all-analysis': tr(lang, 'معالجة كاملة', 'Full Analysis', 'Analyse complete'),
+              'study-kit': tr(lang, 'حزمة دراسة', 'Study Kit', 'Pack etude'),
+              'content-kit': tr(lang, 'حزمة محتوى', 'Content Kit', 'Pack contenu'),
+              'all-analysis': tr(lang, 'تحليل متكامل', 'Comprehensive', 'Analyse complete'),
               chat: tr(lang, 'شات', 'Chat', 'Chat')
             };
             const active = activeFilter === filter;
@@ -226,9 +326,39 @@ function SavedHistory({ apiUrl = defaultApiUrl, user, lang = LANG.ar, onNotify }
           {filteredHistory.map((item) => (
             <article key={item.id} className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
               <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="font-semibold text-slate-900 truncate">{item.video_title || item.video_id}</p>
-                  <p className="text-xs text-slate-500 mt-1">{item.video_id}</p>
+                <div className="min-w-0 flex-1">
+                  {editingItemId === item.id ? (
+                    <div className="flex items-center gap-2 mb-2">
+                      <input
+                        value={editingTitle}
+                        onChange={(e) => setEditingTitle(e.target.value)}
+                        className="w-full rounded-lg border border-slate-300 px-2 py-1 text-sm"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => submitRename(item)}
+                        disabled={renaming}
+                        className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs border border-emerald-200 text-emerald-700 hover:bg-emerald-50 disabled:opacity-60"
+                      >
+                        <FaCheck />
+                        <span>{tr(lang, 'حفظ', 'Save', 'Enregistrer')}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={cancelRename}
+                        disabled={renaming}
+                        className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs border border-slate-300 text-slate-700 hover:bg-white"
+                      >
+                        <FaTimes />
+                        <span>{tr(lang, 'إلغاء', 'Cancel', 'Annuler')}</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="font-semibold text-slate-900 truncate">{item.video_title || item.video_id}</p>
+                      <p className="text-xs text-slate-500 mt-1">{item.video_id}</p>
+                    </>
+                  )}
                   <div className="flex flex-wrap items-center gap-2 mt-2 text-[11px]">
                     <span className="rounded-full bg-indigo-100 text-indigo-700 px-2 py-0.5">
                       {mapTypeLabel(item.processing_type, lang)}
@@ -245,6 +375,14 @@ function SavedHistory({ apiUrl = defaultApiUrl, user, lang = LANG.ar, onNotify }
                   >
                     <FaEye />
                     <span>{tr(lang, 'عرض', 'View', 'Voir')}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => startRename(item)}
+                    className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs border border-amber-200 text-amber-700 hover:bg-amber-50"
+                  >
+                    <FaEdit />
+                    <span>{tr(lang, 'إعادة تسمية', 'Rename', 'Renommer')}</span>
                   </button>
                   <button
                     type="button"

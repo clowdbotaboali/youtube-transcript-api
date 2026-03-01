@@ -1579,7 +1579,7 @@ async function getRecentGlobalExtractRecord(supabase, videoId, ttlMs = TRANSCRIP
   const cutoffIso = new Date(Date.now() - ttlMs).toISOString();
   const { data, error } = await supabase
     .from('transcripts_history')
-    .select('id, video_id, transcript, created_at, ai_result')
+    .select('id, video_id, video_title, transcript, created_at, ai_result')
     .eq('video_id', videoId)
     .eq('processing_type', EXTRACT_TYPE)
     .gte('created_at', cutoffIso)
@@ -1592,14 +1592,58 @@ async function getRecentGlobalExtractRecord(supabase, videoId, ttlMs = TRANSCRIP
   return Array.isArray(data) && data.length > 0 ? data[0] : null;
 }
 
-async function saveExtractionRecord(supabase, userId, videoId, transcript, method) {
+async function getPreferredVideoTitleForUser(supabase, userId, videoId, fallbackTitle = '') {
+  const fallback = sanitizeVideoTitle(fallbackTitle, videoId || '');
+  try {
+    const { data, error } = await supabase
+      .from('transcripts_history')
+      .select('video_title, created_at')
+      .eq('user_id', userId)
+      .eq('video_id', videoId)
+      .not('video_title', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(1);
+    if (error) return fallback;
+    const candidate = Array.isArray(data) && data[0] ? sanitizeVideoTitle(data[0].video_title) : '';
+    return candidate || fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+async function fetchYouTubeVideoTitle(videoId) {
+  const canonicalUrl = `https://www.youtube.com/watch?v=${videoId}`;
+  const oEmbedUrl = `https://www.youtube.com/oembed?url=${encodeURIComponent(canonicalUrl)}&format=json`;
+  try {
+    const response = await fetchWithTimeout(
+      oEmbedUrl,
+      {
+        method: 'GET',
+        headers: {
+          'User-Agent': USER_AGENT,
+          Accept: 'application/json'
+        }
+      },
+      4500,
+      'YouTube title lookup'
+    );
+    if (!response.ok) return null;
+    const payload = await response.json().catch(() => null);
+    const title = sanitizeVideoTitle(payload?.title || '');
+    return title || null;
+  } catch {
+    return null;
+  }
+}
+
+async function saveExtractionRecord(supabase, userId, videoId, transcript, method, videoTitle = '') {
   const { error } = await supabase
     .from('transcripts_history')
     .insert([
       {
         user_id: userId,
         video_id: videoId,
-        video_title: videoId,
+        video_title: sanitizeVideoTitle(videoTitle, videoId),
         transcript,
         ai_result: JSON.stringify({ method }),
         processing_type: EXTRACT_TYPE
@@ -1626,14 +1670,14 @@ async function getCachedAiRecord(supabase, userId, videoId, processingType) {
   return Array.isArray(data) && data.length > 0 ? data[0] : null;
 }
 
-async function saveAiRecord(supabase, userId, videoId, processingType, transcript, result) {
+async function saveAiRecord(supabase, userId, videoId, processingType, transcript, result, videoTitle = '') {
   const { error } = await supabase
     .from('transcripts_history')
     .insert([
       {
         user_id: userId,
         video_id: videoId,
-        video_title: videoId,
+        video_title: sanitizeVideoTitle(videoTitle, videoId),
         transcript,
         ai_result: result,
         processing_type: processingType
@@ -1660,14 +1704,14 @@ async function getCachedChatRecord(supabase, userId, videoId, chatKey) {
   return Array.isArray(data) && data.length > 0 ? data[0] : null;
 }
 
-async function saveChatRecord(supabase, userId, videoId, chatKey, question, response) {
+async function saveChatRecord(supabase, userId, videoId, chatKey, question, response, videoTitle = '') {
   const { error } = await supabase
     .from('transcripts_history')
     .insert([
       {
         user_id: userId,
         video_id: videoId,
-        video_title: videoId,
+        video_title: sanitizeVideoTitle(videoTitle, videoId),
         transcript: question,
         ai_result: response,
         processing_type: chatKey
@@ -1676,6 +1720,30 @@ async function saveChatRecord(supabase, userId, videoId, chatKey, question, resp
   if (error) {
     throw new Error('Failed to save chat history');
   }
+}
+
+async function renameVideoTitleForUser(supabase, userId, videoId, title) {
+  const normalizedTitle = sanitizeVideoTitle(title);
+  if (!normalizedTitle) {
+    throw new Error('Title is required');
+  }
+
+  const { data, error } = await supabase
+    .from('transcripts_history')
+    .update({ video_title: normalizedTitle })
+    .eq('user_id', userId)
+    .eq('video_id', videoId)
+    .select('id, video_id, video_title');
+
+  if (error) {
+    throw new Error('Failed to rename video title');
+  }
+
+  return {
+    videoId,
+    title: normalizedTitle,
+    updatedCount: Array.isArray(data) ? data.length : 0
+  };
 }
 
 function toInteger(value, fallback = 0) {
@@ -2155,6 +2223,97 @@ function normalizeTextInput(value) {
     .replace(/\r\n/g, '\n')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+function sanitizeVideoTitle(value, fallback = '') {
+  const normalized = normalizeTextInput(value);
+  if (!normalized) return String(fallback || '').trim();
+  return normalized.slice(0, 140).trim();
+}
+
+function normalizeOutputLang(value) {
+  const lang = String(value || '').trim().toLowerCase();
+  if (lang === 'en' || lang === 'fr') return lang;
+  return 'ar';
+}
+
+function outputLanguageInstruction(langCode) {
+  if (langCode === 'en') return 'Write the final output in clear professional English.';
+  if (langCode === 'fr') return 'Write the final output in clear professional French.';
+  return 'اكتب الناتج النهائي باللغة العربية الفصحى الواضحة.';
+}
+
+function resolveAiProcessingProfile(type, outputLang = 'ar') {
+  const normalizedType = String(type || '').trim().toLowerCase();
+  const langInstruction = outputLanguageInstruction(outputLang);
+
+  const profiles = {
+    summary: {
+      processingType: 'summary',
+      maxTokens: 700,
+      prompt:
+        `${langInstruction}\n` +
+        'Create a concise executive summary with: (1) what the video is about, (2) who it helps, (3) key conclusion.'
+    },
+    'key-insights': {
+      processingType: 'key-insights',
+      maxTokens: 850,
+      prompt:
+        `${langInstruction}\n` +
+        'Extract 7-12 key insights. For each insight provide: the insight, why it matters, and an actionable implication.'
+    },
+    'clean-transcript': {
+      processingType: 'clean-transcript',
+      maxTokens: 1000,
+      prompt:
+        `${langInstruction}\n` +
+        'Rewrite this transcript into a clean readable script by removing filler words, repetitions, and noise while preserving meaning and sequence.'
+    },
+    'proper-notes': {
+      processingType: 'proper-notes',
+      maxTokens: 900,
+      prompt:
+        `${langInstruction}\n` +
+        'Generate structured notes with headings, concise bullet points, definitions, and important examples from the transcript.'
+    },
+    steps: {
+      processingType: 'steps',
+      maxTokens: 850,
+      prompt:
+        `${langInstruction}\n` +
+        'Extract an actionable step-by-step plan with ordered numbering, prerequisites, and expected result for each step.'
+    },
+    resources: {
+      processingType: 'resources',
+      maxTokens: 800,
+      prompt:
+        `${langInstruction}\n` +
+        'Extract all tools, links, platforms, references, and resources mentioned. Group them by type and explain each item briefly.'
+    },
+    'study-kit': {
+      processingType: 'study-kit',
+      maxTokens: 1050,
+      prompt:
+        `${langInstruction}\n` +
+        'Build a study pack: learning objectives, concept map, quick revision notes, and 8 quiz questions with short answers.'
+    },
+    'content-kit': {
+      processingType: 'content-kit',
+      maxTokens: 1050,
+      prompt:
+        `${langInstruction}\n` +
+        'Build a content creator pack: 5 post hooks, 3 short-form script ideas, blog outline, and 10 SEO keywords from the transcript.'
+    },
+    all: {
+      processingType: 'all',
+      maxTokens: 1200,
+      prompt:
+        `${langInstruction}\n` +
+        'Provide a comprehensive analysis package with sections: Summary, Key Insights, Steps, Resources, and final action checklist.'
+    }
+  };
+
+  return profiles[normalizedType] || profiles.all;
 }
 
 function trimForModel(value, maxChars) {
@@ -3079,6 +3238,7 @@ export default async function handler(req, res) {
         return res.json({
           success: true,
           videoId,
+          videoTitle: sanitizeVideoTitle(cachedExtract.video_title, videoId),
           transcript: cachedExtract.transcript,
           wordCount: cachedExtract.transcript.trim().split(/\s+/).length,
           method: 'cached',
@@ -3204,7 +3364,19 @@ export default async function handler(req, res) {
         return sendError(res, 404, 'TRANSCRIPT_UNAVAILABLE', 'No transcript available for this video');
       }
 
-      await saveExtractionRecord(supabase, user.id, videoId, transcript.trim(), method);
+      let resolvedVideoTitle = await getPreferredVideoTitleForUser(
+        supabase,
+        user.id,
+        videoId,
+        sanitizeVideoTitle(cachedExtract?.video_title || '')
+      );
+      if (!resolvedVideoTitle || resolvedVideoTitle === videoId) {
+        const fetchedTitle = await fetchYouTubeVideoTitle(videoId);
+        if (fetchedTitle) resolvedVideoTitle = fetchedTitle;
+      }
+      resolvedVideoTitle = sanitizeVideoTitle(resolvedVideoTitle, videoId);
+
+      await saveExtractionRecord(supabase, user.id, videoId, transcript.trim(), method, resolvedVideoTitle);
       setCachedTranscriptInMemory(videoId, transcript.trim(), method);
 
       let nextCredits = Number(userRow.credits || 0);
@@ -3217,6 +3389,7 @@ export default async function handler(req, res) {
       return res.json({
         success: true,
         videoId,
+        videoTitle: resolvedVideoTitle,
         transcript: transcript.trim(),
         wordCount: transcript.trim().split(/\s+/).length,
         method,
@@ -3238,7 +3411,7 @@ export default async function handler(req, res) {
         return res.status(401).json({ success: false, error: 'Authentication required' });
       }
       if (!enforceRateLimit(res, 'aiByUser', user.id, 'Too many AI processing requests')) return;
-      const { transcript, type, videoId: providedVideoId } = body;
+      const { transcript, type, videoId: providedVideoId, lang: requestedLang } = body;
       if (!transcript) {
         return sendError(res, 400, 'INVALID_INPUT', 'Please provide transcript text');
       }
@@ -3272,25 +3445,10 @@ export default async function handler(req, res) {
         return sendError(res, 400, 'INVALID_INPUT', 'Transcript text is empty after normalization');
       }
 
-      let systemPrompt = '';
-      let processingType = 'all';
-      switch (type) {
-        case 'summary':
-          systemPrompt = 'Summarize this transcript in Arabic clearly and accurately.';
-          processingType = 'summary';
-          break;
-        case 'steps':
-          systemPrompt = 'Extract actionable steps in Arabic with clear numbering.';
-          processingType = 'steps';
-          break;
-        case 'resources':
-          systemPrompt = 'Extract resources, tools, links, and references mentioned in transcript.';
-          processingType = 'resources';
-          break;
-        default:
-          systemPrompt = 'Provide comprehensive Arabic analysis with summary, steps, and resources.';
-          processingType = 'all';
-      }
+      const outputLang = normalizeOutputLang(requestedLang);
+      const profile = resolveAiProcessingProfile(type, outputLang);
+      const systemPrompt = profile.prompt;
+      const processingType = profile.processingType;
 
       const cachedAi = await getCachedAiRecord(supabase, user.id, videoId, processingType);
       if (cachedAi?.ai_result) {
@@ -3316,11 +3474,12 @@ export default async function handler(req, res) {
           }
         ],
         temperature: 0.4,
-        maxTokens: type === 'all' ? 900 : 700
+        maxTokens: profile.maxTokens
       });
 
       const result = completion.choices?.[0]?.message?.content || '';
-      await saveAiRecord(supabase, user.id, videoId, processingType, transcriptForModel, result);
+      const resolvedVideoTitle = await getPreferredVideoTitleForUser(supabase, user.id, videoId, videoId);
+      await saveAiRecord(supabase, user.id, videoId, processingType, transcriptForModel, result, resolvedVideoTitle);
 
       return res.json({
         success: true,
@@ -3348,6 +3507,10 @@ export default async function handler(req, res) {
       }
 
       const normalizedType = String(processingType || 'manual').trim();
+      const preferredTitle = sanitizeVideoTitle(
+        videoTitle,
+        await getPreferredVideoTitleForUser(supabase, user.id, videoId, videoId)
+      );
       const finalAi = result ?? aiResult ?? null;
       const { data: existingRows, error: existingError } = await supabase
         .from('transcripts_history')
@@ -3370,7 +3533,7 @@ export default async function handler(req, res) {
           {
             user_id: user.id,
             video_id: videoId,
-            video_title: videoTitle || videoId,
+            video_title: preferredTitle,
             transcript,
             ai_result: finalAi,
             processing_type: normalizedType
@@ -3381,6 +3544,40 @@ export default async function handler(req, res) {
 
       if (error) throw error;
       return res.json({ success: true, data });
+    }
+
+    if (pathname.match(/^\/api\/history\/[^/]+\/title$/) && req.method === 'PATCH') {
+      const supabase = getSupabase();
+      if (!supabase) {
+        return res.status(500).json({ success: false, error: 'Server not configured: SUPABASE env vars missing' });
+      }
+      const user = await getAuthedUser(req);
+      if (!user) return res.status(401).json({ success: false, error: 'Authentication required' });
+      await assertUserIsActive(supabase, user.id);
+
+      const parts = pathname.split('/');
+      const id = parts[3];
+      const title = sanitizeVideoTitle(body.title || body.videoTitle || '');
+      if (!title) {
+        return sendError(res, 400, 'INVALID_INPUT', 'Title is required');
+      }
+
+      const { data: targetRow, error: targetError } = await supabase
+        .from('transcripts_history')
+        .select('id, video_id')
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .single();
+
+      if (targetError || !targetRow?.video_id) {
+        return sendError(res, 404, 'NOT_FOUND', 'History item not found');
+      }
+
+      const renameResult = await renameVideoTitleForUser(supabase, user.id, targetRow.video_id, title);
+      return res.json({
+        success: true,
+        data: renameResult
+      });
     }
 
     if (pathname.match(/^\/api\/history\/[^/]+$/) && req.method === 'GET') {
@@ -3478,6 +3675,37 @@ export default async function handler(req, res) {
       }
 
       return res.json({ success: true, data: Array.from(unique.values()) });
+    }
+
+    if (pathname.match(/^\/api\/links\/[^/]+\/title$/) && req.method === 'PATCH') {
+      const supabase = getSupabase();
+      if (!supabase) {
+        return res.status(500).json({ success: false, error: 'Server not configured: SUPABASE env vars missing' });
+      }
+      const user = await getAuthedUser(req);
+      if (!user) return res.status(401).json({ success: false, error: 'Authentication required' });
+      await assertUserIsActive(supabase, user.id);
+
+      const parts = pathname.split('/');
+      const rawVideoId = decodeURIComponent(parts[3] || '');
+      const parsedVideo = parseYouTubeInput(rawVideoId);
+      if (!parsedVideo.ok) {
+        return sendError(res, 400, 'INVALID_VIDEO_ID', 'Invalid YouTube video ID format');
+      }
+
+      const title = sanitizeVideoTitle(body.title || body.videoTitle || '');
+      if (!title) {
+        return sendError(res, 400, 'INVALID_INPUT', 'Title is required');
+      }
+
+      const renameResult = await renameVideoTitleForUser(supabase, user.id, parsedVideo.videoId, title);
+      if (renameResult.updatedCount <= 0) {
+        return sendError(res, 404, 'NOT_FOUND', 'Link not found');
+      }
+      return res.json({
+        success: true,
+        data: renameResult
+      });
     }
 
     if (pathname === '/api/billing/config' && req.method === 'GET') {
@@ -3614,7 +3842,7 @@ export default async function handler(req, res) {
       audit.userId = user.id;
       audit.tier = subscription.tier;
 
-      const { message, transcript, videoId: providedVideoId } = body;
+      const { message, transcript, videoId: providedVideoId, lang: requestedLang } = body;
       if (!message || !transcript) {
         return sendError(res, 400, 'INVALID_INPUT', 'Missing message or transcript');
       }
@@ -3629,6 +3857,7 @@ export default async function handler(req, res) {
       const { text: transcriptForContext } = trimForModel(transcript, CHAT_TRANSCRIPT_CHAR_LIMIT);
       const { text: questionForModel } = trimForModel(message, CHAT_QUESTION_CHAR_LIMIT);
       const chatKey = makeChatKey(questionForModel);
+      const outputLang = normalizeOutputLang(requestedLang);
 
       const cachedChat = await getCachedChatRecord(supabase, user.id, videoId, chatKey);
       if (cachedChat?.ai_result) {
@@ -3643,14 +3872,20 @@ export default async function handler(req, res) {
       const completion = await createMultiProviderChatCompletion({
         supabase,
         messages: [
-          { role: 'system', content: 'You are a helpful Arabic assistant for transcript Q&A.' },
+          {
+            role: 'system',
+            content:
+              `${outputLanguageInstruction(outputLang)} ` +
+              'You are a helpful assistant for transcript Q&A. Keep answers grounded in transcript context and be concise.'
+          },
           { role: 'user', content: `Transcript: ${transcriptForContext}\n\nQuestion: ${questionForModel}` }
         ],
         temperature: 0.6,
         maxTokens: 600
       });
       const chatResponse = completion.choices?.[0]?.message?.content || '';
-      await saveChatRecord(supabase, user.id, videoId, chatKey, questionForModel, chatResponse);
+      const resolvedVideoTitle = await getPreferredVideoTitleForUser(supabase, user.id, videoId, videoId);
+      await saveChatRecord(supabase, user.id, videoId, chatKey, questionForModel, chatResponse, resolvedVideoTitle);
       return res.json({
         success: true,
         response: chatResponse,

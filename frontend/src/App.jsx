@@ -344,7 +344,8 @@ function App() {
         body: JSON.stringify({
           transcript: transcriptData.transcript,
           type,
-          videoId: transcriptData.videoId
+          videoId: transcriptData.videoId,
+          lang
         })
       });
 
@@ -677,7 +678,7 @@ function App() {
                     result={aiResult.result}
                     type={aiResult.type}
                     videoId={transcriptData.videoId}
-                    videoTitle={transcriptData.videoId}
+                    videoTitle={transcriptData.videoTitle || transcriptData.videoId}
                     transcript={transcriptData.transcript}
                     onSave={handleSave}
                     user={user}
