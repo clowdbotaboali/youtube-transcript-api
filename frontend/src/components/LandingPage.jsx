@@ -501,6 +501,9 @@ function LandingPage({
 
               <p className={`mt-3 text-lg font-black ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>{t('pricing.pro.limit')}</p>
               <p className={`mt-2 text-3xl sm:text-4xl font-black ${isDark ? 'text-cyan-100' : 'text-cyan-800'}`}>{t('pricing.pro.price')}</p>
+              <p className={`mt-2 inline-flex rounded-full px-3 py-1 text-xs font-black ${isDark ? 'bg-amber-500/20 text-amber-100' : 'bg-amber-100 text-amber-800'}`}>
+                {t('pricing.pro.promo')}
+              </p>
               <p className={`mt-1 text-sm font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>{t('pricing.pro.valueSummary')}</p>
 
               <ul className={`mt-4 space-y-2 text-sm ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>

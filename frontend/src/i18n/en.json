@@ -124,24 +124,34 @@
       "badge": "FREE",
       "limit": "5 videos per day",
       "features": [
-        "Transcript",
-        "Summary",
-        "Action steps"
+        "Full transcript extraction",
+        "Multiple summary modes: quick, detailed, and key insights",
+        "Clean transcript rewrite + proper study notes",
+        "Action plan you can execute immediately",
+        "Resources extraction (tools, links, references)",
+        "Study kit: learning objectives + quick quiz",
+        "Content kit for creators (hooks + short scripts)",
+        "AI chat on the same extracted video"
       ],
       "button": "Start Free"
     },
     "pro": {
       "badge": "PRO",
       "popularBadge": "Most Popular",
-      "limit": "Up to 500 videos per day",
+      "limit": "Up to 500 videos per day (based on credits)",
       "price": "$5 / 200 credits",
-      "valueSummary": "For serious learners & content creators",
+      "valueSummary": "For power users, creators, and teams",
       "features": [
-        "Priority processing",
-        "Future features included",
-        "Manual upgrade available"
+        "Everything in Free included",
+        "All summary and analysis modes unlocked",
+        "Advanced AI chat for every extracted video",
+        "Save chat sessions and return anytime",
+        "Priority processing and faster turnaround",
+        "Multilingual output support",
+        "Future features included automatically"
       ],
-      "button": "Upgrade to Pro"
+      "button": "Upgrade to Pro",
+      "promo": "Limited-time promotional pricing"
     }
   },
   "faq": {

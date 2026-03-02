@@ -124,24 +124,34 @@
       "badge": "GRATUIT",
       "limit": "5 videos par jour",
       "features": [
-        "Transcription",
-        "Resume",
-        "Etapes d'action"
+        "Extraction complete de la transcription",
+        "Plusieurs modes de resume : rapide, detaille, et idees cles",
+        "Transcription nettoyee + notes structurees",
+        "Plan d'action immediat et applicable",
+        "Extraction des ressources (outils, liens, references)",
+        "Pack etude : objectifs d'apprentissage + quiz rapide",
+        "Pack createur (hooks + scripts courts)",
+        "Chat IA sur la meme video extraite"
       ],
       "button": "Demarrer gratuitement"
     },
     "pro": {
       "badge": "PRO",
       "popularBadge": "Le plus populaire",
-      "limit": "Jusqu'a 500 videos par jour",
+      "limit": "Jusqu'a 500 videos par jour (selon credits)",
       "price": "$5 / 200 credits",
-      "valueSummary": "Pour utilisateurs intensifs et createurs",
+      "valueSummary": "Pour utilisateurs intensifs, createurs et equipes",
       "features": [
-        "Traitement prioritaire",
-        "Fonctionnalites futures incluses",
-        "Mise a niveau manuelle disponible"
+        "Toutes les fonctionnalites Free incluses",
+        "Tous les modes de resume et d'analyse debloques",
+        "Chat IA avance pour chaque video extraite",
+        "Sauvegarde des sessions de chat et reprise a tout moment",
+        "Traitement prioritaire et plus rapide",
+        "Support multilingue des sorties",
+        "Fonctionnalites futures incluses automatiquement"
       ],
-      "button": "Passer a Pro"
+      "button": "Passer a Pro",
+      "promo": "Tarif promotionnel pour une duree limitee"
     }
   },
   "faq": {
