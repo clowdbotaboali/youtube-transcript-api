@@ -15,16 +15,27 @@ import {
 } from 'react-icons/fa';
 import { LANG, tr } from '../utils/lang';
 
-function NavLink({ href, children, dark }) {
+function NavLink({ href, onClick, children, dark, active = false }) {
+  const baseClass = `px-3 py-2 text-sm rounded-xl border transition ${
+    active
+      ? dark
+        ? 'border-cyan-400/60 bg-cyan-500/20 text-cyan-100'
+        : 'border-cyan-300 bg-cyan-50 text-cyan-800'
+      : dark
+        ? 'border-slate-700/80 text-slate-200 hover:bg-slate-800/70'
+        : 'border-slate-300/80 text-slate-700 hover:bg-white/80'
+  }`;
+
+  if (typeof onClick === 'function') {
+    return (
+      <button type="button" onClick={onClick} className={baseClass}>
+        {children}
+      </button>
+    );
+  }
+
   return (
-    <a
-      href={href}
-      className={`px-3 py-2 text-sm rounded-xl border transition ${
-        dark
-          ? 'border-slate-700/80 text-slate-200 hover:bg-slate-800/70'
-          : 'border-slate-300/80 text-slate-700 hover:bg-white/80'
-      }`}
-    >
+    <a href={href} className={baseClass}>
       {children}
     </a>
   );
@@ -80,6 +91,7 @@ function LandingPage({
   const isArabic = lang === LANG.ar;
   const [heroUrl, setHeroUrl] = useState('');
   const [heroError, setHeroError] = useState('');
+  const [infoTab, setInfoTab] = useState('pricing');
   const dir = isArabic ? 'rtl' : 'ltr';
   const t = (ar, en, fr) => tr(lang, ar, en, fr);
 
@@ -176,6 +188,22 @@ function LandingPage({
     if (typeof onStart === 'function') onStart({ mode: 'login' });
   };
 
+  const openInfoTab = (tabKey) => {
+    setInfoTab(tabKey);
+    if (typeof window !== 'undefined') {
+      const section = window.document.getElementById('landing-info-tabs');
+      section?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  const infoTabs = [
+    { key: 'pricing', label: t('الأسعار', 'Pricing', 'Tarification') },
+    { key: 'privacy', label: t('سياسة الخصوصية', 'Privacy Policy', 'Politique de confidentialite') },
+    { key: 'terms', label: t('الشروط', 'Terms', 'Conditions') },
+    { key: 'refund', label: t('سياسة الاسترجاع', 'Refund Policy', 'Politique de remboursement') },
+    { key: 'contact', label: t('تواصل', 'Contact', 'Contact') }
+  ];
+
   return (
     <div className="min-h-screen relative overflow-hidden" dir={dir}>
       <div
@@ -231,21 +259,16 @@ function LandingPage({
               </select>
             </div>
 
-            <NavLink href="/pricing" dark={isDark}>
-              {t('الأسعار', 'Pricing', 'Tarification')}
-            </NavLink>
-            <NavLink href="/privacy-policy" dark={isDark}>
-              {t('سياسة الخصوصية', 'Privacy Policy', 'Politique de confidentialite')}
-            </NavLink>
-            <NavLink href="/terms" dark={isDark}>
-              {t('الشروط', 'Terms', 'Conditions')}
-            </NavLink>
-            <NavLink href="/refund-policy" dark={isDark}>
-              {t('سياسة الاسترجاع', 'Refund Policy', 'Politique de remboursement')}
-            </NavLink>
-            <NavLink href="/contact" dark={isDark}>
-              {t('تواصل', 'Contact', 'Contact')}
-            </NavLink>
+            {infoTabs.map((item) => (
+              <NavLink
+                key={item.key}
+                dark={isDark}
+                active={infoTab === item.key}
+                onClick={() => openInfoTab(item.key)}
+              >
+                {item.label}
+              </NavLink>
+            ))}
             <button
               onClick={openLogin}
               className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl border font-bold transition ${
@@ -329,6 +352,127 @@ function LandingPage({
                 </ul>
               </div>
             </div>
+          </div>
+        </section>
+
+        <section id="landing-info-tabs" className="mb-12">
+          <div className={`rounded-2xl border p-4 sm:p-5 ${isDark ? 'border-slate-700 bg-slate-900/75' : 'border-slate-200 bg-white/90'}`}>
+            <div className="flex flex-wrap gap-2 mb-4">
+              {infoTabs.map((item) => (
+                <button
+                  key={`panel-${item.key}`}
+                  type="button"
+                  onClick={() => setInfoTab(item.key)}
+                  className={`px-3 py-2 text-sm rounded-xl border transition ${
+                    infoTab === item.key
+                      ? isDark
+                        ? 'border-cyan-400/60 bg-cyan-500/20 text-cyan-100'
+                        : 'border-cyan-300 bg-cyan-50 text-cyan-800'
+                      : isDark
+                        ? 'border-slate-700 text-slate-300 hover:bg-slate-800'
+                        : 'border-slate-300 text-slate-700 hover:bg-slate-50'
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+
+            {infoTab === 'pricing' && (
+              <div className={`rounded-xl border p-4 ${isDark ? 'border-amber-700/60 bg-amber-950/20' : 'border-amber-200 bg-amber-50/70'}`}>
+                <h3 className={`text-xl font-black mb-2 ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
+                  {t('الأسعار', 'Pricing', 'Tarification')}
+                </h3>
+                <p className={`${isDark ? 'text-slate-300' : 'text-slate-700'} mb-3`}>
+                  {t(
+                    'خدمة رقمية لاستخراج النصوص من يوتيوب فقط. الخطة المجانية تشمل 5 روابط فيديو، والشحن يبدأ من 5$ = 200 كريديت مع خصومات تلقائية للمبالغ الأكبر.',
+                    'Digital transcript service for YouTube only. Free plan includes 5 video links, and paid top-up starts at $5 = 200 credits with automatic bonus credits for larger amounts.',
+                    'Service numerique d extraction de transcription YouTube. Le plan gratuit inclut 5 liens video et la recharge commence a 5 $ = 200 credits avec bonus automatiques.'
+                  )}
+                </p>
+                <ul className={`text-sm space-y-1.5 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                  <li>{t('• كل رابط فيديو جديد = 1 كريديت', '• Each new video link = 1 credit', '• Chaque nouveau lien video = 1 credit')}</li>
+                  <li>{t('• التلخيص والشات لنفس الفيديو بدون خصم إضافي', '• Summary/chat on the same video has no extra charge', '• Resume/chat sur la meme video sans cout supplementaire')}</li>
+                  <li>{t('• الشحنات الأكبر تحصل على كريديت إضافي تلقائيًا', '• Higher top-ups receive bonus credits automatically', '• Les recharges elevees recoivent des bonus credits automatiques')}</li>
+                </ul>
+              </div>
+            )}
+
+            {infoTab === 'privacy' && (
+              <div className={`rounded-xl border p-4 ${isDark ? 'border-cyan-700/60 bg-cyan-950/20' : 'border-cyan-200 bg-cyan-50/70'}`}>
+                <h3 className={`text-xl font-black mb-2 ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
+                  {t('سياسة الخصوصية', 'Privacy Policy', 'Politique de confidentialite')}
+                </h3>
+                <p className={`${isDark ? 'text-slate-300' : 'text-slate-700'} mb-3`}>
+                  {t(
+                    'نجمع فقط البيانات اللازمة لتشغيل الخدمة (مثل رابط الفيديو وبريد الحساب وسجلات الاستخدام الفنية)، ولا نقوم ببيع البيانات الشخصية.',
+                    'We collect only data required to run the service (video URL, account email, technical logs), and we do not sell personal data.',
+                    'Nous collectons uniquement les donnees necessaires au service (URL video, email du compte, journaux techniques) et nous ne vendons pas les donnees personnelles.'
+                  )}
+                </p>
+                <ul className={`text-sm space-y-1.5 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                  <li>{t('• لا نقوم بتخزين ملفات الفيديو نفسها', '• We do not store video files themselves', '• Nous ne stockons pas les fichiers video')}</li>
+                  <li>{t('• نستخدم البيانات لتحسين الأداء ومنع إساءة الاستخدام', '• Data is used for reliability and abuse prevention', '• Les donnees servent a la fiabilite et a la prevention des abus')}</li>
+                  <li>{t('• للاستفسارات: compliance@transcriptai-eg.com', '• Privacy contact: compliance@transcriptai-eg.com', '• Contact confidentialite : compliance@transcriptai-eg.com')}</li>
+                </ul>
+              </div>
+            )}
+
+            {infoTab === 'terms' && (
+              <div className={`rounded-xl border p-4 ${isDark ? 'border-indigo-700/60 bg-indigo-950/20' : 'border-indigo-200 bg-indigo-50/70'}`}>
+                <h3 className={`text-xl font-black mb-2 ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
+                  {t('الشروط', 'Terms', 'Conditions')}
+                </h3>
+                <p className={`${isDark ? 'text-slate-300' : 'text-slate-700'} mb-3`}>
+                  {t(
+                    'الخدمة مخصصة لاستخراج النصوص وتحليلها رقميًا. باستخدامك المنصة أنت مسؤول عن الروابط والمحتوى الذي ترسله والالتزام بالقوانين.',
+                    'The service is for digital transcript generation and analysis. You are responsible for submitted links/content and legal compliance.',
+                    'Le service est destine a la generation et analyse numeriques de transcription. Vous etes responsable des liens/contenus soumis et du respect des lois.'
+                  )}
+                </p>
+                <ul className={`text-sm space-y-1.5 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                  <li>{t('• يمنع إساءة الاستخدام أو محاولة تجاوز الحدود', '• Abuse and limit bypass attempts are prohibited', '• Les abus et contournements de limites sont interdits')}</li>
+                  <li>{t('• يحق للمنصة تعليق الحسابات المخالفة', '• Violating accounts may be restricted or suspended', '• Les comptes en violation peuvent etre restreints ou suspendus')}</li>
+                  <li>{t('• الخدمة تُقدم حسب التوفر', '• Service is provided as available', '• Service fourni selon disponibilite')}</li>
+                </ul>
+              </div>
+            )}
+
+            {infoTab === 'refund' && (
+              <div className={`rounded-xl border p-4 ${isDark ? 'border-rose-700/60 bg-rose-950/20' : 'border-rose-200 bg-rose-50/70'}`}>
+                <h3 className={`text-xl font-black mb-2 ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
+                  {t('سياسة الاسترجاع', 'Refund Policy', 'Politique de remboursement')}
+                </h3>
+                <p className={`${isDark ? 'text-slate-300' : 'text-slate-700'} mb-3`}>
+                  {t(
+                    'طلبات الاسترجاع تُراجع خلال 24 ساعة من الدفع عند فشل استخراج النص وعدم تسليم نتيجة صالحة. بعد التسليم الناجح لا يتاح الاسترجاع.',
+                    'Refund requests are reviewed within 24 hours of payment if transcript generation fails and no usable output is delivered. No refund after successful delivery.',
+                    'Les demandes de remboursement sont examinees dans les 24h si la generation echoue et aucun resultat exploitable n est livre. Pas de remboursement apres livraison reussie.'
+                  )}
+                </p>
+                <p className={`text-sm ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                  {t(
+                    'لدعم الفوترة والاسترجاع: billing@transcriptai-eg.com',
+                    'Billing/refund support: billing@transcriptai-eg.com',
+                    'Support facturation/remboursement : billing@transcriptai-eg.com'
+                  )}
+                </p>
+              </div>
+            )}
+
+            {infoTab === 'contact' && (
+              <div className={`rounded-xl border p-4 ${isDark ? 'border-emerald-700/60 bg-emerald-950/20' : 'border-emerald-200 bg-emerald-50/70'}`}>
+                <h3 className={`text-xl font-black mb-2 ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
+                  {t('تواصل', 'Contact', 'Contact')}
+                </h3>
+                <ul className={`text-sm space-y-1.5 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                  <li>{t('• دعم عام: support@transcriptai-eg.com', '• General support: support@transcriptai-eg.com', '• Support general : support@transcriptai-eg.com')}</li>
+                  <li>{t('• فوترة واسترجاع: billing@transcriptai-eg.com', '• Billing/refunds: billing@transcriptai-eg.com', '• Facturation/remboursements : billing@transcriptai-eg.com')}</li>
+                  <li>{t('• قانوني وامتثال: compliance@transcriptai-eg.com', '• Legal/compliance: compliance@transcriptai-eg.com', '• Juridique/conformite : compliance@transcriptai-eg.com')}</li>
+                  <li>{t('• زمن الرد: خلال 24 ساعة عمل', '• Response time: within 24 business hours', '• Temps de reponse : sous 24h ouvrables')}</li>
+                </ul>
+              </div>
+            )}
           </div>
         </section>
 
