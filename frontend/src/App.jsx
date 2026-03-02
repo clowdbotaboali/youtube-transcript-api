@@ -95,20 +95,20 @@ const buildFallbackVideoBrief = (titleValue, langCode) => {
   if (!title) return '';
   const compact = title.length > 90 ? `${title.slice(0, 87).trim()}...` : title;
   const lang = normalizeOutputLanguage(langCode);
-  if (lang === 'ar') return `Ù…Ù„Ø®Øµ Ø³Ø±ÙŠØ¹: ${compact}`;
-  if (lang === 'fr') return `RÃ©sumÃ© rapide: ${compact}`;
+  if (lang === 'ar') return `ملخص سريع: فيديو يشرح ${compact}`;
+  if (lang === 'fr') return `Resume rapide: ${compact}`;
   if (lang === 'es') return `Resumen breve: ${compact}`;
   if (lang === 'de') return `Kurzzusammenfassung: ${compact}`;
   if (lang === 'it') return `Sintesi rapida: ${compact}`;
-  if (lang === 'pt') return `Resumo rÃ¡pido: ${compact}`;
+  if (lang === 'pt') return `Resumo rapido: ${compact}`;
   if (lang === 'tr') return `Kisa ozet: ${compact}`;
-  if (lang === 'ru') return `ÐšÑ€Ð°Ñ‚ÐºÐ¾Ðµ Ñ€ÐµÐ·ÑŽÐ¼Ðµ: ${compact}`;
-  if (lang === 'hi') return `à¤¸à¤‚à¤•à¥à¤·à¤¿à¤ªà¥à¤¤ à¤¸à¤¾à¤°: ${compact}`;
+  if (lang === 'ru') return `Kratkoe rezyume: ${compact}`;
+  if (lang === 'hi') return `Sankshipt saar: ${compact}`;
   if (lang === 'id') return `Ringkasan singkat: ${compact}`;
-  if (lang === 'ur') return `Ø®Ù„Ø§ØµÛ Ù…Ø®ØªØµØ±: ${compact}`;
-  if (lang === 'zh') return `ç®€è¦æ‘˜è¦ï¼š${compact}`;
-  if (lang === 'ja') return `è¦ç´„: ${compact}`;
-  if (lang === 'ko') return `ìš”ì•½: ${compact}`;
+  if (lang === 'ur') return `Khulasa mukhtasar: ${compact}`;
+  if (lang === 'zh') return `Jianyao zhaiyao: ${compact}`;
+  if (lang === 'ja') return `Yoyaku: ${compact}`;
+  if (lang === 'ko') return `Yoyak: ${compact}`;
   return `Quick brief: ${compact}`;
 };
 
@@ -582,9 +582,43 @@ function App() {
         });
         const data = await response.json().catch(() => ({}));
         if (!cancelled && response.ok && data.success && data.result) {
-          const subtitle = cleanText(data.result).trim() || titleFallback;
-          videoBriefCacheRef.current.set(cacheKey, subtitle);
-          setVideoBrief(subtitle);
+          let subtitle = cleanText(data.result).trim() || titleFallback;
+
+          // If Arabic output was requested but model returned non-Arabic text,
+          // retry using only the video title to force a short localized subtitle.
+          if (normalizedLang === 'ar' && subtitle && !isLikelyArabic(subtitle)) {
+            const titleOnlyText = cleanText(transcriptData?.videoTitle || '').trim();
+            if (titleOnlyText) {
+              try {
+                const retryResponse = await fetch(`${apiUrl}/api/ai/process`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    ...authHeaders
+                  },
+                  body: JSON.stringify({
+                    transcript: `Video title: ${titleOnlyText}`,
+                    type: 'video-brief',
+                    videoId,
+                    lang: normalizedLang
+                  }),
+                  signal: controller.signal
+                });
+                const retryData = await retryResponse.json().catch(() => ({}));
+                const retrySubtitle = cleanText(retryData?.result).trim();
+                if (retryResponse.ok && retryData.success && retrySubtitle && isLikelyArabic(retrySubtitle)) {
+                  subtitle = retrySubtitle;
+                } else {
+                  subtitle = `ملخص سريع: فيديو عن ${titleOnlyText}`;
+                }
+              } catch {
+                subtitle = `ملخص سريع: فيديو عن ${titleOnlyText}`;
+              }
+            }
+          }
+
+          videoBriefCacheRef.current.set(cacheKey, subtitle || titleFallback);
+          setVideoBrief(subtitle || titleFallback);
         } else if (!cancelled) {
           setVideoBrief(titleFallback);
         }
