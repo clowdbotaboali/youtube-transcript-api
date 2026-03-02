@@ -1,4 +1,15 @@
-﻿import { FaBolt, FaCog, FaGem, FaHistory, FaHome, FaMagic, FaMoon, FaSignOutAlt, FaSun, FaUserCircle } from 'react-icons/fa';
+﻿import {
+  FaBolt,
+  FaCog,
+  FaGem,
+  FaHistory,
+  FaHome,
+  FaMagic,
+  FaMoon,
+  FaSignOutAlt,
+  FaSun,
+  FaUserCircle
+} from 'react-icons/fa';
 import { LANG, tr } from '../utils/lang';
 
 const PAGES = {
@@ -21,6 +32,17 @@ function NavButton({ active, onClick, icon, label }) {
       {icon}
       <span>{label}</span>
     </button>
+  );
+}
+
+function ExternalTab({ href, label }) {
+  return (
+    <a
+      href={href}
+      className="px-3 py-2 text-sm rounded-xl border border-white/25 text-slate-100 bg-white/5 hover:bg-white/15 transition whitespace-nowrap"
+    >
+      {label}
+    </a>
   );
 }
 
@@ -54,8 +76,16 @@ function ClientHeader({
 }) {
   const isDark = theme === 'dark';
 
+  const legalTabs = [
+    { href: '/pricing', label: tr(lang, 'الأسعار', 'Pricing', 'Tarification') },
+    { href: '/privacy-policy', label: tr(lang, 'سياسة الخصوصية', 'Privacy Policy', 'Politique de confidentialite') },
+    { href: '/terms', label: tr(lang, 'الشروط', 'Terms', 'Conditions') },
+    { href: '/refund-policy', label: tr(lang, 'سياسة الاسترجاع', 'Refund Policy', 'Politique de remboursement') },
+    { href: '/contact', label: tr(lang, 'تواصل', 'Contact', 'Contact') }
+  ];
+
   return (
-    <header className="sticky top-2 z-30 rounded-3xl border border-slate-700/80 bg-[linear-gradient(160deg,#071229_0%,#0f1d3a_60%,#18274b_100%)] text-slate-100 p-4 sm:p-5 mb-4 sm:mb-6 overflow-hidden">
+    <header className="sticky top-0 z-30 rounded-3xl border border-slate-700/80 bg-[linear-gradient(160deg,#071229_0%,#0f1d3a_60%,#18274b_100%)] text-slate-100 p-4 sm:p-5 mb-4 sm:mb-6 overflow-hidden">
       <div className="absolute inset-0 pointer-events-none opacity-20 bg-[radial-gradient(circle_at_12%_12%,#22d3ee_0%,transparent_45%),radial-gradient(circle_at_88%_22%,#6366f1_0%,transparent_40%)]" />
 
       <div className="relative">
@@ -109,15 +139,21 @@ function ClientHeader({
               <select
                 value={lang}
                 onChange={(event) => onLangChange?.(event.target.value)}
-                className="h-9 rounded-lg px-2.5 bg-white/10 hover:bg-white/20 transition font-semibold border border-white/20 outline-none"
+                className="h-9 rounded-lg px-2.5 bg-white/10 hover:bg-white/20 transition font-semibold border border-white/20 outline-none text-slate-100"
                 title={tr(lang, 'Switch language', 'Switch language', 'Changer la langue')}
               >
-                <option value={LANG.en}>EN</option>
-                <option value={LANG.ar}>AR</option>
-                <option value={LANG.fr}>FR</option>
+                <option value={LANG.en} className="text-slate-900 bg-white">EN</option>
+                <option value={LANG.ar} className="text-slate-900 bg-white">AR</option>
+                <option value={LANG.fr} className="text-slate-900 bg-white">FR</option>
               </select>
             </div>
           </div>
+        </div>
+
+        <div className="mt-3 flex flex-wrap gap-2">
+          {legalTabs.map((item) => (
+            <ExternalTab key={item.href} href={item.href} label={item.label} />
+          ))}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2 mt-4">

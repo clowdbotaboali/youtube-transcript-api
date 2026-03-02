@@ -253,14 +253,14 @@ function LandingPage({
           <div className={`reveal-up rounded-3xl border p-6 sm:p-8 lg:p-10 ${isDark ? 'border-slate-700 bg-slate-900/75' : 'border-slate-200 bg-white/90'}`}>
             <div className="grid lg:grid-cols-[1.1fr_0.9fr] gap-6 sm:gap-8 items-start">
               <div>
-                <h1 className={`text-4xl sm:text-5xl lg:text-6xl font-black leading-tight mb-3 ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
+                <h1 className={`text-3xl sm:text-4xl lg:text-5xl font-black leading-[1.14] mb-5 ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
                   {t(
                     'حول فيديوهات يوتيوب إلى ملخصات مفهومة في دقائق',
                     'Turn YouTube videos into clear summaries in minutes',
                     'Transformez les videos YouTube en resumes clairs en quelques minutes'
                   )}
                 </h1>
-                <p className={`text-base sm:text-lg mb-6 max-w-2xl ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                <p className={`text-base sm:text-lg mb-7 max-w-2xl ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
                   {t(
                     'للمحاضرات، الكورسات، والمحتوى التعليمي: نص + ملخص + خطوات عملية في مكان واحد.',
                     'For lectures, courses, and educational content: transcript, summary, and practical steps in one place.',
@@ -268,11 +268,11 @@ function LandingPage({
                   )}
                 </p>
 
-                <form onSubmit={handleStartFromHero} className={`rounded-2xl border p-4 sm:p-5 ${isDark ? 'border-slate-700 bg-slate-950/50' : 'border-slate-200 bg-white'}`}>
+                <form onSubmit={handleStartFromHero} className={`rounded-2xl border p-4 sm:p-5 text-center max-w-2xl mx-auto ${isDark ? 'border-slate-700 bg-slate-950/50' : 'border-slate-200 bg-white'}`}>
                   <label className={`block text-sm font-bold mb-2 ${isDark ? 'text-slate-100' : 'text-slate-800'}`}>
                     {t('ضع رابط يوتيوب وابدأ', 'Paste a YouTube URL and start', 'Collez un lien YouTube et commencez')}
                   </label>
-                  <div className="grid sm:grid-cols-[1fr_auto] gap-3">
+                  <div className="space-y-3">
                     <input
                       type="text"
                       value={heroUrl}
@@ -287,7 +287,7 @@ function LandingPage({
                     />
                     <button
                       type="submit"
-                      className="h-12 px-5 rounded-xl bg-cyan-500 text-white font-black hover:bg-cyan-600 transition inline-flex items-center justify-center gap-2"
+                      className="h-12 w-full sm:w-auto sm:min-w-[280px] px-5 rounded-xl bg-cyan-500 text-white font-black hover:bg-cyan-600 transition inline-flex items-center justify-center gap-2"
                     >
                       {t('استخراج السكريبت', 'Extract Transcript', 'Extraire la transcription')}
                       <FaArrowRight className={isArabic ? 'rotate-180' : ''} />

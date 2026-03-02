@@ -1273,15 +1273,22 @@ function App() {
               </article>
 
               <article className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
-                <h3 className="text-lg font-black text-slate-900 mb-3">{tr(lang, 'إجراءات سريعة', 'Quick actions')}</h3>
+                <h3 className="text-lg font-black text-slate-900 mb-3">{tr(lang, 'ترقية النتائج بالشحن', 'Upgrade your results with top-up')}</h3>
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 mb-4">
+                  <p className="text-sm text-amber-900 mb-2">
+                    {tr(
+                      lang,
+                      'كلما زودت الرصيد، تقدر تعالج فيديوهات أكثر بدون توقف وتبني مكتبة ملخصات أقوى لفريقك أو دراستك.',
+                      'With more credits, you can process more videos without interruption and build a stronger summary library for study or teams.'
+                    )}
+                  </p>
+                  <ul className="text-sm text-amber-800 space-y-1">
+                    <li>{tr(lang, '• انطلاقة سريعة: 5$ = 200 كريديت', '• Fast start: $5 = 200 credits')}</li>
+                    <li>{tr(lang, '• خصومات تلقائية مع المبالغ الأكبر', '• Automatic bonus credits on larger amounts')}</li>
+                    <li>{tr(lang, '• تفاصيل الدفع في صفحة مستقلة وواضحة', '• Dedicated clear checkout page')}</li>
+                  </ul>
+                </div>
                 <div className="flex flex-wrap gap-3">
-                  <button
-                    type="button"
-                    onClick={openTopupPicker}
-                    className="rounded-xl px-4 py-2 bg-orange-400 text-slate-950 font-extrabold hover:bg-orange-300 transition"
-                  >
-                    {tr(lang, 'فتح صفحة الشحن', 'Open top-up flow')}
-                  </button>
                   {canUseLocalGuide && (
                     <button
                       type="button"
