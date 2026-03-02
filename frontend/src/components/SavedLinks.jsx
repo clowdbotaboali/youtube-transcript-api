@@ -23,6 +23,7 @@ function defaultThumbnail(videoId) {
 function SavedLinks({ onSelectLink, apiUrl = defaultApiUrl, user, lang = LANG.ar, onNotify }) {
   const [links, setLinks] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
   const [editingVideoId, setEditingVideoId] = useState('');
   const [editingTitle, setEditingTitle] = useState('');
@@ -31,6 +32,7 @@ function SavedLinks({ onSelectLink, apiUrl = defaultApiUrl, user, lang = LANG.ar
 
   const notifyRef = useRef(onNotify);
   const langRef = useRef(lang);
+  const linksRef = useRef(links);
 
   useEffect(() => {
     notifyRef.current = onNotify;
@@ -39,6 +41,10 @@ function SavedLinks({ onSelectLink, apiUrl = defaultApiUrl, user, lang = LANG.ar
   useEffect(() => {
     langRef.current = lang;
   }, [lang]);
+
+  useEffect(() => {
+    linksRef.current = links;
+  }, [links]);
 
   const notify = useCallback((type, message) => {
     const fn = notifyRef.current;
@@ -103,7 +109,7 @@ function SavedLinks({ onSelectLink, apiUrl = defaultApiUrl, user, lang = LANG.ar
     async (force = false) => {
       if (!user?.id) return;
 
-      let showLoader = true;
+      let showLoader = linksRef.current.length === 0;
       if (!force) {
         const cached = readCache();
         if (cached) {
@@ -113,7 +119,11 @@ function SavedLinks({ onSelectLink, apiUrl = defaultApiUrl, user, lang = LANG.ar
           showLoader = cached.items.length === 0;
         }
       }
-      if (showLoader) setLoading(true);
+      if (showLoader) {
+        setLoading(true);
+      } else {
+        setRefreshing(true);
+      }
 
       try {
         const response = await fetch(`${apiUrl}/api/links`, {
@@ -133,7 +143,11 @@ function SavedLinks({ onSelectLink, apiUrl = defaultApiUrl, user, lang = LANG.ar
       } catch {
         notify('error', tr(langRef.current, 'فشل الاتصال بالخادم.', 'Connection failed.', 'Echec de connexion.'));
       } finally {
-        if (showLoader) setLoading(false);
+        if (showLoader) {
+          setLoading(false);
+        } else {
+          setRefreshing(false);
+        }
       }
     },
     [apiUrl, notify, readCache, user?.id, writeCache]
@@ -144,6 +158,7 @@ function SavedLinks({ onSelectLink, apiUrl = defaultApiUrl, user, lang = LANG.ar
       loadLinks();
     } else {
       setLinks([]);
+      setRefreshing(false);
     }
   }, [loadLinks, user?.id]);
 
@@ -205,6 +220,8 @@ function SavedLinks({ onSelectLink, apiUrl = defaultApiUrl, user, lang = LANG.ar
   }, [links, search]);
 
   const dateLocale = lang === LANG.ar ? 'ar-EG' : lang === LANG.fr ? 'fr-FR' : 'en-US';
+  const isBusy = loading || refreshing;
+  const isInitialLoading = loading && links.length === 0;
 
   return (
     <div className="rounded-2xl border border-emerald-200 bg-white p-4 sm:p-5 shadow-sm">
@@ -224,9 +241,9 @@ function SavedLinks({ onSelectLink, apiUrl = defaultApiUrl, user, lang = LANG.ar
           type="button"
           onClick={() => loadLinks(true)}
           className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs border border-slate-200 hover:bg-slate-50"
-          disabled={loading}
+          disabled={isBusy}
         >
-          <FaRedo className={loading ? 'animate-spin' : ''} />
+          <FaRedo className={isBusy ? 'animate-spin' : ''} />
           <span>{tr(lang, 'تحديث', 'Refresh', 'Actualiser')}</span>
         </button>
       </div>
@@ -245,7 +262,11 @@ function SavedLinks({ onSelectLink, apiUrl = defaultApiUrl, user, lang = LANG.ar
         {tr(lang, 'إجمالي الروابط:', 'Total links:', 'Total liens:')} <span className="font-bold text-slate-700">{links.length}</span>
       </div>
 
-      {loading ? (
+      {refreshing && !isInitialLoading ? (
+        <p className="text-xs text-slate-500 mb-3">{tr(lang, 'جارٍ تحديث البيانات...', 'Refreshing data...', 'Actualisation en cours...')}</p>
+      ) : null}
+
+      {isInitialLoading ? (
         <p className="text-sm text-slate-500 py-5 text-center">{tr(lang, 'جارٍ التحميل...', 'Loading...', 'Chargement...')}</p>
       ) : filteredLinks.length === 0 ? (
         <p className="text-sm text-slate-500 py-5 text-center">{tr(lang, 'لا توجد روابط محفوظة بعد.', 'No saved links yet.', 'Aucun lien enregistré pour le moment.')}</p>
@@ -335,4 +356,3 @@ function SavedLinks({ onSelectLink, apiUrl = defaultApiUrl, user, lang = LANG.ar
 }
 
 export default SavedLinks;
-

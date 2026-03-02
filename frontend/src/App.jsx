@@ -68,6 +68,7 @@ const THEME = {
   light: 'light',
   dark: 'dark'
 };
+const ACCOUNT_SNAPSHOT_KEY_PREFIX = 'account-snapshot:';
 
 const buildFallbackVideoBrief = (titleValue, langCode) => {
   const title = cleanText(titleValue || '').trim();
@@ -89,6 +90,38 @@ const buildFallbackVideoBrief = (titleValue, langCode) => {
   if (lang === 'ja') return `要約: ${compact}`;
   if (lang === 'ko') return `요약: ${compact}`;
   return `Quick brief: ${compact}`;
+};
+
+const parseInstructionLines = (value) =>
+  String(value || '')
+    .split(/\r?\n/)
+    .map((line) => cleanText(line || '').trim())
+    .map((line) => line.replace(/^\s*(?:\d+[.)-]?|[-*]|\u2022)\s+/, '').trim())
+    .filter((line) => line.length >= 8)
+    .slice(0, 12);
+
+const isLikelyArabic = (value) => /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/.test(String(value || ''));
+
+const readAccountSnapshot = (userId) => {
+  if (!hasWindow || !userId) return null;
+  try {
+    const raw = localStorage.getItem(`${ACCOUNT_SNAPSHOT_KEY_PREFIX}${userId}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+};
+
+const writeAccountSnapshot = (userId, snapshot) => {
+  if (!hasWindow || !userId || !snapshot) return;
+  try {
+    localStorage.setItem(`${ACCOUNT_SNAPSHOT_KEY_PREFIX}${userId}`, JSON.stringify(snapshot));
+  } catch {
+    // ignore local cache write failures
+  }
 };
 
 const clearSupabaseAuthStorage = () => {
@@ -145,6 +178,8 @@ function App() {
   );
   const [videoBrief, setVideoBrief] = useState('');
   const [videoBriefLoading, setVideoBriefLoading] = useState(false);
+  const [localizedDescriptionInstructions, setLocalizedDescriptionInstructions] = useState([]);
+  const [localizedDescriptionLoading, setLocalizedDescriptionLoading] = useState(false);
   const [extraContext, setExtraContext] = useState('');
   const [toasts, setToasts] = useState([]);
   const [currentPath, setCurrentPath] = useState(() => (hasWindow ? window.location.pathname : '/'));
@@ -225,16 +260,25 @@ function App() {
       });
       const data = await response.json().catch(() => ({}));
       if (response.ok && data.success) {
-        setCredits(Number(data.data?.credits || 0));
-        setFreeLinksRemaining(
-          Number.isFinite(Number(data.data?.freeLinksRemaining))
-            ? Number(data.data.freeLinksRemaining)
-            : FREE_PLAN_REQUESTS
-        );
-        setAccountAccess({
+        const nextCredits = Number(data.data?.credits || 0);
+        const nextFreeLinks = Number.isFinite(Number(data.data?.freeLinksRemaining))
+          ? Number(data.data.freeLinksRemaining)
+          : FREE_PLAN_REQUESTS;
+        const nextAccess = {
           status: data.data?.accessStatus || 'active',
           reason: data.data?.accessReason || null
-        });
+        };
+        setCredits(nextCredits);
+        setFreeLinksRemaining(nextFreeLinks);
+        setAccountAccess(nextAccess);
+        if (user?.id) {
+          writeAccountSnapshot(user.id, {
+            credits: nextCredits,
+            freeLinksRemaining: nextFreeLinks,
+            accessStatus: nextAccess.status,
+            accessReason: nextAccess.reason
+          });
+        }
       } else if (response.status === 403) {
         const parsed = parseApiError(data);
         const access = parsed.details?.access || null;
@@ -330,6 +374,8 @@ function App() {
         setAiResult(null);
         setVideoBrief('');
         setVideoBriefLoading(false);
+        setLocalizedDescriptionInstructions([]);
+        setLocalizedDescriptionLoading(false);
         setExtraContext('');
       }
     });
@@ -345,6 +391,29 @@ function App() {
       refreshAccount();
     }
   }, [apiUrl, user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const cached = readAccountSnapshot(user.id);
+    if (!cached) return;
+    if (Number.isFinite(Number(cached.credits))) {
+      setCredits(Number(cached.credits));
+    }
+    if (Number.isFinite(Number(cached.freeLinksRemaining))) {
+      setFreeLinksRemaining(Number(cached.freeLinksRemaining));
+    }
+    if (typeof cached.accessStatus === 'string') {
+      setAccountAccess({
+        status: cached.accessStatus || 'active',
+        reason: cached.accessReason || null
+      });
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    refreshAccount();
+  }, [clientPage, user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!hasWindow || !user?.id) return undefined;
@@ -401,6 +470,9 @@ function App() {
     setTranscriptData(data);
     setAiResult(null);
     setVideoBrief(buildFallbackVideoBrief(data?.videoTitle || data?.videoId, outputLang));
+    const initialInstructions = Array.isArray(data?.descriptionInstructions) ? data.descriptionInstructions : [];
+    setLocalizedDescriptionInstructions(initialInstructions);
+    setLocalizedDescriptionLoading(false);
     setExtraContext('');
     if (typeof data?.creditsLeft === 'number') {
       setCredits(data.creditsLeft);
@@ -475,6 +547,75 @@ function App() {
       controller.abort();
     };
   }, [apiUrl, outputLang, transcriptData?.transcript, transcriptData?.videoId, transcriptData?.videoTitle, user?.id]);
+
+  useEffect(() => {
+    const videoId = String(transcriptData?.videoId || '').trim();
+    const baseInstructions = Array.isArray(transcriptData?.descriptionInstructions)
+      ? transcriptData.descriptionInstructions.map((line) => cleanText(line || '').trim()).filter(Boolean).slice(0, 10)
+      : [];
+    const normalizedLang = normalizeOutputLanguage(outputLang);
+
+    if (!videoId || baseInstructions.length === 0) {
+      setLocalizedDescriptionInstructions([]);
+      setLocalizedDescriptionLoading(false);
+      return;
+    }
+
+    if (!user?.id || normalizedLang === 'en') {
+      setLocalizedDescriptionInstructions(baseInstructions);
+      setLocalizedDescriptionLoading(false);
+      return;
+    }
+
+    if (normalizedLang === 'ar' && baseInstructions.every((line) => isLikelyArabic(line))) {
+      setLocalizedDescriptionInstructions(baseInstructions);
+      setLocalizedDescriptionLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    const controller = new AbortController();
+
+    const run = async () => {
+      setLocalizedDescriptionLoading(true);
+      try {
+        const authHeaders = await getAuthHeaders();
+        const response = await fetch(`${apiUrl}/api/ai/process`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...authHeaders
+          },
+          body: JSON.stringify({
+            transcript: baseInstructions.map((line, idx) => `${idx + 1}. ${line}`).join('\n'),
+            type: 'description-instructions',
+            videoId,
+            lang: normalizedLang
+          }),
+          signal: controller.signal
+        });
+        const data = await response.json().catch(() => ({}));
+        if (cancelled) return;
+        if (response.ok && data.success && data.result) {
+          const parsed = parseInstructionLines(data.result);
+          setLocalizedDescriptionInstructions(parsed.length > 0 ? parsed : baseInstructions);
+        } else {
+          setLocalizedDescriptionInstructions(baseInstructions);
+        }
+      } catch {
+        if (!cancelled) setLocalizedDescriptionInstructions(baseInstructions);
+      } finally {
+        if (!cancelled) setLocalizedDescriptionLoading(false);
+      }
+    };
+
+    run();
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [apiUrl, outputLang, transcriptData?.descriptionInstructions, transcriptData?.videoId, user?.id]);
 
   const handleProcess = async (type) => {
     if (!transcriptData) return;
@@ -848,6 +989,7 @@ function App() {
               initialUrl={selectedUrl}
               apiUrl={apiUrl}
               lang={lang}
+              outputLang={normalizeOutputLanguage(outputLang)}
               accessRestrictionMessage={accountRestrictionMessage}
             />
 
@@ -857,6 +999,8 @@ function App() {
                   data={transcriptData}
                   localizedSubtitle={videoBrief}
                   localizedSubtitleLoading={videoBriefLoading}
+                  localizedDescriptionInstructions={localizedDescriptionInstructions}
+                  localizedDescriptionLoading={localizedDescriptionLoading}
                   outputLanguageLabel={getOutputLanguageLabel(outputLang, lang)}
                   lang={lang}
                   extraContext={extraContext}

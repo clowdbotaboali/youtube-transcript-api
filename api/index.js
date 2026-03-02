@@ -13,7 +13,7 @@ const USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 const YTDL_AGENT = ytdl.createAgent();
 const EXTRACTION_TIMEOUT_MS = 20000;
-const AI_TRANSCRIPT_CHAR_LIMIT = 8500;
+const AI_TRANSCRIPT_CHAR_LIMIT = 12000;
 const CHAT_TRANSCRIPT_CHAR_LIMIT = 6500;
 const CHAT_QUESTION_CHAR_LIMIT = 1200;
 const QUOTA_MARKER_TYPE = 'quota_extract_marker';
@@ -267,7 +267,7 @@ function parseYouTubeInput(rawValue) {
     videoId = parsed.searchParams.get('v') || '';
   } else {
     const parts = parsed.pathname.split('/').filter(Boolean);
-    if (parts[0] === 'embed' || parts[0] === 'v' || parts[0] === 'shorts') {
+    if (parts[0] === 'embed' || parts[0] === 'v' || parts[0] === 'shorts' || parts[0] === 'live') {
       videoId = parts[1] || '';
     }
   }
@@ -1446,8 +1446,11 @@ function getTranscriptApiKeyCandidates(config) {
     labelPrefix: 'Transcript key',
     idPrefix: 'tap'
   });
-  const activeKeyId = ensureActiveKeyId(keys, config?.activeKeyId);
-  return orderKeyCandidates(keys, activeKeyId);
+  const activeEntry = resolveActiveKeyEntry(keys, config?.activeKeyId);
+  if (!activeEntry) return [];
+  if (activeEntry.enabled === false) return [];
+  if (!String(activeEntry.apiKey || '').trim()) return [];
+  return [activeEntry];
 }
 
 async function ensurePaymentProofBucket(supabase) {
@@ -3046,8 +3049,52 @@ function outputFormattingInstruction() {
   return (
     'Return clean Markdown only. ' +
     'Use clear section headings, and keep each bullet point on its own line. ' +
-    'Do not return JSON, code blocks, HTML tags, or escaped characters like <br> or \\n.'
+    'Do not return JSON, code blocks, HTML tags, or escaped characters like <br> or \\n. ' +
+    'Always finish with a complete final sentence and never cut off mid-sentence.'
   );
+}
+
+function isLikelyArabicText(value) {
+  const text = String(value || '').trim();
+  if (!text) return false;
+  const letters = text.match(/\p{L}/gu) || [];
+  if (letters.length === 0) return false;
+  const arabicLetters = text.match(/[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/g) || [];
+  return arabicLetters.length / letters.length >= 0.25;
+}
+
+async function enforceOutputLanguageIfNeeded({ supabase, text, outputLang, maxTokens = 700 }) {
+  const content = String(text || '').trim();
+  if (!content) return '';
+
+  const lang = normalizeOutputLang(outputLang);
+  if (lang !== 'ar') return content;
+  if (isLikelyArabicText(content)) return content;
+
+  try {
+    const completion = await createMultiProviderChatCompletion({
+      supabase,
+      messages: [
+        {
+          role: 'system',
+          content:
+            `${outputLanguageInstruction(lang)}\n${outputFormattingInstruction()}\n` +
+            'Rewrite the user text in the requested language only while preserving meaning, section order, and bullet structure.'
+        },
+        { role: 'user', content }
+      ],
+      temperature: 0.2,
+      maxTokens: Math.max(180, Math.min(Number(maxTokens || 700) + 200, 1800))
+    });
+    const translated = String(completion?.choices?.[0]?.message?.content || '').trim();
+    if (translated && isLikelyArabicText(translated)) {
+      return translated;
+    }
+  } catch {
+    // Fallback to original content if localization retry fails.
+  }
+
+  return content;
 }
 
 function resolveAiProcessingProfile(type, outputLang = DEFAULT_OUTPUT_LANG) {
@@ -3060,7 +3107,7 @@ function resolveAiProcessingProfile(type, outputLang = DEFAULT_OUTPUT_LANG) {
     summary: {
       baseType: 'summary',
       processingType: `summary:${langSuffix}`,
-      maxTokens: 700,
+      maxTokens: 1000,
       prompt:
         `${langInstruction}\n${formattingInstruction}\n` +
         'Create a concise executive summary with: (1) what the video is about, (2) who it helps, (3) key conclusion.'
@@ -3068,7 +3115,7 @@ function resolveAiProcessingProfile(type, outputLang = DEFAULT_OUTPUT_LANG) {
     'key-insights': {
       baseType: 'key-insights',
       processingType: `key-insights:${langSuffix}`,
-      maxTokens: 850,
+      maxTokens: 1100,
       prompt:
         `${langInstruction}\n${formattingInstruction}\n` +
         'Extract 7-12 key insights. For each insight provide: the insight, why it matters, and an actionable implication.'
@@ -3084,7 +3131,7 @@ function resolveAiProcessingProfile(type, outputLang = DEFAULT_OUTPUT_LANG) {
     'proper-notes': {
       baseType: 'proper-notes',
       processingType: `proper-notes:${langSuffix}`,
-      maxTokens: 900,
+      maxTokens: 1200,
       prompt:
         `${langInstruction}\n${formattingInstruction}\n` +
         'Generate structured notes with headings, concise bullet points, definitions, and important examples from the transcript.'
@@ -3092,7 +3139,7 @@ function resolveAiProcessingProfile(type, outputLang = DEFAULT_OUTPUT_LANG) {
     steps: {
       baseType: 'steps',
       processingType: `steps:${langSuffix}`,
-      maxTokens: 850,
+      maxTokens: 1100,
       prompt:
         `${langInstruction}\n${formattingInstruction}\n` +
         'Extract an actionable step-by-step plan with ordered numbering, prerequisites, and expected result for each step.'
@@ -3100,7 +3147,7 @@ function resolveAiProcessingProfile(type, outputLang = DEFAULT_OUTPUT_LANG) {
     resources: {
       baseType: 'resources',
       processingType: `resources:${langSuffix}`,
-      maxTokens: 800,
+      maxTokens: 1000,
       prompt:
         `${langInstruction}\n${formattingInstruction}\n` +
         'Extract all tools, links, platforms, references, and resources mentioned. Group them by type and explain each item briefly.'
@@ -3108,7 +3155,7 @@ function resolveAiProcessingProfile(type, outputLang = DEFAULT_OUTPUT_LANG) {
     'study-kit': {
       baseType: 'study-kit',
       processingType: `study-kit:${langSuffix}`,
-      maxTokens: 1050,
+      maxTokens: 1400,
       prompt:
         `${langInstruction}\n${formattingInstruction}\n` +
         'Build a study pack: learning objectives, concept map, quick revision notes, and 8 quiz questions with short answers.'
@@ -3116,7 +3163,7 @@ function resolveAiProcessingProfile(type, outputLang = DEFAULT_OUTPUT_LANG) {
     'content-kit': {
       baseType: 'content-kit',
       processingType: `content-kit:${langSuffix}`,
-      maxTokens: 1050,
+      maxTokens: 1400,
       prompt:
         `${langInstruction}\n${formattingInstruction}\n` +
         'Build a content creator pack: 5 post hooks, 3 short-form script ideas, blog outline, and 10 SEO keywords from the transcript.'
@@ -3124,10 +3171,19 @@ function resolveAiProcessingProfile(type, outputLang = DEFAULT_OUTPUT_LANG) {
     all: {
       baseType: 'all',
       processingType: `all:${langSuffix}`,
-      maxTokens: 1200,
+      maxTokens: 1800,
       prompt:
         `${langInstruction}\n${formattingInstruction}\n` +
         'Provide a comprehensive analysis package with sections: Summary, Key Insights, Steps, Resources, and final action checklist.'
+    },
+    'description-instructions': {
+      baseType: 'description-instructions',
+      processingType: `description-instructions:${langSuffix}`,
+      maxTokens: 550,
+      saveHistory: false,
+      prompt:
+        `${langInstruction}\n${formattingInstruction}\n` +
+        'Convert the provided description lines into a clean, concise numbered list of actionable steps only. Keep it faithful and do not add unrelated points.'
     },
     'video-brief': {
       baseType: 'video-brief',
@@ -3136,7 +3192,7 @@ function resolveAiProcessingProfile(type, outputLang = DEFAULT_OUTPUT_LANG) {
       saveHistory: false,
       prompt:
         `${langInstruction}\n${formattingInstruction}\n` +
-        'Generate one short subtitle line (max 14 words) that summarizes the video value in a natural, marketing-friendly style.'
+        'Generate one short subtitle line (max 14 words) that summarizes the video value in a natural, marketing-friendly style. Use only the requested output language.'
     }
   };
 
@@ -4474,7 +4530,13 @@ export default async function handler(req, res) {
         maxTokens: profile.maxTokens
       });
 
-      const result = completion.choices?.[0]?.message?.content || '';
+      const rawResult = completion.choices?.[0]?.message?.content || '';
+      const result = await enforceOutputLanguageIfNeeded({
+        supabase,
+        text: rawResult,
+        outputLang,
+        maxTokens: profile.maxTokens
+      });
       const resolvedVideoTitle = await getPreferredVideoTitleForUser(supabase, user.id, videoId, videoId);
       if (shouldPersistResult) {
         await saveAiRecord(supabase, user.id, videoId, processingType, transcriptForModel, result, resolvedVideoTitle);
@@ -4629,7 +4691,7 @@ export default async function handler(req, res) {
       await assertUserIsActive(supabase, user.id);
       const { data, error } = await supabase
         .from('transcripts_history')
-        .select('*')
+        .select('id, video_id, video_title, processing_type, created_at')
         .eq('user_id', user.id)
         .neq('processing_type', QUOTA_MARKER_TYPE)
         .neq('processing_type', ADMIN_CONFIG_TYPE)

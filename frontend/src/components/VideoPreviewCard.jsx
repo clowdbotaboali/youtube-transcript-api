@@ -5,6 +5,8 @@ function VideoPreviewCard({
   data,
   localizedSubtitle = '',
   localizedSubtitleLoading = false,
+  localizedDescriptionInstructions = [],
+  localizedDescriptionLoading = false,
   outputLanguageLabel = '',
   lang = LANG.ar,
   extraContext = '',
@@ -17,6 +19,10 @@ function VideoPreviewCard({
   const thumbnailUrl = String(data?.thumbnailUrl || '').trim();
   const descriptionLinks = Array.isArray(data?.descriptionLinks) ? data.descriptionLinks : [];
   const descriptionInstructions = Array.isArray(data?.descriptionInstructions) ? data.descriptionInstructions : [];
+  const instructionSource =
+    Array.isArray(localizedDescriptionInstructions) && localizedDescriptionInstructions.length > 0
+      ? localizedDescriptionInstructions
+      : descriptionInstructions;
 
   const normalizeInstruction = (value) => {
     let line = cleanText(value || '').trim();
@@ -29,7 +35,7 @@ function VideoPreviewCard({
     return line.length >= 10 ? line : '';
   };
 
-  const cleanedInstructions = descriptionInstructions
+  const cleanedInstructions = instructionSource
     .map(normalizeInstruction)
     .filter(Boolean)
     .slice(0, 8);
@@ -153,7 +159,17 @@ function VideoPreviewCard({
                   {tr(lang, 'تعليمات/خطوات من الوصف', 'Instructions from description', 'Instructions detectees')}
                 </h4>
               </div>
-              {cleanedInstructions.length > 0 ? (
+              {localizedDescriptionLoading ? (
+                <p className="inline-flex items-center gap-2 text-sm text-amber-900/90">
+                  <FaSpinner className="animate-spin" />
+                  {tr(
+                    lang,
+                    'Ø¬Ø§Ø±Ù ØªØ¬Ù‡ÙŠØ² Ø§Ù„Ø®Ø·ÙˆØ§Øª Ø¨Ø§Ù„Ù„ØºØ© Ø§Ù„Ù…Ø®ØªØ§Ø±Ø©...',
+                    'Localizing steps to selected language...',
+                    'Localisation des etapes en cours...'
+                  )}
+                </p>
+              ) : cleanedInstructions.length > 0 ? (
                 <ol className="list-decimal list-inside space-y-1 text-sm text-amber-900">
                   {cleanedInstructions.map((line, idx) => (
                     <li key={`${idx}-${line}`}>{line}</li>

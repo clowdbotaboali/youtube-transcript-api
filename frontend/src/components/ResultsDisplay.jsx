@@ -174,7 +174,7 @@ function ResultsDisplay({ result, type, videoId, videoTitle, transcript, onSave,
                 </div>
               </div>
 
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 sm:p-6 max-h-none overflow-visible md:max-h-[700px] md:overflow-y-auto overflow-x-hidden">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 sm:p-6 max-h-none overflow-visible overflow-x-hidden">
                 <ResultBlocks blocks={resultBlocks} />
               </div>
             </div>
@@ -217,7 +217,7 @@ function ResultsDisplay({ result, type, videoId, videoTitle, transcript, onSave,
             </div>
           </div>
 
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 sm:p-6 max-h-none overflow-visible md:max-h-[600px] md:overflow-y-auto overflow-x-hidden">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 sm:p-6 max-h-none overflow-visible overflow-x-hidden">
             <ResultBlocks blocks={resultBlocks} />
           </div>
         </div>

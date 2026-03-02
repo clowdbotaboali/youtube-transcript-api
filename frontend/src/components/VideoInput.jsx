@@ -12,6 +12,7 @@ function VideoInput({
   onUrlChange,
   apiUrl,
   lang = LANG.ar,
+  outputLang = 'ar',
   accessRestrictionMessage = ''
 }) {
   const [url, setUrl] = useState('');
@@ -70,7 +71,7 @@ function VideoInput({
       const response = await fetch(`${apiUrl}/api/transcript/extract`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders },
-        body: JSON.stringify({ url: url.trim() }),
+        body: JSON.stringify({ url: url.trim(), lang: outputLang }),
         signal: controller.signal
       });
 

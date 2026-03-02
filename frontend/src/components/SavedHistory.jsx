@@ -72,7 +72,9 @@ function mapTypeLabel(type, lang) {
 function SavedHistory({ apiUrl = defaultApiUrl, user, lang = LANG.ar, onNotify }) {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
+  const [selectedItemLoading, setSelectedItemLoading] = useState(false);
   const [activeFilter, setActiveFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [editingItemId, setEditingItemId] = useState(null);
@@ -82,6 +84,7 @@ function SavedHistory({ apiUrl = defaultApiUrl, user, lang = LANG.ar, onNotify }
 
   const notifyRef = useRef(onNotify);
   const langRef = useRef(lang);
+  const historyRef = useRef(history);
 
   useEffect(() => {
     notifyRef.current = onNotify;
@@ -90,6 +93,10 @@ function SavedHistory({ apiUrl = defaultApiUrl, user, lang = LANG.ar, onNotify }
   useEffect(() => {
     langRef.current = lang;
   }, [lang]);
+
+  useEffect(() => {
+    historyRef.current = history;
+  }, [history]);
 
   const notify = useCallback((type, message) => {
     const fn = notifyRef.current;
@@ -155,7 +162,7 @@ function SavedHistory({ apiUrl = defaultApiUrl, user, lang = LANG.ar, onNotify }
     async (force = false) => {
       if (!user?.id) return;
 
-      let showLoader = true;
+      let showLoader = historyRef.current.length === 0;
       if (!force) {
         const cached = readCache();
         if (cached) {
@@ -165,7 +172,11 @@ function SavedHistory({ apiUrl = defaultApiUrl, user, lang = LANG.ar, onNotify }
           showLoader = cached.items.length === 0;
         }
       }
-      if (showLoader) setLoading(true);
+      if (showLoader) {
+        setLoading(true);
+      } else {
+        setRefreshing(true);
+      }
 
       try {
         const response = await fetch(`${apiUrl}/api/history`, {
@@ -184,7 +195,11 @@ function SavedHistory({ apiUrl = defaultApiUrl, user, lang = LANG.ar, onNotify }
       } catch {
         notify('error', tr(langRef.current, 'فشل الاتصال بالخادم.', 'Connection failed.', 'Echec de connexion.'));
       } finally {
-        if (showLoader) setLoading(false);
+        if (showLoader) {
+          setLoading(false);
+        } else {
+          setRefreshing(false);
+        }
       }
     },
     [apiUrl, notify, readCache, user?.id, writeCache]
@@ -196,6 +211,8 @@ function SavedHistory({ apiUrl = defaultApiUrl, user, lang = LANG.ar, onNotify }
     } else {
       setHistory([]);
       setSelectedItem(null);
+      setRefreshing(false);
+      setSelectedItemLoading(false);
     }
   }, [loadHistory, user?.id]);
 
@@ -271,6 +288,29 @@ function SavedHistory({ apiUrl = defaultApiUrl, user, lang = LANG.ar, onNotify }
     }
   };
 
+  const handleSelectItem = async (item) => {
+    if (!item?.id) return;
+    setSelectedItem(item);
+    setSelectedItemLoading(true);
+    try {
+      const response = await fetch(`${apiUrl}/api/history/${item.id}`, {
+        headers: {
+          ...(await getAuthHeaders())
+        }
+      });
+      const data = await response.json().catch(() => ({}));
+      if (response.ok && data.success && data.item) {
+        setSelectedItem(data.item);
+      } else {
+        notify('error', tr(lang, 'تعذر تحميل تفاصيل السجل.', 'Failed to load record details.', "Echec du chargement des details."));
+      }
+    } catch {
+      notify('error', tr(lang, 'فشل الاتصال بالخادم.', 'Connection failed.', 'Echec de connexion.'));
+    } finally {
+      setSelectedItemLoading(false);
+    }
+  };
+
   const typeFilteredHistory = useMemo(() => {
     if (activeFilter === 'all') return history;
     if (activeFilter === 'all-analysis') {
@@ -312,6 +352,8 @@ function SavedHistory({ apiUrl = defaultApiUrl, user, lang = LANG.ar, onNotify }
           .filter(Boolean)
           .join('\n\n')
       : cleanText(selectedItem?.ai_result || '');
+  const isBusy = loading || refreshing;
+  const isInitialLoading = loading && history.length === 0;
 
   return (
     <div className="rounded-2xl border border-blue-200 bg-white p-4 sm:p-5 shadow-sm">
@@ -331,9 +373,9 @@ function SavedHistory({ apiUrl = defaultApiUrl, user, lang = LANG.ar, onNotify }
           type="button"
           onClick={() => loadHistory(true)}
           className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs border border-slate-200 hover:bg-slate-50"
-          disabled={loading}
+          disabled={isBusy}
         >
-          <FaRedo className={loading ? 'animate-spin' : ''} />
+          <FaRedo className={isBusy ? 'animate-spin' : ''} />
           <span>{tr(lang, 'تحديث', 'Refresh', 'Actualiser')}</span>
         </button>
       </div>
@@ -398,7 +440,11 @@ function SavedHistory({ apiUrl = defaultApiUrl, user, lang = LANG.ar, onNotify }
         <span className="font-bold text-slate-700">{filteredHistory.length}</span>
       </div>
 
-      {loading ? (
+      {refreshing && !isInitialLoading ? (
+        <p className="text-xs text-slate-500 mb-3">{tr(lang, 'جارٍ تحديث البيانات...', 'Refreshing data...', 'Actualisation en cours...')}</p>
+      ) : null}
+
+      {isInitialLoading ? (
         <p className="text-sm text-slate-500 py-5 text-center">{tr(lang, 'جارٍ التحميل...', 'Loading...', 'Chargement...')}</p>
       ) : filteredHistory.length === 0 ? (
         <p className="text-sm text-slate-500 py-5 text-center">{tr(lang, 'لا توجد عناصر محفوظة.', 'No saved records.', 'Aucun élément enregistré.')}</p>
@@ -406,7 +452,7 @@ function SavedHistory({ apiUrl = defaultApiUrl, user, lang = LANG.ar, onNotify }
         <div className="space-y-2 max-h-[520px] overflow-y-auto pr-1">
           {filteredHistory.map((item) => {
             const baseType = getBaseProcessingType(item.processing_type);
-            const meta = parseExtractMeta(item);
+            const meta = baseType === 'extract' ? parseExtractMeta(item) : { thumbnailUrl: defaultThumbnail(item.video_id) };
             const thumbnail = meta.thumbnailUrl || defaultThumbnail(item.video_id);
             return (
               <article key={item.id} className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
@@ -463,7 +509,7 @@ function SavedHistory({ apiUrl = defaultApiUrl, user, lang = LANG.ar, onNotify }
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={() => setSelectedItem(item)}
+                      onClick={() => handleSelectItem(item)}
                       className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs border border-blue-200 text-blue-700 hover:bg-blue-50"
                     >
                       <FaEye />
@@ -524,19 +570,23 @@ function SavedHistory({ apiUrl = defaultApiUrl, user, lang = LANG.ar, onNotify }
               <section className="p-4 border-b md:border-b-0 md:border-l border-slate-200">
                 <h5 className="font-bold text-slate-800 mb-2">{tr(lang, 'النص الأصلي', 'Original Transcript', 'Transcription originale')}</h5>
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 max-h-[65vh] overflow-auto text-sm whitespace-pre-wrap break-words">
-                  {selectedItem.transcript || tr(lang, 'لا يوجد نص.', 'No transcript.', 'Aucune transcription.')}
+                  {selectedItemLoading
+                    ? tr(lang, 'جارٍ تحميل التفاصيل...', 'Loading details...', 'Chargement des details...')
+                    : selectedItem.transcript || tr(lang, 'لا يوجد نص.', 'No transcript.', 'Aucune transcription.')}
                 </div>
               </section>
               <section className="p-4">
                 <h5 className="font-bold text-slate-800 mb-2">{tr(lang, 'الناتج', 'Result', 'Résultat')}</h5>
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 max-h-[65vh] overflow-auto text-sm whitespace-pre-wrap break-words">
-                  {selectedResult ||
-                    tr(
-                      lang,
-                      'لا يوجد ناتج محفوظ لهذا العنصر.',
-                      'No saved result for this record.',
-                      'Aucun résultat enregistré pour cet élément.'
-                    )}
+                  {selectedItemLoading
+                    ? tr(lang, 'جارٍ تحميل التفاصيل...', 'Loading details...', 'Chargement des details...')
+                    : selectedResult ||
+                      tr(
+                        lang,
+                        'لا يوجد ناتج محفوظ لهذا العنصر.',
+                        'No saved result for this record.',
+                        'Aucun résultat enregistré pour cet élément.'
+                      )}
                 </div>
               </section>
             </div>
@@ -548,4 +598,3 @@ function SavedHistory({ apiUrl = defaultApiUrl, user, lang = LANG.ar, onNotify }
 }
 
 export default SavedHistory;
-
