@@ -1,5 +1,4 @@
 import { Groq } from 'groq-sdk';
-import { YoutubeTranscript } from 'youtube-transcript';
 import { createClient } from '@supabase/supabase-js';
 import ytdl from '@distube/ytdl-core';
 import crypto from 'crypto';
@@ -93,7 +92,6 @@ const DEFAULT_ALLOWED_ORIGINS = [
   'http://127.0.0.1:5173',
   'https://transcripta.tech',
   'https://www.transcripta.tech',
-  'https://youtube-transcript-api-lilac.vercel.app'
 ];
 const STATUS_DEFAULT_ERROR_CODE = {
   400: 'INVALID_INPUT',
@@ -815,8 +813,19 @@ function makeHash(value) {
   return crypto.createHash('sha256').update(String(value || '')).digest('hex');
 }
 
-function makeChatKey(message) {
-  return `${CHAT_TYPE_PREFIX}${makeHash(normalizeTextInput(message).toLowerCase())}`;
+function buildScopedProcessingType(baseType, scopeToken = '') {
+  const normalizedBase = String(baseType || '').trim();
+  if (!normalizedBase) return '';
+  const normalizedToken = String(scopeToken || '').trim();
+  if (!normalizedToken) return normalizedBase;
+  return `${normalizedBase}|cfg:${normalizedToken}`;
+}
+
+function makeChatKey(message, { outputLang = DEFAULT_OUTPUT_LANG, scopeToken = '' } = {}) {
+  const normalizedMessage = normalizeTextInput(message).toLowerCase();
+  const normalizedLang = normalizeOutputLang(outputLang);
+  const payload = `${normalizedMessage}|lang:${normalizedLang}|cfg:${String(scopeToken || '').trim()}`;
+  return `${CHAT_TYPE_PREFIX}${makeHash(payload)}`;
 }
 
 function normalizeTier(value) {
@@ -1167,6 +1176,21 @@ function orderKeyCandidates(entries, activeKeyId = '') {
   const primary = list.find((item) => String(item.id || '').trim() === active);
   const fallback = list.filter((item) => String(item.id || '').trim() !== active);
   return primary ? [primary, ...fallback] : fallback;
+}
+
+function keepOnlyActiveKeyEntry(entries, activeKeyId = '') {
+  const list = Array.isArray(entries) ? entries : [];
+  const activeEntry = resolveActiveKeyEntry(list, activeKeyId);
+  if (!activeEntry) {
+    return {
+      keys: [],
+      activeKeyId: ''
+    };
+  }
+  return {
+    keys: [{ ...activeEntry }],
+    activeKeyId: String(activeEntry.id || '').trim()
+  };
 }
 
 function runtimeStateKey(scope, provider, keyId) {
@@ -1529,25 +1553,16 @@ function normalizeProviderName(value) {
 
 function normalizeAiProviderEntry(providerName, rawValue) {
   const value = rawValue && typeof rawValue === 'object' ? rawValue : {};
-  const keys = normalizeApiKeyEntries(value.keys || [], {
+  const normalizedKeys = normalizeApiKeyEntries(value.keys || [], {
     labelPrefix: `${providerName.toUpperCase()} key`,
     idPrefix: `ai_${providerName}`
   });
-  const legacyKey = String(value.apiKey || '').trim();
-  if (legacyKey && !keys.some((item) => String(item.apiKey || '') === legacyKey)) {
-    keys.push({
-      id: buildApiKeyEntryId(legacyKey, `ai_${providerName}`),
-      label: `${providerName.toUpperCase()} legacy`,
-      apiKey: legacyKey,
-      enabled: true
-    });
-  }
-
-  const activeKeyId = ensureActiveKeyId(keys, value.activeKeyId);
-  const activeEntry = resolveActiveKeyEntry(keys, activeKeyId);
+  const activeKeyId = ensureActiveKeyId(normalizedKeys, value.activeKeyId);
+  const activeOnly = keepOnlyActiveKeyEntry(normalizedKeys, activeKeyId);
+  const activeEntry = resolveActiveKeyEntry(activeOnly.keys, activeOnly.activeKeyId);
   return {
-    keys,
-    activeKeyId,
+    keys: activeOnly.keys,
+    activeKeyId: activeOnly.activeKeyId,
     apiKey: String(activeEntry?.apiKey || '').trim()
   };
 }
@@ -1608,7 +1623,18 @@ function sanitizeAiConfigForAdmin(config) {
 async function loadOrBootstrapAiProviderConfig(supabase) {
   const { payload } = await loadConfigPayload(supabase, AI_CONFIG_TYPE, AI_CONFIG_VIDEO_ID);
   if (payload) {
-    return normalizeAiConfigPayload(payload);
+    const normalized = normalizeAiConfigPayload(payload);
+    // One-time cleanup for legacy payload shapes/extra keys so only active admin key remains persisted.
+    if (JSON.stringify(payload) !== JSON.stringify(normalized)) {
+      await saveConfigPayload(supabase, {
+        processingType: AI_CONFIG_TYPE,
+        videoId: AI_CONFIG_VIDEO_ID,
+        videoTitle: 'AI Providers Config',
+        transcript: 'ai-providers',
+        payload: normalized
+      });
+    }
+    return normalized;
   }
 
   const defaults = normalizeAiConfigPayload(defaultAiProviderConfig());
@@ -1660,6 +1686,19 @@ function getActiveAiProviderKey(config, provider) {
   return activeEntry;
 }
 
+function buildAiExecutionToken(config) {
+  const provider = normalizeProviderName(config?.selectedProvider);
+  const model = String(config?.selectedModel || defaultModelForProvider(provider)).trim() || defaultModelForProvider(provider);
+  const activeKey = getActiveAiProviderKey(config, provider);
+  const activeKeyId = String(activeKey?.id || 'none').trim() || 'none';
+  return `${provider}:${model}:${activeKeyId}`;
+}
+
+async function getCurrentAiExecutionToken(supabase) {
+  const config = await loadOrBootstrapAiProviderConfig(supabase);
+  return buildAiExecutionToken(config);
+}
+
 function defaultTranscriptApiConfig() {
   return {
     keys: [],
@@ -1671,14 +1710,15 @@ function defaultTranscriptApiConfig() {
 function normalizeTranscriptApiConfig(payload) {
   const defaults = defaultTranscriptApiConfig();
   const data = payload && typeof payload === 'object' ? payload : {};
-  const keys = normalizeApiKeyEntries(data.keys || defaults.keys, {
+  const normalizedKeys = normalizeApiKeyEntries(data.keys || defaults.keys, {
     labelPrefix: 'Transcript key',
     idPrefix: 'tap'
   });
-  const activeKeyId = ensureActiveKeyId(keys, data.activeKeyId);
+  const activeKeyId = ensureActiveKeyId(normalizedKeys, data.activeKeyId);
+  const activeOnly = keepOnlyActiveKeyEntry(normalizedKeys, activeKeyId);
   return {
-    keys,
-    activeKeyId,
+    keys: activeOnly.keys,
+    activeKeyId: activeOnly.activeKeyId,
     updatedAt: data.updatedAt || defaults.updatedAt
   };
 }
@@ -1686,7 +1726,18 @@ function normalizeTranscriptApiConfig(payload) {
 async function loadOrBootstrapTranscriptApiConfig(supabase) {
   const { payload } = await loadConfigPayload(supabase, TRANSCRIPT_API_CONFIG_TYPE, TRANSCRIPT_API_VIDEO_ID);
   if (payload) {
-    return normalizeTranscriptApiConfig(payload);
+    const normalized = normalizeTranscriptApiConfig(payload);
+    // One-time cleanup for legacy transcript key payloads.
+    if (JSON.stringify(payload) !== JSON.stringify(normalized)) {
+      await saveConfigPayload(supabase, {
+        processingType: TRANSCRIPT_API_CONFIG_TYPE,
+        videoId: TRANSCRIPT_API_VIDEO_ID,
+        videoTitle: 'Transcript API Keys Config',
+        transcript: 'transcript-api-keys',
+        payload: normalized
+      });
+    }
+    return normalized;
   }
 
   const defaults = normalizeTranscriptApiConfig(defaultTranscriptApiConfig());
@@ -1741,6 +1792,11 @@ function getTranscriptApiKeyCandidates(config) {
   if (activeEntry.enabled === false) return [];
   if (!String(activeEntry.apiKey || '').trim()) return [];
   return [activeEntry];
+}
+
+function getActiveTranscriptApiKeyId(config) {
+  const active = getTranscriptApiKeyCandidates(config)[0] || null;
+  return String(active?.id || '').trim();
 }
 
 async function ensurePaymentProofBucket(supabase) {
@@ -1941,7 +1997,6 @@ async function fetchProviderModels(provider, apiKey) {
         'Content-Type': 'application/json',
         ...(target === 'openrouter'
           ? {
-              'HTTP-Referer': 'https://youtube-transcript-api-lilac.vercel.app',
               'X-Title': 'Transcript AI'
             }
           : {})
@@ -2172,7 +2227,6 @@ async function createMultiProviderChatCompletion({ supabase, messages, temperatu
         extraHeaders:
           provider === 'openrouter'
             ? {
-                'HTTP-Referer': 'https://youtube-transcript-api-lilac.vercel.app',
                 'X-Title': 'Transcript AI'
               }
             : {}
@@ -2399,6 +2453,7 @@ function parseExtractMeta(rawMeta, videoId) {
 
   return {
     method: String(parsed.method || '').trim() || null,
+    transcriptKeyId: String(parsed.transcriptKeyId || '').trim() || null,
     thumbnailUrl: String(parsed.thumbnailUrl || '').trim() || buildYouTubeThumbnailUrl(videoId),
     descriptionLinks: links,
     descriptionInstructions: instructions
@@ -2415,6 +2470,7 @@ function shouldHydrateExtractMeta(meta = {}) {
 function normalizeExtractMetaForSave(meta = {}, videoId, methodFallback = 'cached') {
   return {
     method: String(meta.method || '').trim() || methodFallback,
+    transcriptKeyId: String(meta.transcriptKeyId || '').trim() || null,
     thumbnailUrl: String(meta.thumbnailUrl || '').trim() || buildYouTubeThumbnailUrl(videoId),
     descriptionLinks: Array.isArray(meta.descriptionLinks)
       ? meta.descriptionLinks.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 20)
@@ -2423,6 +2479,15 @@ function normalizeExtractMetaForSave(meta = {}, videoId, methodFallback = 'cache
       ? meta.descriptionInstructions.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 10)
       : []
   };
+}
+
+function isTranscriptCacheCompatible(meta = {}, activeTranscriptKeyId = '') {
+  const method = String(meta.method || '').trim().toLowerCase();
+  if (method !== 'transcriptapi') return false;
+  const activeKeyId = String(activeTranscriptKeyId || '').trim();
+  if (!activeKeyId) return true;
+  const cachedKeyId = String(meta.transcriptKeyId || '').trim();
+  return Boolean(cachedKeyId) && cachedKeyId === activeKeyId;
 }
 
 async function hydrateExtractMetaIfNeeded(videoId, currentMeta = {}, fallbackTitle = '') {
@@ -2720,6 +2785,7 @@ async function fetchYouTubeVideoMetadata(videoId, fallbackTitle = '') {
 async function saveExtractionRecord(supabase, userId, videoId, transcript, method, videoTitle = '', meta = {}) {
   const normalizedMeta = {
     method,
+    transcriptKeyId: String(meta.transcriptKeyId || '').trim() || null,
     thumbnailUrl: String(meta.thumbnailUrl || '').trim() || buildYouTubeThumbnailUrl(videoId),
     descriptionLinks: Array.isArray(meta.descriptionLinks) ? meta.descriptionLinks.slice(0, 20) : [],
     descriptionInstructions: Array.isArray(meta.descriptionInstructions) ? meta.descriptionInstructions.slice(0, 10) : []
@@ -3259,13 +3325,14 @@ function getCachedTranscriptFromMemory(videoId) {
   return entry;
 }
 
-function setCachedTranscriptInMemory(videoId, transcript, method) {
+function setCachedTranscriptInMemory(videoId, transcript, method, transcriptKeyId = '') {
   const key = String(videoId || '').trim();
   const text = String(transcript || '').trim();
   if (!key || !text) return;
   transcriptMemoryCache.set(key, {
     transcript: text,
     method: String(method || 'unknown'),
+    transcriptKeyId: String(transcriptKeyId || '').trim() || null,
     expiresAt: Date.now() + TRANSCRIPT_GLOBAL_CACHE_TTL_MS
   });
   if (transcriptMemoryCache.size > TRANSCRIPT_MEMORY_CACHE_MAX_ITEMS) {
@@ -3611,8 +3678,8 @@ function isUsableTranscript(text = '') {
   return stats.wordsCount >= 3 && stats.uniqueWords >= 2;
 }
 
-async function fetchWithTranscriptApi(videoUrl, supabase) {
-  const config = supabase ? await loadOrBootstrapTranscriptApiConfig(supabase) : { keys: [], activeKeyId: '' };
+async function fetchWithTranscriptApi(videoUrl, supabase, transcriptConfig = null) {
+  const config = transcriptConfig || (supabase ? await loadOrBootstrapTranscriptApiConfig(supabase) : { keys: [], activeKeyId: '' });
   const candidates = getTranscriptApiKeyCandidates(config);
   if (candidates.length === 0) return null;
 
@@ -3659,7 +3726,10 @@ async function fetchWithTranscriptApi(videoUrl, supabase) {
       const transcript = data.transcript.map((item) => item.text || '').join(' ').trim();
       if (transcript) {
         recordRuntimeState('transcript', 'transcript', keyEntry.id, { success: true });
-        return transcript;
+        return {
+          transcript,
+          keyId: String(keyEntry.id || '').trim() || null
+        };
       }
       lastError = new Error('TranscriptAPI returned empty transcript');
       recordRuntimeState('transcript', 'transcript', keyEntry.id, {
@@ -3679,54 +3749,6 @@ async function fetchWithTranscriptApi(videoUrl, supabase) {
     return null;
   }
   return null;
-}
-
-async function fetchWithYtdl(videoId) {
-  const info = await withTimeout(ytdl.getInfo(videoId, { agent: YTDL_AGENT }), 10000, 'ytdl info');
-  const captionTracks = info?.player_response?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
-  if (!captionTracks || captionTracks.length === 0) return null;
-
-  const preferredTracks = [
-    ...captionTracks.filter((track) => track.languageCode === 'ar' || track.languageCode === 'ar-SA'),
-    ...captionTracks.filter((track) => track.languageCode === 'en' || track.languageCode === 'en-US'),
-    ...captionTracks
-  ];
-  const uniqueTracks = Array.from(new Map(preferredTracks.map((track) => [track.baseUrl, track])).values());
-
-  let bestTranscript = null;
-  let bestScore = -1;
-
-  for (const track of uniqueTracks) {
-    const response = await fetchWithTimeout(
-      track.baseUrl,
-      {
-        dispatcher: YTDL_AGENT.dispatcher,
-        headers: {
-          'User-Agent': USER_AGENT,
-          'Accept-Language': 'en-US,en;q=0.9'
-        }
-      },
-      8000,
-      'Caption track request'
-    );
-    if (!response.ok) continue;
-    const xmlText = await withTimeout(response.text(), 8000, 'Caption track read');
-    if (!xmlText) continue;
-    const textMatches = xmlText.matchAll(/<text[^>]*>([\s\S]*?)<\/text>/g);
-    const transcript = Array.from(textMatches)
-      .map((match) => decodeXmlEntities(match[1]))
-      .join(' ')
-      .trim();
-    if (!transcript) continue;
-    const stats = getTranscriptStats(transcript);
-    const score = stats.wordsCount * 2 + stats.uniqueWords;
-    if (score > bestScore) {
-      bestScore = score;
-      bestTranscript = transcript;
-    }
-  }
-
-  return bestTranscript;
 }
 
 export default async function handler(req, res) {
@@ -3840,84 +3862,71 @@ export default async function handler(req, res) {
       const videoId = parsedVideo.videoId;
       audit.tier = 'guest';
       audit.videoId = videoId;
+      const transcriptConfig = supabase ? await loadOrBootstrapTranscriptApiConfig(supabase) : { keys: [], activeKeyId: '' };
+      const activeTranscriptKeyId = getActiveTranscriptApiKeyId(transcriptConfig);
+      if (!activeTranscriptKeyId) {
+        return sendError(
+          res,
+          503,
+          'TRANSCRIPT_API_NOT_CONFIGURED',
+          'Transcript API active key is missing or disabled. Configure it in admin first.'
+        );
+      }
       let transcript = null;
       let method = 'unknown';
       let extractMeta = parseExtractMeta(null, videoId);
 
-      if (!transcript) {
-        try {
-          transcript = await withTimeout(fetchWithTranscriptApi(parsedVideo.canonicalUrl, supabase), EXTRACTION_TIMEOUT_MS, 'Guest TranscriptAPI pipeline');
-          if (transcript && isUsableTranscript(transcript)) {
-            method = 'transcriptapi';
-          } else {
-            transcript = null;
-          }
-        } catch {}
-      }
-
       const memoryCache = getCachedTranscriptFromMemory(videoId);
       if (!transcript && memoryCache?.transcript) {
-        transcript = memoryCache.transcript;
-        method = memoryCache.method || 'memory-cache';
+        const memoryMeta = {
+          method: memoryCache.method || 'memory-cache',
+          transcriptKeyId: memoryCache.transcriptKeyId || null
+        };
+        if (isTranscriptCacheCompatible(memoryMeta, activeTranscriptKeyId)) {
+          transcript = memoryCache.transcript;
+          method = memoryMeta.method;
+          extractMeta = {
+            ...extractMeta,
+            ...memoryMeta
+          };
+        }
       }
 
       if (!transcript && supabase) {
         const globalCache = await getRecentGlobalExtractRecord(supabase, videoId, TRANSCRIPT_GLOBAL_CACHE_TTL_MS);
         if (globalCache?.transcript) {
-          transcript = String(globalCache.transcript || '').trim();
           const globalMeta = parseExtractMeta(globalCache.ai_result, videoId);
-          method = globalMeta.method || 'global-db-cache';
-          extractMeta = {
-            ...extractMeta,
-            ...globalMeta
-          };
-          if (transcript) {
-            setCachedTranscriptInMemory(videoId, transcript, method);
+          if (isTranscriptCacheCompatible(globalMeta, activeTranscriptKeyId)) {
+            transcript = String(globalCache.transcript || '').trim();
+            method = globalMeta.method || 'global-db-cache';
+            extractMeta = {
+              ...extractMeta,
+              ...globalMeta
+            };
+            if (transcript) {
+              setCachedTranscriptInMemory(videoId, transcript, method, globalMeta.transcriptKeyId || activeTranscriptKeyId);
+            }
           }
         }
       }
 
       if (!transcript) {
         try {
-          transcript = await withTimeout(fetchWithYtdl(videoId), EXTRACTION_TIMEOUT_MS, 'Guest ytdl pipeline');
-          if (transcript && isUsableTranscript(transcript)) {
-            method = 'ytdl-core';
+          const transcriptResult = await withTimeout(
+            fetchWithTranscriptApi(parsedVideo.canonicalUrl, supabase, transcriptConfig),
+            EXTRACTION_TIMEOUT_MS,
+            'Guest TranscriptAPI pipeline'
+          );
+          if (transcriptResult?.transcript && isUsableTranscript(transcriptResult.transcript)) {
+            transcript = transcriptResult.transcript;
+            method = 'transcriptapi';
+            extractMeta = {
+              ...extractMeta,
+              method,
+              transcriptKeyId: transcriptResult.keyId || activeTranscriptKeyId
+            };
           } else {
             transcript = null;
-          }
-        } catch {}
-      }
-
-      if (!transcript) {
-        try {
-          const data = await withTimeout(
-            YoutubeTranscript.fetchTranscript(videoId, { lang: 'ar' }),
-            EXTRACTION_TIMEOUT_MS,
-            'Guest youtube-transcript ar'
-          );
-          if (data?.length) {
-            const candidate = data.map((item) => item.text).join(' ').trim();
-            if (isUsableTranscript(candidate)) {
-              transcript = candidate;
-              method = 'youtube-transcript-ar';
-            }
-          }
-        } catch {}
-      }
-
-      if (!transcript) {
-        try {
-          const data = await withTimeout(
-            YoutubeTranscript.fetchTranscript(videoId, { lang: 'en' }),
-            EXTRACTION_TIMEOUT_MS,
-            'Guest youtube-transcript en'
-          );
-          if (data?.length) {
-            const candidate = data.map((item) => item.text).join(' ').trim();
-            if (isUsableTranscript(candidate)) {
-              transcript = candidate;
-              method = 'youtube-transcript-en';
-            }
           }
         } catch {}
       }
@@ -3932,7 +3941,7 @@ export default async function handler(req, res) {
       }
 
       transcript = String(transcript || '').trim();
-      setCachedTranscriptInMemory(videoId, transcript, method);
+      setCachedTranscriptInMemory(videoId, transcript, method, extractMeta.transcriptKeyId || activeTranscriptKeyId);
 
       const metadata = await fetchYouTubeVideoMetadata(videoId, extractMeta.videoTitle || videoId);
       extractMeta = {
@@ -4971,60 +4980,72 @@ export default async function handler(req, res) {
       const videoId = parsedVideo.videoId;
       audit.videoId = videoId;
       const defaultExtractMeta = parseExtractMeta(null, videoId);
+      const transcriptConfig = await loadOrBootstrapTranscriptApiConfig(supabase);
+      const activeTranscriptKeyId = getActiveTranscriptApiKeyId(transcriptConfig);
+      if (!activeTranscriptKeyId) {
+        return sendError(
+          res,
+          503,
+          'TRANSCRIPT_API_NOT_CONFIGURED',
+          'Transcript API active key is missing or disabled. Configure it in admin first.'
+        );
+      }
 
       const cachedExtract = await getCachedExtractRecord(supabase, user.id, videoId);
       if (cachedExtract?.transcript) {
         const cachedMeta = parseExtractMeta(cachedExtract.ai_result, videoId);
-        const hydratedMeta = await hydrateExtractMetaIfNeeded(
-          videoId,
-          cachedMeta,
-          sanitizeVideoTitle(cachedExtract.video_title, videoId)
-        );
-        const normalizedCached = normalizeExtractMetaForSave(cachedMeta, videoId, cachedMeta.method || 'cached');
-        if (JSON.stringify(normalizedCached) !== JSON.stringify(hydratedMeta)) {
-          await supabase
-            .from('transcripts_history')
-            .update({
-              ai_result: JSON.stringify(hydratedMeta)
-            })
-            .eq('id', cachedExtract.id)
-            .eq('user_id', user.id);
-        }
-        console.info(`[cache] transcript user-hit video=${videoId} user=${user.id}`);
-        const quota = await consumeQuotaForExtraction();
-        if (!quota.allowed) {
-          return sendError(
-            res,
-            403,
-            'QUOTA_EXCEEDED',
-            'Monthly transcript quota reached. Please wait for reset or upgrade your plan.',
-            {
-              monthlyQuota: quota.monthlyQuota,
-              usedThisMonth: quota.usedThisMonth,
-              remaining: quota.remaining,
-              nextResetAt: quota.nextResetAt
-            }
+        if (isTranscriptCacheCompatible(cachedMeta, activeTranscriptKeyId)) {
+          const hydratedMeta = await hydrateExtractMetaIfNeeded(
+            videoId,
+            cachedMeta,
+            sanitizeVideoTitle(cachedExtract.video_title, videoId)
           );
+          const normalizedCached = normalizeExtractMetaForSave(cachedMeta, videoId, cachedMeta.method || 'cached');
+          if (JSON.stringify(normalizedCached) !== JSON.stringify(hydratedMeta)) {
+            await supabase
+              .from('transcripts_history')
+              .update({
+                ai_result: JSON.stringify(hydratedMeta)
+              })
+              .eq('id', cachedExtract.id)
+              .eq('user_id', user.id);
+          }
+          console.info(`[cache] transcript user-hit video=${videoId} user=${user.id}`);
+          const quota = await consumeQuotaForExtraction();
+          if (!quota.allowed) {
+            return sendError(
+              res,
+              403,
+              'QUOTA_EXCEEDED',
+              'Monthly transcript quota reached. Please wait for reset or upgrade your plan.',
+              {
+                monthlyQuota: quota.monthlyQuota,
+                usedThisMonth: quota.usedThisMonth,
+                remaining: quota.remaining,
+                nextResetAt: quota.nextResetAt
+              }
+            );
+          }
+          return res.json({
+            success: true,
+            videoId,
+            videoTitle: sanitizeVideoTitle(cachedExtract.video_title, videoId),
+            transcript: cachedExtract.transcript,
+            wordCount: cachedExtract.transcript.trim().split(/\s+/).length,
+            method: hydratedMeta.method || cachedMeta.method || 'cached',
+            thumbnailUrl: hydratedMeta.thumbnailUrl || defaultExtractMeta.thumbnailUrl,
+            descriptionLinks: hydratedMeta.descriptionLinks || [],
+            descriptionInstructions: hydratedMeta.descriptionInstructions || [],
+            creditsLeft: Number(userRow.credits || 0),
+            chargedForNewVideo: true,
+            monthlyQuota: quota.monthlyQuota,
+            usedThisMonth: quota.usedThisMonth,
+            monthlyQuotaRemaining: quota.remaining,
+            quotaLastResetAt: quota.lastResetAt,
+            quotaNextResetAt: quota.nextResetAt,
+            cached: true
+          });
         }
-        return res.json({
-          success: true,
-          videoId,
-          videoTitle: sanitizeVideoTitle(cachedExtract.video_title, videoId),
-          transcript: cachedExtract.transcript,
-          wordCount: cachedExtract.transcript.trim().split(/\s+/).length,
-          method: hydratedMeta.method || cachedMeta.method || 'cached',
-          thumbnailUrl: hydratedMeta.thumbnailUrl || defaultExtractMeta.thumbnailUrl,
-          descriptionLinks: hydratedMeta.descriptionLinks || [],
-          descriptionInstructions: hydratedMeta.descriptionInstructions || [],
-          creditsLeft: Number(userRow.credits || 0),
-          chargedForNewVideo: true,
-          monthlyQuota: quota.monthlyQuota,
-          usedThisMonth: quota.usedThisMonth,
-          monthlyQuotaRemaining: quota.remaining,
-          quotaLastResetAt: quota.lastResetAt,
-          quotaNextResetAt: quota.nextResetAt,
-          cached: true
-        });
       }
 
       let transcript = null;
@@ -5032,38 +5053,39 @@ export default async function handler(req, res) {
       let fetchedFromCache = false;
       let extractMeta = { ...defaultExtractMeta };
 
-      if (!transcript) {
-        try {
-          transcript = await withTimeout(fetchWithTranscriptApi(parsedVideo.canonicalUrl, supabase), EXTRACTION_TIMEOUT_MS, 'TranscriptAPI pipeline');
-          if (transcript && isUsableTranscript(transcript)) {
-            method = 'transcriptapi';
-          } else {
-            transcript = null;
-          }
-        } catch {}
-      }
-
       const memoryCache = getCachedTranscriptFromMemory(videoId);
       if (!transcript && memoryCache?.transcript) {
-        transcript = memoryCache.transcript;
-        method = memoryCache.method || 'memory-cache';
-        fetchedFromCache = true;
-        console.info(`[cache] transcript memory-hit video=${videoId}`);
+        const memoryMeta = {
+          method: memoryCache.method || 'memory-cache',
+          transcriptKeyId: memoryCache.transcriptKeyId || null
+        };
+        if (isTranscriptCacheCompatible(memoryMeta, activeTranscriptKeyId)) {
+          transcript = memoryCache.transcript;
+          method = memoryMeta.method;
+          extractMeta = {
+            ...extractMeta,
+            ...memoryMeta
+          };
+          fetchedFromCache = true;
+          console.info(`[cache] transcript memory-hit video=${videoId}`);
+        }
       }
 
       if (!transcript) {
         const globalCache = await getRecentGlobalExtractRecord(supabase, videoId, TRANSCRIPT_GLOBAL_CACHE_TTL_MS);
         if (globalCache?.transcript) {
-          transcript = String(globalCache.transcript || '').trim();
           const globalMeta = parseExtractMeta(globalCache.ai_result, videoId);
-          method = globalMeta.method || 'global-db-cache';
-          extractMeta = {
-            ...extractMeta,
-            ...globalMeta
-          };
-          fetchedFromCache = true;
-          setCachedTranscriptInMemory(videoId, transcript, method);
-          console.info(`[cache] transcript db-hit video=${videoId}`);
+          if (isTranscriptCacheCompatible(globalMeta, activeTranscriptKeyId)) {
+            transcript = String(globalCache.transcript || '').trim();
+            method = globalMeta.method || 'global-db-cache';
+            extractMeta = {
+              ...extractMeta,
+              ...globalMeta
+            };
+            fetchedFromCache = true;
+            setCachedTranscriptInMemory(videoId, transcript, method, globalMeta.transcriptKeyId || activeTranscriptKeyId);
+            console.info(`[cache] transcript db-hit video=${videoId}`);
+          }
         } else {
           console.info(`[cache] transcript miss video=${videoId}`);
         }
@@ -5071,68 +5093,32 @@ export default async function handler(req, res) {
 
       if (!transcript) {
         try {
-          transcript = await withTimeout(fetchWithYtdl(videoId), EXTRACTION_TIMEOUT_MS, 'ytdl pipeline');
-          if (transcript && isUsableTranscript(transcript)) {
-            method = 'ytdl-core';
+          const transcriptResult = await withTimeout(
+            fetchWithTranscriptApi(parsedVideo.canonicalUrl, supabase, transcriptConfig),
+            EXTRACTION_TIMEOUT_MS,
+            'TranscriptAPI pipeline'
+          );
+          if (transcriptResult?.transcript && isUsableTranscript(transcriptResult.transcript)) {
+            transcript = transcriptResult.transcript;
+            method = 'transcriptapi';
+            extractMeta = {
+              ...extractMeta,
+              method,
+              transcriptKeyId: transcriptResult.keyId || activeTranscriptKeyId
+            };
           } else {
             transcript = null;
           }
         } catch {}
       }
 
-      try {
-        if (!transcript) {
-          const data = await withTimeout(
-            YoutubeTranscript.fetchTranscript(videoId, { lang: 'ar' }),
-            EXTRACTION_TIMEOUT_MS,
-            'youtube-transcript ar'
-          );
-          if (data?.length) {
-            const candidate = data.map((item) => item.text).join(' ').trim();
-            if (isUsableTranscript(candidate)) {
-              transcript = candidate;
-              method = 'youtube-transcript-ar';
-            }
-          }
-        }
-      } catch {}
-
       if (!transcript) {
-        try {
-          const data = await withTimeout(
-            YoutubeTranscript.fetchTranscript(videoId, { lang: 'en' }),
-            EXTRACTION_TIMEOUT_MS,
-            'youtube-transcript en'
-          );
-          if (data?.length) {
-            const candidate = data.map((item) => item.text).join(' ').trim();
-            if (isUsableTranscript(candidate)) {
-              transcript = candidate;
-              method = 'youtube-transcript-en';
-            }
-          }
-        } catch {}
-      }
-
-      if (!transcript) {
-        try {
-          const data = await withTimeout(
-            YoutubeTranscript.fetchTranscript(videoId),
-            EXTRACTION_TIMEOUT_MS,
-            'youtube-transcript default'
-          );
-          if (data?.length) {
-            const candidate = data.map((item) => item.text).join(' ').trim();
-            if (isUsableTranscript(candidate)) {
-              transcript = candidate;
-              method = 'youtube-transcript-default';
-            }
-          }
-        } catch {}
-      }
-
-      if (!transcript) {
-        return sendError(res, 404, 'TRANSCRIPT_UNAVAILABLE', 'No transcript available for this video');
+        return sendError(
+          res,
+          404,
+          'TRANSCRIPT_UNAVAILABLE',
+          'No transcript is available for this video (captions unavailable or unsupported).'
+        );
       }
 
       let resolvedVideoTitle = await getPreferredVideoTitleForUser(
@@ -5145,6 +5131,7 @@ export default async function handler(req, res) {
         const videoMeta = await fetchYouTubeVideoMetadata(videoId, resolvedVideoTitle);
         resolvedVideoTitle = sanitizeVideoTitle(videoMeta.title, resolvedVideoTitle || videoId);
         extractMeta = {
+          ...extractMeta,
           method,
           thumbnailUrl: videoMeta.thumbnailUrl || buildYouTubeThumbnailUrl(videoId),
           descriptionLinks: videoMeta.descriptionLinks || [],
@@ -5176,7 +5163,7 @@ export default async function handler(req, res) {
       }
 
       await saveExtractionRecord(supabase, user.id, videoId, transcript.trim(), method, resolvedVideoTitle, extractMeta);
-      setCachedTranscriptInMemory(videoId, transcript.trim(), method);
+      setCachedTranscriptInMemory(videoId, transcript.trim(), method, extractMeta.transcriptKeyId || activeTranscriptKeyId);
 
       return res.json({
         success: true,
@@ -5249,9 +5236,11 @@ export default async function handler(req, res) {
       const systemPrompt = profile.prompt;
       const processingType = profile.processingType;
       const shouldPersistResult = profile.saveHistory !== false;
+      const aiExecutionToken = await getCurrentAiExecutionToken(supabase);
+      const scopedProcessingType = buildScopedProcessingType(processingType, aiExecutionToken);
 
       if (shouldPersistResult) {
-        const cachedAi = await getCachedAiRecord(supabase, user.id, videoId, processingType);
+        const cachedAi = await getCachedAiRecord(supabase, user.id, videoId, scopedProcessingType);
         if (cachedAi?.ai_result) {
           return res.json({
             success: true,
@@ -5288,7 +5277,7 @@ export default async function handler(req, res) {
       });
       const resolvedVideoTitle = await getPreferredVideoTitleForUser(supabase, user.id, videoId, videoId);
       if (shouldPersistResult) {
-        await saveAiRecord(supabase, user.id, videoId, processingType, transcriptForModel, result, resolvedVideoTitle);
+        await saveAiRecord(supabase, user.id, videoId, scopedProcessingType, transcriptForModel, result, resolvedVideoTitle);
       }
 
       return res.json({
@@ -5668,8 +5657,12 @@ export default async function handler(req, res) {
 
       const { text: transcriptForContext } = trimForModel(transcript, CHAT_TRANSCRIPT_CHAR_LIMIT);
       const { text: questionForModel } = trimForModel(message, CHAT_QUESTION_CHAR_LIMIT);
-      const chatKey = makeChatKey(questionForModel);
       const outputLang = normalizeOutputLang(requestedLang);
+      const aiExecutionToken = await getCurrentAiExecutionToken(supabase);
+      const chatKey = makeChatKey(questionForModel, {
+        outputLang,
+        scopeToken: aiExecutionToken
+      });
 
       const cachedChat = await getCachedChatRecord(supabase, user.id, videoId, chatKey);
       if (cachedChat?.ai_result) {
@@ -5726,7 +5719,12 @@ export default async function handler(req, res) {
       return sendError(res, 400, 'INVALID_INPUT', 'Input is too large for current limits.');
     }
     if (lowerMessage.includes('no transcript available')) {
-      return sendError(res, 404, 'TRANSCRIPT_UNAVAILABLE', 'No transcript available for this video');
+      return sendError(
+        res,
+        404,
+        'TRANSCRIPT_UNAVAILABLE',
+        'No transcript is available for this video (captions unavailable or unsupported).'
+      );
     }
     return sendError(res, 500, 'INTERNAL_ERROR', error.message || 'Internal error');
   }

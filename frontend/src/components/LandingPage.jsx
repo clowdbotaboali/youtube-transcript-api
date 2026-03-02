@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   FaArrowRight,
   FaBolt,
@@ -64,8 +64,6 @@ function LandingPage({
   const isArabic = lang === LANG.ar;
   const dir = isArabic ? 'rtl' : 'ltr';
 
-  const inputRef = useRef(null);
-
   const [heroUrl, setHeroUrl] = useState('');
   const [heroError, setHeroError] = useState('');
   const [guestLoading, setGuestLoading] = useState(false);
@@ -95,14 +93,6 @@ function LandingPage({
     if (typeof window === 'undefined') return;
     const target = window.document.getElementById('landing-pricing');
     target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
-
-  const focusHeroInput = () => {
-    if (typeof window === 'undefined') return;
-    const target = inputRef.current;
-    if (!target) return;
-    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    target.focus();
   };
 
   const openSignIn = () => onStart?.({ mode: 'login' });
@@ -278,7 +268,6 @@ function LandingPage({
                   {t('hero.inputLabel')}
                 </label>
                 <input
-                  ref={inputRef}
                   type="text"
                   value={heroUrl}
                   onChange={(event) => setHeroUrl(event.target.value)}
@@ -306,19 +295,6 @@ function LandingPage({
                     ) : (
                       t('hero.primaryCta')
                     )}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={runGuestExtraction}
-                    disabled={guestLoading}
-                    className={`h-11 w-full rounded-xl border font-bold transition disabled:opacity-60 ${
-                      isDark
-                        ? 'border-slate-600 text-slate-100 hover:bg-slate-800'
-                        : 'border-slate-300 text-slate-800 hover:bg-white'
-                    }`}
-                  >
-                    {t('hero.secondaryCta')}
                   </button>
 
                   <p className={`text-xs text-center font-medium ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{t('hero.trustLine')}</p>
@@ -461,13 +437,13 @@ function LandingPage({
           <h2 className={`text-2xl sm:text-3xl font-black mb-2 ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>{t('pricing.title')}</h2>
           <p className={`mb-5 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{t('pricing.subtitle')}</p>
 
-          <div className="grid gap-4 lg:grid-cols-2">
-            <article className={`rounded-2xl border p-6 ${isDark ? 'border-slate-700 bg-slate-900/70' : 'border-slate-200 bg-white'}`}>
+          <div className="grid gap-4 lg:grid-cols-2 items-stretch">
+            <article className={`rounded-2xl border p-6 h-full flex flex-col ${isDark ? 'border-slate-700 bg-slate-900/70' : 'border-slate-200 bg-white'}`}>
               <span className={`inline-flex rounded-full px-3 py-1 text-xs font-black ${isDark ? 'bg-slate-800 text-slate-200' : 'bg-slate-100 text-slate-700'}`}>
                 {t('pricing.free.badge')}
               </span>
               <p className={`mt-3 text-lg font-black ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>{t('pricing.free.limit')}</p>
-              <ul className={`mt-4 space-y-2 text-sm ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+              <ul className={`mt-4 space-y-2 text-sm flex-1 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
                 {pricingFreeFeatures.map((feature, idx) => (
                   <li key={`free-feature-${idx}`} className="flex items-start gap-2">
                     <FaCheckCircle className="mt-0.5 text-emerald-500 shrink-0" />
@@ -477,7 +453,7 @@ function LandingPage({
               </ul>
               <button
                 type="button"
-                onClick={focusHeroInput}
+                onClick={openSignup}
                 className={`mt-5 w-full h-11 rounded-xl border font-bold transition ${
                   isDark
                     ? 'border-slate-600 text-slate-100 hover:bg-slate-800'
@@ -488,7 +464,7 @@ function LandingPage({
               </button>
             </article>
 
-            <article className={`rounded-2xl border p-6 relative overflow-hidden ${isDark ? 'border-cyan-500/70 bg-slate-900/85 shadow-xl shadow-cyan-500/10' : 'border-cyan-300 bg-cyan-50/75 shadow-lg shadow-cyan-100/60'}`}>
+            <article className={`rounded-2xl border p-6 relative overflow-hidden h-full flex flex-col ${isDark ? 'border-cyan-500/70 bg-slate-900/85 shadow-xl shadow-cyan-500/10' : 'border-cyan-300 bg-cyan-50/75 shadow-lg shadow-cyan-100/60'}`}>
               <div className={`absolute inset-x-0 top-0 h-1 ${isDark ? 'bg-cyan-400/80' : 'bg-cyan-500'}`} />
               <div className="flex flex-wrap items-center gap-2">
                 <span className={`inline-flex rounded-full px-3 py-1 text-xs font-black ${isDark ? 'bg-cyan-500/20 text-cyan-100' : 'bg-cyan-100 text-cyan-800'}`}>
@@ -506,7 +482,7 @@ function LandingPage({
               </p>
               <p className={`mt-1 text-sm font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>{t('pricing.pro.valueSummary')}</p>
 
-              <ul className={`mt-4 space-y-2 text-sm ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+              <ul className={`mt-4 space-y-2 text-sm flex-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
                 {pricingProFeatures.map((feature, idx) => (
                   <li key={`pro-feature-${idx}`} className="flex items-start gap-2">
                     <FaCheckCircle className="mt-0.5 text-emerald-500 shrink-0" />

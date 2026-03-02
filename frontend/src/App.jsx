@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FaSpinner } from 'react-icons/fa';
 import VideoInput from './components/VideoInput';
 import TranscriptDisplay from './components/TranscriptDisplay';
@@ -95,7 +95,7 @@ const buildFallbackVideoBrief = (titleValue, langCode) => {
   if (!title) return '';
   const compact = title.length > 90 ? `${title.slice(0, 87).trim()}...` : title;
   const lang = normalizeOutputLanguage(langCode);
-  if (lang === 'ar') return `ملخص سريع: فيديو يشرح ${compact}`;
+  if (lang === 'ar') return `\u0645\u0644\u062e\u0635 \u0633\u0631\u064a\u0639: \u0646\u0638\u0631\u0629 \u0639\u0644\u0649 ${compact}`;
   if (lang === 'fr') return `Resume rapide: ${compact}`;
   if (lang === 'es') return `Resumen breve: ${compact}`;
   if (lang === 'de') return `Kurzzusammenfassung: ${compact}`;
@@ -175,6 +175,23 @@ const normalizeUiMessage = (value) => {
   }
   return '';
 };
+const paymentRequestStatusLabel = (status, lang) => {
+  const normalized = String(status || '').trim().toLowerCase();
+  if (normalized === 'approved') return tr(lang, '\u0645\u0642\u0628\u0648\u0644', 'Approved', 'Approuve');
+  if (normalized === 'rejected') return tr(lang, '\u0645\u0631\u0641\u0648\u0636', 'Rejected', 'Rejete');
+  if (normalized === 'cancelled') return tr(lang, '\u0645\u0644\u063a\u064a', 'Cancelled', 'Annule');
+  if (normalized === 'paid') return tr(lang, '\u0645\u062f\u0641\u0648\u0639', 'Paid', 'Paye');
+  return tr(lang, '\u0642\u064a\u062f \u0627\u0644\u0645\u0631\u0627\u062c\u0639\u0629', 'Pending review', 'En attente');
+};
+
+const paymentRequestStatusClass = (status) => {
+  const normalized = String(status || '').trim().toLowerCase();
+  if (normalized === 'approved' || normalized === 'paid') return 'bg-emerald-100 text-emerald-800 border border-emerald-200';
+  if (normalized === 'rejected') return 'bg-red-100 text-red-700 border border-red-200';
+  if (normalized === 'cancelled') return 'bg-slate-100 text-slate-700 border border-slate-200';
+  return 'bg-amber-100 text-amber-800 border border-amber-200';
+};
+
 function App() {
   const [transcriptData, setTranscriptData] = useState(null);
   const [aiResult, setAiResult] = useState(null);
@@ -206,6 +223,8 @@ function App() {
   const [extraContext, setExtraContext] = useState('');
   const [passwordForm, setPasswordForm] = useState({ newPassword: '', confirmPassword: '' });
   const [passwordSubmitting, setPasswordSubmitting] = useState(false);
+  const [recentTopupRequests, setRecentTopupRequests] = useState([]);
+  const [recentTopupLoading, setRecentTopupLoading] = useState(false);
   const [toasts, setToasts] = useState([]);
   const [currentPath, setCurrentPath] = useState(() => (hasWindow ? window.location.pathname : '/'));
   const videoBriefCacheRef = useRef(new Map());
@@ -264,7 +283,7 @@ function App() {
       },
       status: 403,
       lang,
-      fallbackAr: 'Ø§Ù„Ø­Ø³Ø§Ø¨ ØºÙŠØ± Ù…ØªØ§Ø­ Ø­Ø§Ù„ÙŠÙ‹Ø§. ØªÙˆØ§ØµÙ„ Ù…Ø¹ Ø§Ù„Ø¯Ø¹Ù….',
+      fallbackAr: 'الحساب غير متاح حاليًا. تواصل مع الدعم.',
       fallbackEn: 'This account is currently restricted. Contact support.',
       fallbackFr: 'Ce compte est actuellement restreint. Contactez le support.'
     });
@@ -320,6 +339,36 @@ function App() {
       // Keep current credits value to avoid noisy UI resets on transient failures.
     }
   };
+
+  const loadRecentTopupRequests = useCallback(async () => {
+    if (!user?.id) {
+      setRecentTopupRequests([]);
+      setRecentTopupLoading(false);
+      return;
+    }
+    setRecentTopupLoading(true);
+    try {
+      const headers = await getAuthHeaders();
+      if (!headers.Authorization) {
+        setRecentTopupRequests([]);
+        return;
+      }
+      const response = await fetch(`${apiUrl}/api/billing/my-requests`, {
+        headers,
+        cache: 'no-store'
+      });
+      const data = await response.json().catch(() => ({}));
+      if (response.ok && data.success && Array.isArray(data.data)) {
+        setRecentTopupRequests(data.data.slice(0, 8));
+      } else if (response.status === 401) {
+        setRecentTopupRequests([]);
+      }
+    } catch {
+      // ignore transient errors
+    } finally {
+      setRecentTopupLoading(false);
+    }
+  }, [apiUrl, user?.id]);
 
   useEffect(() => {
     if (!SUPABASE_CONFIGURED) {
@@ -410,6 +459,8 @@ function App() {
         setLocalizedDescriptionLoading(false);
         setExtraContext('');
         setTopupQuote(null);
+        setRecentTopupRequests([]);
+        setRecentTopupLoading(false);
         setPasswordForm({ newPassword: '', confirmPassword: '' });
       }
     });
@@ -448,6 +499,17 @@ function App() {
     if (!user?.id) return;
     refreshAccount();
   }, [clientPage, user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (clientPage !== CLIENT_PAGES.account || !user?.id) {
+      if (!user?.id) {
+        setRecentTopupRequests([]);
+        setRecentTopupLoading(false);
+      }
+      return;
+    }
+    loadRecentTopupRequests();
+  }, [clientPage, loadRecentTopupRequests, user?.id]);
 
   useEffect(() => {
     if (!hasWindow || !user?.id) return undefined;
@@ -609,10 +671,10 @@ function App() {
                 if (retryResponse.ok && retryData.success && retrySubtitle && isLikelyArabic(retrySubtitle)) {
                   subtitle = retrySubtitle;
                 } else {
-                  subtitle = `ملخص سريع: فيديو عن ${titleOnlyText}`;
+                  subtitle = `\u0645\u0644\u062e\u0635 \u0633\u0631\u064a\u0639: \u0646\u0638\u0631\u0629 \u0639\u0644\u0649 ${titleOnlyText}`;
                 }
               } catch {
-                subtitle = `ملخص سريع: فيديو عن ${titleOnlyText}`;
+                subtitle = `\u0645\u0644\u062e\u0635 \u0633\u0631\u064a\u0639: \u0646\u0638\u0631\u0629 \u0639\u0644\u0649 ${titleOnlyText}`;
               }
             }
           }
@@ -719,7 +781,7 @@ function App() {
     if (!user) {
       setAuthModalMode('login');
       setIsAuthModalOpen(true);
-      notify('info', tr(lang, 'ÙŠØ±Ø¬Ù‰ ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„ Ù„Ø§Ø³ØªØ®Ø¯Ø§Ù… Ø§Ù„Ù…Ø¹Ø§Ù„Ø¬Ø© Ø¨Ø§Ù„Ø°ÙƒØ§Ø¡ Ø§Ù„Ø§ØµØ·Ù†Ø§Ø¹ÙŠ.', 'Please sign in to use AI processing.'));
+      notify('info', tr(lang, 'يرجى تسجيل الدخول لاستخدام المعالجة بالذكاء الاصطناعي.', 'Please sign in to use AI processing.'));
       return;
     }
     if (accountAccess.status !== 'active') {
@@ -759,7 +821,7 @@ function App() {
             payload: data,
             status: response.status,
             lang,
-            fallbackAr: 'Ù„Ø§ ÙŠÙ…ÙƒÙ† ØªÙ†ÙÙŠØ° Ø§Ù„Ù…Ø¹Ø§Ù„Ø¬Ø© Ø­Ø§Ù„ÙŠØ§Ù‹.',
+            fallbackAr: 'لا يمكن تنفيذ المعالجة حالياً.',
             fallbackEn: 'AI processing is not available right now.',
             fallbackFr: "Le traitement IA n'est pas disponible actuellement."
           })
@@ -776,7 +838,7 @@ function App() {
             payload: data,
             status: response.status,
             lang,
-            fallbackAr: 'Ø§Ù†ØªÙ‡Øª Ø§Ù„Ø¬Ù„Ø³Ø©. ÙŠØ±Ø¬Ù‰ ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„ Ù…Ø±Ø© Ø£Ø®Ø±Ù‰.',
+            fallbackAr: 'انتهت الجلسة. يرجى تسجيل الدخول مرة أخرى.',
             fallbackEn: 'Session expired. Please sign in again.',
             fallbackFr: 'Session expiree. Veuillez vous reconnecter.'
           })
@@ -788,14 +850,14 @@ function App() {
             payload: data,
             status: response.status,
             lang,
-            fallbackAr: 'ÙØ´Ù„Øª Ø§Ù„Ù…Ø¹Ø§Ù„Ø¬Ø©.',
+            fallbackAr: 'فشلت المعالجة.',
             fallbackEn: 'Processing failed.',
             fallbackFr: 'Le traitement a echoue.'
           })
         );
       }
     } catch {
-      notify('error', tr(lang, 'ÙØ´Ù„ Ø§Ù„Ø§ØªØµØ§Ù„ Ø¨Ø§Ù„Ø®Ø§Ø¯Ù…', 'Connection failed'));
+      notify('error', tr(lang, 'فشل الاتصال بالخادم', 'Connection failed'));
     } finally {
       setProcessLoading(false);
     }
@@ -816,11 +878,11 @@ function App() {
       const data = await response.json().catch(() => ({}));
       const success = !!(response.ok && data.success);
       if (!success) {
-        notify('error', tr(lang, 'Ã˜ÂªÃ˜Â¹Ã˜Â°Ã˜Â± Ã˜Â­Ã™ÂÃ˜Â¸ Ã˜Â§Ã™â€žÃ™â€ Ã˜ÂªÃ™Å Ã˜Â¬Ã˜Â©.', 'Failed to save result.'));
+        notify('error', tr(lang, 'ØªØ¹Ø°Ø± Ø­ÙØ¸ Ø§Ù„Ù†ØªÙŠØ¬Ø©.', 'Failed to save result.'));
       }
       return success;
     } catch {
-      notify('error', tr(lang, 'Ã™ÂÃ˜Â´Ã™â€ž Ã˜Â§Ã™â€žÃ˜Â§Ã˜ÂªÃ˜ÂµÃ˜Â§Ã™â€ž Ã˜Â¨Ã˜Â§Ã™â€žÃ˜Â®Ã˜Â§Ã˜Â¯Ã™â€¦', 'Connection failed'));
+      notify('error', tr(lang, 'ÙØ´Ù„ Ø§Ù„Ø§ØªØµØ§Ù„ Ø¨Ø§Ù„Ø®Ø§Ø¯Ù…', 'Connection failed'));
       return false;
     }
   };
@@ -833,7 +895,7 @@ function App() {
       setClientPage(hasPendingUrl ? CLIENT_PAGES.workspace : CLIENT_PAGES.dashboard);
       setAuthModalMode('login');
       await refreshAccount();
-      notify('success', tr(lang, 'Ã˜ÂªÃ™â€¦ Ã˜ÂªÃ˜Â³Ã˜Â¬Ã™Å Ã™â€ž Ã˜Â§Ã™â€žÃ˜Â¯Ã˜Â®Ã™Ë†Ã™â€ž Ã˜Â¨Ã™â€ Ã˜Â¬Ã˜Â§Ã˜Â­.', 'Signed in successfully.'));
+      notify('success', tr(lang, 'ØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„ Ø¨Ù†Ø¬Ø§Ø­.', 'Signed in successfully.'));
     }
   };
 
@@ -868,11 +930,11 @@ function App() {
     const confirmPassword = String(passwordForm.confirmPassword || '').trim();
 
     if (!nextPassword || nextPassword.length < 8) {
-      notify('error', tr(lang, 'ÙƒÙ„Ù…Ø© Ø§Ù„Ù…Ø±ÙˆØ± Ù„Ø§Ø²Ù… ØªÙƒÙˆÙ† 8 Ø£Ø­Ø±Ù Ø¹Ù„Ù‰ Ø§Ù„Ø£Ù‚Ù„.', 'Password must be at least 8 characters.'));
+      notify('error', tr(lang, 'كلمة المرور لازم تكون 8 أحرف على الأقل.', 'Password must be at least 8 characters.'));
       return;
     }
     if (nextPassword !== confirmPassword) {
-      notify('error', tr(lang, 'ØªØ£ÙƒÙŠØ¯ ÙƒÙ„Ù…Ø© Ø§Ù„Ù…Ø±ÙˆØ± ØºÙŠØ± Ù…Ø·Ø§Ø¨Ù‚.', 'Password confirmation does not match.'));
+      notify('error', tr(lang, 'تأكيد كلمة المرور غير مطابق.', 'Password confirmation does not match.'));
       return;
     }
 
@@ -880,13 +942,13 @@ function App() {
     try {
       const { error } = await supabase.auth.updateUser({ password: nextPassword });
       if (error) {
-        notify('error', cleanText(error.message) || tr(lang, 'ÙØ´Ù„ ØªØºÙŠÙŠØ± ÙƒÙ„Ù…Ø© Ø§Ù„Ù…Ø±ÙˆØ±.', 'Failed to change password.'));
+        notify('error', cleanText(error.message) || tr(lang, 'فشل تغيير كلمة المرور.', 'Failed to change password.'));
         return;
       }
       setPasswordForm({ newPassword: '', confirmPassword: '' });
-      notify('success', tr(lang, 'ØªÙ… ØªØºÙŠÙŠØ± ÙƒÙ„Ù…Ø© Ø§Ù„Ù…Ø±ÙˆØ± Ø¨Ù†Ø¬Ø§Ø­.', 'Password updated successfully.'));
+      notify('success', tr(lang, 'تم تغيير كلمة المرور بنجاح.', 'Password updated successfully.'));
     } catch {
-      notify('error', tr(lang, 'Ø­Ø¯Ø« Ø®Ø·Ø£ Ø£Ø«Ù†Ø§Ø¡ ØªØºÙŠÙŠØ± ÙƒÙ„Ù…Ø© Ø§Ù„Ù…Ø±ÙˆØ±.', 'Unexpected error while updating password.'));
+      notify('error', tr(lang, 'حدث خطأ أثناء تغيير كلمة المرور.', 'Unexpected error while updating password.'));
     } finally {
       setPasswordSubmitting(false);
     }
@@ -911,6 +973,8 @@ function App() {
     setIsAuthModalOpen(false);
     setIsPricingModalOpen(false);
     setTopupQuote(null);
+    setRecentTopupRequests([]);
+    setRecentTopupLoading(false);
     setPasswordForm({ newPassword: '', confirmPassword: '' });
     setShowSettings(false);
 
@@ -934,7 +998,7 @@ function App() {
       // Intentionally ignored.
     }
 
-    notify('success', tr(lang, 'Ã˜ÂªÃ™â€¦ Ã˜ÂªÃ˜Â³Ã˜Â¬Ã™Å Ã™â€ž Ã˜Â§Ã™â€žÃ˜Â®Ã˜Â±Ã™Ë†Ã˜Â¬ Ã˜Â¨Ã™â€ Ã˜Â¬Ã˜Â§Ã˜Â­.', 'Signed out successfully.'));
+    notify('success', tr(lang, 'ØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø®Ø±ÙˆØ¬ Ø¨Ù†Ø¬Ø§Ø­.', 'Signed out successfully.'));
 
     // Hard refresh to guarantee no in-memory auth state survives.
     if (hasWindow) {
@@ -985,12 +1049,12 @@ function App() {
         <div className="flex-1 bg-slate-950 text-slate-100 flex items-center justify-center px-4" dir={rootDir}>
           <div className="max-w-lg w-full rounded-xl border border-slate-700 bg-slate-900/70 p-6 text-center">
             <h1 className="text-xl font-bold mb-3">
-              {tr(lang, 'Ã˜Â¥Ã˜Â¹Ã˜Â¯Ã˜Â§Ã˜Â¯Ã˜Â§Ã˜Âª Ã˜Â§Ã™â€žÃ™â€¦Ã˜ÂµÃ˜Â§Ã˜Â¯Ã™â€šÃ˜Â© Ã˜ÂºÃ™Å Ã˜Â± Ã™â€¦Ã™Æ’Ã˜ÂªÃ™â€¦Ã™â€žÃ˜Â©', 'Authentication configuration is missing')}
+              {tr(lang, 'Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø§Ù„Ù…ØµØ§Ø¯Ù‚Ø© ØºÙŠØ± Ù…ÙƒØªÙ…Ù„Ø©', 'Authentication configuration is missing')}
             </h1>
             <p className="text-slate-300 text-sm">
               {tr(
                 lang,
-                'Ã˜Â£Ã˜Â¶Ã™Â Ã™â€¦Ã˜ÂªÃ˜ÂºÃ™Å Ã˜Â±Ã˜Â§Ã˜Âª VITE_SUPABASE_URL Ã™Ë† VITE_SUPABASE_ANON_KEY Ã™ÂÃ™Å  Ã˜Â¨Ã™Å Ã˜Â¦Ã˜Â© Vercel Ã˜Â«Ã™â€¦ Ã˜Â£Ã˜Â¹Ã˜Â¯ Ã˜Â§Ã™â€žÃ™â€ Ã˜Â´Ã˜Â±.',
+                'Ø£Ø¶Ù Ù…ØªØºÙŠØ±Ø§Øª VITE_SUPABASE_URL Ùˆ VITE_SUPABASE_ANON_KEY ÙÙŠ Ø¨ÙŠØ¦Ø© Vercel Ø«Ù… Ø£Ø¹Ø¯ Ø§Ù„Ù†Ø´Ø±.',
                 'Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in Vercel environment variables, then redeploy.'
               )}
             </p>
@@ -1012,7 +1076,7 @@ function App() {
         <div className="flex-1 bg-slate-950 text-slate-100 flex items-center justify-center">
           <div className="flex items-center gap-2 text-sm">
             <FaSpinner className="animate-spin" />
-            <span>{tr(lang, 'Ã˜Â¬Ã˜Â§Ã˜Â±Ã™Å  Ã˜ÂªÃ˜Â¬Ã™â€¡Ã™Å Ã˜Â² Ã˜Â§Ã™â€žÃ˜Â¬Ã™â€žÃ˜Â³Ã˜Â©...', 'Preparing session...')}</span>
+            <span>{tr(lang, 'Ø¬Ø§Ø±ÙŠ ØªØ¬Ù‡ÙŠØ² Ø§Ù„Ø¬Ù„Ø³Ø©...', 'Preparing session...')}</span>
           </div>
         </div>
         <SiteFooter lang={lang} theme={theme} />
@@ -1102,8 +1166,8 @@ function App() {
         {clientPage === CLIENT_PAGES.workspace && (
           <section className="space-y-4 sm:space-y-6">
             <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6">
-              <h2 className="text-xl sm:text-2xl font-black text-slate-900 mb-1">{tr(lang, 'Ã™â€¦Ã˜Â³Ã˜Â§Ã˜Â­Ã˜Â© Ã˜Â§Ã˜Â³Ã˜ÂªÃ˜Â®Ã˜Â±Ã˜Â§Ã˜Â¬ Ã˜Â§Ã™â€žÃ˜Â³Ã™Æ’Ã˜Â±Ã™Å Ã˜Â¨Ã˜Âª', 'Transcript Extraction Workspace')}</h2>
-              <p className="text-sm text-slate-600">{tr(lang, 'Ã˜Â¶Ã˜Â¹ Ã˜Â§Ã™â€žÃ˜Â±Ã˜Â§Ã˜Â¨Ã˜Â·Ã˜Å’ Ã˜Â§Ã˜Â³Ã˜ÂªÃ˜Â®Ã˜Â±Ã˜Â¬ Ã˜Â§Ã™â€žÃ™â€ Ã˜ÂµÃ˜Å’ Ã˜Â«Ã™â€¦ Ã˜Â§Ã˜Â¨Ã˜Â¯Ã˜Â£ Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â¹Ã˜Â§Ã™â€žÃ˜Â¬Ã˜Â© Ã˜Â£Ã™Ë† Ã˜Â§Ã™â€žÃ˜Â¯Ã˜Â±Ã˜Â¯Ã˜Â´Ã˜Â©.', 'Paste a URL, extract transcript, then process or chat.')}</p>
+              <h2 className="text-xl sm:text-2xl font-black text-slate-900 mb-1">{tr(lang, 'Ù…Ø³Ø§Ø­Ø© Ø§Ø³ØªØ®Ø±Ø§Ø¬ Ø§Ù„Ø³ÙƒØ±ÙŠØ¨Øª', 'Transcript Extraction Workspace')}</h2>
+              <p className="text-sm text-slate-600">{tr(lang, 'Ø¶Ø¹ Ø§Ù„Ø±Ø§Ø¨Ø·ØŒ Ø§Ø³ØªØ®Ø±Ø¬ Ø§Ù„Ù†ØµØŒ Ø«Ù… Ø§Ø¨Ø¯Ø£ Ø§Ù„Ù…Ø¹Ø§Ù„Ø¬Ø© Ø£Ùˆ Ø§Ù„Ø¯Ø±Ø¯Ø´Ø©.', 'Paste a URL, extract transcript, then process or chat.')}</p>
             </div>
             {accountRestrictionMessage ? (
               <div className="rounded-xl border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm font-medium">
@@ -1117,8 +1181,8 @@ function App() {
                   onClick={toggleLocalGuide}
                   className="inline-flex items-center gap-2 text-xs sm:text-sm px-3 py-1.5 rounded-full border border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100 transition"
                 >
-                  <span>{showLocalGuide ? tr(lang, 'Ã˜Â¥Ã˜Â®Ã™ÂÃ˜Â§Ã˜Â¡', 'Hide') : tr(lang, 'Ã˜Â¥Ã˜Â¸Ã™â€¡Ã˜Â§Ã˜Â±', 'Show')}</span>
-                  <span>{tr(lang, 'Ã˜Â¯Ã™â€žÃ™Å Ã™â€ž Ã˜Â§Ã™â€žÃ˜Â®Ã˜Â§Ã˜Â¯Ã™â€¦ Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â­Ã™â€žÃ™Å ', 'Local backend guide')}</span>
+                  <span>{showLocalGuide ? tr(lang, 'Ø¥Ø®ÙØ§Ø¡', 'Hide') : tr(lang, 'Ø¥Ø¸Ù‡Ø§Ø±', 'Show')}</span>
+                  <span>{tr(lang, 'Ø¯Ù„ÙŠÙ„ Ø§Ù„Ø®Ø§Ø¯Ù… Ø§Ù„Ù…Ø­Ù„ÙŠ', 'Local backend guide')}</span>
                 </button>
               </div>
             )}
@@ -1203,8 +1267,8 @@ function App() {
         {clientPage === CLIENT_PAGES.history && (
           <section className="space-y-4 sm:space-y-6">
             <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6">
-              <h2 className="text-xl sm:text-2xl font-black text-slate-900 mb-1">{tr(lang, 'Ã˜Â§Ã™â€žÃ˜Â³Ã˜Â¬Ã™â€ž Ã™Ë†Ã˜Â§Ã™â€žÃ˜Â±Ã™Ë†Ã˜Â§Ã˜Â¨Ã˜Â·', 'History & Saved Links')}</h2>
-              <p className="text-sm text-slate-600">{tr(lang, 'Ã˜Â±Ã˜Â§Ã˜Â¬Ã˜Â¹ Ã™â€ Ã˜ÂªÃ˜Â§Ã˜Â¦Ã˜Â¬Ã™Æ’ Ã˜Â§Ã™â€žÃ˜Â³Ã˜Â§Ã˜Â¨Ã™â€šÃ˜Â© Ã™Ë†Ã˜Â§Ã˜Â®Ã˜ÂªÃ˜Â± Ã˜Â£Ã™Å  Ã˜Â±Ã˜Â§Ã˜Â¨Ã˜Â· Ã™â€¦Ã˜Â­Ã™ÂÃ™Ë†Ã˜Â¸ Ã™â€žÃ™â€žÃ˜Â¹Ã™Ë†Ã˜Â¯Ã˜Â© Ã˜Â¥Ã™â€žÃ™â€° Ã™â€¦Ã˜Â³Ã˜Â§Ã˜Â­Ã˜Â© Ã˜Â§Ã™â€žÃ˜Â§Ã˜Â³Ã˜ÂªÃ˜Â®Ã˜Â±Ã˜Â§Ã˜Â¬.', 'Review saved runs and open any saved link back in the extraction workspace.')}</p>
+              <h2 className="text-xl sm:text-2xl font-black text-slate-900 mb-1">{tr(lang, 'Ø§Ù„Ø³Ø¬Ù„ ÙˆØ§Ù„Ø±ÙˆØ§Ø¨Ø·', 'History & Saved Links')}</h2>
+              <p className="text-sm text-slate-600">{tr(lang, 'Ø±Ø§Ø¬Ø¹ Ù†ØªØ§Ø¦Ø¬Ùƒ Ø§Ù„Ø³Ø§Ø¨Ù‚Ø© ÙˆØ§Ø®ØªØ± Ø£ÙŠ Ø±Ø§Ø¨Ø· Ù…Ø­ÙÙˆØ¸ Ù„Ù„Ø¹ÙˆØ¯Ø© Ø¥Ù„Ù‰ Ù…Ø³Ø§Ø­Ø© Ø§Ù„Ø§Ø³ØªØ®Ø±Ø§Ø¬.', 'Review saved runs and open any saved link back in the extraction workspace.')}</p>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <SavedHistory apiUrl={apiUrl} user={user} lang={lang} onNotify={notify} />
@@ -1227,6 +1291,7 @@ function App() {
             }}
             onTopupSubmitted={() => {
               refreshAccount();
+              loadRecentTopupRequests();
             }}
           />
         )}
@@ -1235,17 +1300,17 @@ function App() {
           <section className="space-y-4 sm:space-y-5">
             <div className="grid gap-4 sm:gap-5 md:grid-cols-2">
               <article className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
-                <h2 className="text-xl font-black text-slate-900 mb-3">{tr(lang, 'بيانات الحساب', 'Account details')}</h2>
+                <h2 className="text-xl font-black text-slate-900 mb-3">{tr(lang, '?????? ??????', 'Account details')}</h2>
                 <div className="space-y-3 text-sm">
-                  <p><span className="font-bold">{tr(lang, 'البريد:', 'Email:')}</span> {user?.email || '-'}</p>
-                  <p><span className="font-bold">{tr(lang, 'الرصيد:', 'Credits:')}</span> {credits ?? '...'}</p>
-                  <p><span className="font-bold">{tr(lang, 'الخطة المجانية:', 'Free plan:')}</span> {FREE_PLAN_REQUESTS} {tr(lang, 'روابط فقط', 'links only')}</p>
-                  <p><span className="font-bold">{tr(lang, 'المتبقي من المجانية:', 'Free links remaining:')}</span> {freeLinksRemaining} / {FREE_PLAN_REQUESTS}</p>
-                  <p><span className="font-bold">{tr(lang, 'تكلفة الرابط:', 'Link cost:')}</span> {CREDIT_COST_PER_SUCCESS} {tr(lang, 'نقطة لكل رابط فيديو جديد', 'credit per new video link')}</p>
-                  <p><span className="font-bold">{tr(lang, 'الحالة:', 'Session:')}</span> {tr(lang, 'متصل', 'Active')}</p>
+                  <p><span className="font-bold">{tr(lang, '??????:', 'Email:')}</span> {user?.email || '-'}</p>
+                  <p><span className="font-bold">{tr(lang, '??????:', 'Credits:')}</span> {credits ?? '...'}</p>
+                  <p><span className="font-bold">{tr(lang, '????? ????????:', 'Free plan:')}</span> {FREE_PLAN_REQUESTS} {tr(lang, '????? ???', 'links only')}</p>
+                  <p><span className="font-bold">{tr(lang, '??????? ?? ????????:', 'Free links remaining:')}</span> {freeLinksRemaining} / {FREE_PLAN_REQUESTS}</p>
+                  <p><span className="font-bold">{tr(lang, '????? ??????:', 'Link cost:')}</span> {CREDIT_COST_PER_SUCCESS} {tr(lang, '???? ??? ???? ????? ????', 'credit per new video link')}</p>
+                  <p><span className="font-bold">{tr(lang, '??????:', 'Session:')}</span> {tr(lang, '????', 'Active')}</p>
                   {accountAccess.status !== 'active' ? (
                     <p>
-                      <span className="font-bold">{tr(lang, 'حالة الوصول:', 'Access status:')}</span>{' '}
+                      <span className="font-bold">{tr(lang, '???? ??????:', 'Access status:')}</span>{' '}
                       {accountAccess.status} {accountAccess.reason ? `(${accountAccess.reason})` : ''}
                     </p>
                   ) : null}
@@ -1253,22 +1318,22 @@ function App() {
               </article>
 
               <article className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
-                <h3 className="text-lg font-black text-slate-900 mb-3">{tr(lang, 'الخطط والشحن', 'Plans & top-up')}</h3>
+                <h3 className="text-lg font-black text-slate-900 mb-3">{tr(lang, '????? ??????', 'Plans & top-up')}</h3>
                 <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 mb-3">
-                  <p className="font-black text-emerald-900 mb-2">{tr(lang, 'الخطة المجانية', 'Free plan')}</p>
-                  <p className="text-sm text-emerald-800">{tr(lang, '5 روابط فيديو كبداية، ونفس الفيديو تقدر تعمل له تلخيص وشات بدون خصم إضافي.', '5 video links included, and same-video summary/chat do not consume extra credits.')}</p>
+                  <p className="font-black text-emerald-900 mb-2">{tr(lang, '????? ????????', 'Free plan')}</p>
+                  <p className="text-sm text-emerald-800">{tr(lang, '5 ????? ????? ??????? ???? ??????? ???? ???? ?? ????? ???? ???? ??? ?????.', '5 video links included, and same-video summary/chat do not consume extra credits.')}</p>
                 </div>
                 <div className="rounded-xl border border-orange-200 bg-orange-50 p-4">
-                  <p className="font-black text-orange-900 mb-2">{tr(lang, 'الشحن المدفوع', 'Paid top-up')}</p>
+                  <p className="font-black text-orange-900 mb-2">{tr(lang, '????? ???????', 'Paid top-up')}</p>
                   <p className="text-sm text-orange-800 mb-3">
-                    {tr(lang, 'يبدأ من 5$ = 200 كريديت. التفاصيل الكاملة تفتح في صفحة مستقلة بعد اختيار المبلغ.', 'Starts at $5 = 200 credits. Full payment details open on a dedicated page after choosing the amount.')}
+                    {tr(lang, '???? ?? 5$ = 200 ??????. ???????? ??????? ???? ?? ???? ?????? ??? ?????? ??????.', 'Starts at $5 = 200 credits. Full payment details open on a dedicated page after choosing the amount.')}
                   </p>
                   <button
                     type="button"
                     onClick={openTopupPicker}
                     className="rounded-xl px-4 py-2 bg-orange-400 text-slate-950 font-extrabold hover:bg-orange-300 transition"
                   >
-                    {tr(lang, 'اختيار مبلغ الشحن', 'Choose top-up amount')}
+                    {tr(lang, '?????? ???? ?????', 'Choose top-up amount')}
                   </button>
                 </div>
               </article>
@@ -1276,26 +1341,26 @@ function App() {
 
             <div className="grid gap-4 sm:gap-5 md:grid-cols-2">
               <article className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
-                <h3 className="text-lg font-black text-slate-900 mb-3">{tr(lang, 'أمان الحساب', 'Account security')}</h3>
+                <h3 className="text-lg font-black text-slate-900 mb-3">{tr(lang, '???? ??????', 'Account security')}</h3>
                 <form onSubmit={handlePasswordChange} className="space-y-3">
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1">{tr(lang, 'كلمة المرور الجديدة', 'New password')}</label>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">{tr(lang, '???? ?????? ???????', 'New password')}</label>
                     <input
                       type="password"
                       value={passwordForm.newPassword}
                       onChange={(event) => setPasswordForm((prev) => ({ ...prev, newPassword: event.target.value }))}
                       className="w-full rounded-xl border border-slate-300 px-3 py-2 outline-none focus:ring-2 focus:ring-cyan-500"
-                      placeholder={tr(lang, '8 أحرف على الأقل', 'At least 8 characters')}
+                      placeholder={tr(lang, '8 ???? ??? ?????', 'At least 8 characters')}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1">{tr(lang, 'تأكيد كلمة المرور', 'Confirm password')}</label>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">{tr(lang, '????? ???? ??????', 'Confirm password')}</label>
                     <input
                       type="password"
                       value={passwordForm.confirmPassword}
                       onChange={(event) => setPasswordForm((prev) => ({ ...prev, confirmPassword: event.target.value }))}
                       className="w-full rounded-xl border border-slate-300 px-3 py-2 outline-none focus:ring-2 focus:ring-cyan-500"
-                      placeholder={tr(lang, 'أعد إدخال كلمة المرور', 'Re-enter password')}
+                      placeholder={tr(lang, '??? ????? ???? ??????', 'Re-enter password')}
                     />
                   </div>
                   <button
@@ -1303,25 +1368,25 @@ function App() {
                     disabled={passwordSubmitting}
                     className="rounded-xl px-4 py-2 bg-slate-900 text-white font-bold hover:bg-slate-800 transition disabled:opacity-60"
                   >
-                    {passwordSubmitting ? tr(lang, 'جارٍ التحديث...', 'Updating...') : tr(lang, 'تحديث كلمة المرور', 'Update password')}
+                    {passwordSubmitting ? tr(lang, '???? ???????...', 'Updating...') : tr(lang, '????? ???? ??????', 'Update password')}
                   </button>
                 </form>
               </article>
 
               <article className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
-                <h3 className="text-lg font-black text-slate-900 mb-3">{tr(lang, 'ترقية النتائج بالشحن', 'Upgrade your results with top-up')}</h3>
+                <h3 className="text-lg font-black text-slate-900 mb-3">{tr(lang, '????? ??????? ??????', 'Upgrade your results with top-up')}</h3>
                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 mb-4">
                   <p className="text-sm text-amber-900 mb-2">
                     {tr(
                       lang,
-                      'كلما زودت الرصيد، تقدر تعالج فيديوهات أكثر بدون توقف وتبني مكتبة ملخصات أقوى لفريقك أو دراستك.',
+                      '???? ???? ??????? ???? ????? ???????? ???? ???? ???? ????? ????? ?????? ???? ?????? ?? ??????.',
                       'With more credits, you can process more videos without interruption and build a stronger summary library for study or teams.'
                     )}
                   </p>
                   <ul className="text-sm text-amber-800 space-y-1">
-                    <li>{tr(lang, '• انطلاقة سريعة: 5$ = 200 كريديت', '• Fast start: $5 = 200 credits')}</li>
-                    <li>{tr(lang, '• خصومات تلقائية مع المبالغ الأكبر', '• Automatic bonus credits on larger amounts')}</li>
-                    <li>{tr(lang, '• تفاصيل الدفع في صفحة مستقلة وواضحة', '• Dedicated clear checkout page')}</li>
+                    <li>{tr(lang, '� ??????? ?????: 5$ = 200 ??????', '� Fast start: $5 = 200 credits')}</li>
+                    <li>{tr(lang, '� ?????? ??????? ?? ??????? ??????', '� Automatic bonus credits on larger amounts')}</li>
+                    <li>{tr(lang, '� ?????? ????? ?? ???? ?????? ??????', '� Dedicated clear checkout page')}</li>
                   </ul>
                 </div>
                 <div className="flex flex-wrap gap-3">
@@ -1331,7 +1396,7 @@ function App() {
                       onClick={() => setShowSettings(true)}
                       className="rounded-xl px-4 py-2 bg-slate-900 text-white font-bold hover:bg-slate-800 transition"
                     >
-                      {tr(lang, 'فتح الإعدادات', 'Open settings')}
+                      {tr(lang, '??? ?????????', 'Open settings')}
                     </button>
                   )}
                   <button
@@ -1339,11 +1404,42 @@ function App() {
                     onClick={handleLogout}
                     className="rounded-xl px-4 py-2 bg-red-500 text-white font-bold hover:bg-red-600 transition"
                   >
-                    {tr(lang, 'تسجيل خروج', 'Sign out')}
+                    {tr(lang, '????? ????', 'Sign out')}
                   </button>
                 </div>
               </article>
             </div>
+
+            <article className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+                <h3 className="text-lg font-black text-slate-900">{tr(lang, '?????? ???????', 'My recent requests', 'Mes demandes recentes')}</h3>
+                {recentTopupLoading ? <span className="text-xs text-slate-500">{tr(lang, '???? ???????...', 'Refreshing...', 'Actualisation...')}</span> : null}
+              </div>
+
+              {recentTopupRequests.length === 0 ? (
+                <p className="text-sm text-slate-600">
+                  {tr(lang, '?? ???? ????? ??? ???.', 'No top-up requests yet.', 'Aucune demande de recharge pour le moment.')}
+                </p>
+              ) : (
+                <div className="max-h-72 overflow-auto space-y-2 pr-1">
+                  {recentTopupRequests.map((item) => (
+                    <div key={item.id} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                        <span className="font-semibold text-slate-900">
+                          ${(Number(item.amount_cents || 0) / 100).toFixed(2)} / {item.credits_added} {tr(lang, '??????', 'credits', 'credits')}
+                        </span>
+                        <span className={`text-xs rounded-full px-2 py-1 ${paymentRequestStatusClass(item.status)}`}>
+                          {paymentRequestStatusLabel(item.status, lang)}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500 mt-1">
+                        {new Date(item.created_at).toLocaleString(lang === LANG.ar ? 'ar-EG' : lang === LANG.fr ? 'fr-FR' : 'en-US')}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </article>
           </section>
         )}
       </div>
