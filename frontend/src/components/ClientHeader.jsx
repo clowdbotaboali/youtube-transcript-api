@@ -35,17 +35,6 @@ function NavButton({ active, onClick, icon, label }) {
   );
 }
 
-function ExternalTab({ href, label }) {
-  return (
-    <a
-      href={href}
-      className="px-3 py-2 text-sm rounded-xl border border-white/25 text-slate-100 bg-white/5 hover:bg-white/15 transition whitespace-nowrap"
-    >
-      {label}
-    </a>
-  );
-}
-
 function MetricCard({ label, value, subtext, tone }) {
   return (
     <div className={`rounded-xl border px-3 py-2 ${tone}`}>
@@ -75,14 +64,6 @@ function ClientHeader({
   onLogout
 }) {
   const isDark = theme === 'dark';
-
-  const legalTabs = [
-    { href: '/pricing', label: tr(lang, 'الأسعار', 'Pricing', 'Tarification') },
-    { href: '/privacy-policy', label: tr(lang, 'سياسة الخصوصية', 'Privacy Policy', 'Politique de confidentialite') },
-    { href: '/terms', label: tr(lang, 'الشروط', 'Terms', 'Conditions') },
-    { href: '/refund-policy', label: tr(lang, 'سياسة الاسترجاع', 'Refund Policy', 'Politique de remboursement') },
-    { href: '/contact', label: tr(lang, 'تواصل', 'Contact', 'Contact') }
-  ];
 
   return (
     <header className="sticky top-0 z-30 rounded-3xl border border-slate-700/80 bg-[linear-gradient(160deg,#071229_0%,#0f1d3a_60%,#18274b_100%)] text-slate-100 p-4 sm:p-5 mb-4 sm:mb-6 overflow-hidden">
@@ -148,12 +129,6 @@ function ClientHeader({
               </select>
             </div>
           </div>
-        </div>
-
-        <div className="mt-3 flex flex-wrap gap-2">
-          {legalTabs.map((item) => (
-            <ExternalTab key={item.href} href={item.href} label={item.label} />
-          ))}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2 mt-4">

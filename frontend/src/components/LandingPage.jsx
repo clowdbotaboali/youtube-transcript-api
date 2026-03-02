@@ -234,6 +234,15 @@ function LandingPage({
             <NavLink href="/pricing" dark={isDark}>
               {t('الأسعار', 'Pricing', 'Tarification')}
             </NavLink>
+            <NavLink href="/privacy-policy" dark={isDark}>
+              {t('سياسة الخصوصية', 'Privacy Policy', 'Politique de confidentialite')}
+            </NavLink>
+            <NavLink href="/terms" dark={isDark}>
+              {t('الشروط', 'Terms', 'Conditions')}
+            </NavLink>
+            <NavLink href="/refund-policy" dark={isDark}>
+              {t('سياسة الاسترجاع', 'Refund Policy', 'Politique de remboursement')}
+            </NavLink>
             <NavLink href="/contact" dark={isDark}>
               {t('تواصل', 'Contact', 'Contact')}
             </NavLink>
