@@ -166,12 +166,13 @@ function App() {
   const [session, setSession] = useState(null);
   const [authReady, setAuthReady] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState('login');
   const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
   const [credits, setCredits] = useState(null);
   const [freeLinksRemaining, setFreeLinksRemaining] = useState(FREE_PLAN_REQUESTS);
   const [accountAccess, setAccountAccess] = useState({ status: 'active', reason: null });
   const [clientPage, setClientPage] = useState(CLIENT_PAGES.dashboard);
-  const [lang, setLang] = useState(() => (hasWindow ? localStorage.getItem('appLang') || LANG.ar : LANG.ar));
+  const [lang, setLang] = useState(() => (hasWindow ? localStorage.getItem('appLang') || LANG.en : LANG.en));
   const [theme, setTheme] = useState(() => (hasWindow ? localStorage.getItem('appTheme') || THEME.light : THEME.light));
   const [outputLang, setOutputLang] = useState(() =>
     normalizeOutputLanguage(hasWindow ? localStorage.getItem('outputLang') || DEFAULT_OUTPUT_LANGUAGE : DEFAULT_OUTPUT_LANGUAGE)
@@ -367,6 +368,8 @@ function App() {
         await refreshAccount();
       } else {
         setClientPage(CLIENT_PAGES.dashboard);
+        setSelectedUrl('');
+        setAuthModalMode('login');
         setCredits(null);
         setFreeLinksRemaining(FREE_PLAN_REQUESTS);
         setAccountAccess({ status: 'active', reason: null });
@@ -468,6 +471,7 @@ function App() {
 
   const handleTranscriptExtracted = (data) => {
     setTranscriptData(data);
+    setSelectedUrl('');
     setAiResult(null);
     setVideoBrief(buildFallbackVideoBrief(data?.videoTitle || data?.videoId, outputLang));
     const initialInstructions = Array.isArray(data?.descriptionInstructions) ? data.descriptionInstructions : [];
@@ -620,6 +624,7 @@ function App() {
   const handleProcess = async (type) => {
     if (!transcriptData) return;
     if (!user) {
+      setAuthModalMode('login');
       setIsAuthModalOpen(true);
       notify('info', tr(lang, 'يرجى تسجيل الدخول لاستخدام المعالجة بالذكاء الاصطناعي.', 'Please sign in to use AI processing.'));
       return;
@@ -731,11 +736,22 @@ function App() {
     setSession(nextSession ?? null);
     setIsAuthModalOpen(false);
     if (nextSession?.user) {
-      setClientPage(CLIENT_PAGES.dashboard);
+      const hasPendingUrl = Boolean(String(selectedUrl || '').trim());
+      setClientPage(hasPendingUrl ? CLIENT_PAGES.workspace : CLIENT_PAGES.dashboard);
+      setAuthModalMode('login');
       await refreshAccount();
       notify('success', tr(lang, 'ØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„ Ø¨Ù†Ø¬Ø§Ø­.', 'Signed in successfully.'));
     }
   };
+
+  const handleLandingStart = useCallback((options = {}) => {
+    const nextMode = options?.mode === 'signup' ? 'signup' : 'login';
+    const nextUrl = typeof options?.url === 'string' ? options.url.trim() : '';
+    if (nextUrl) setSelectedUrl(nextUrl);
+    else setSelectedUrl('');
+    setAuthModalMode(nextMode);
+    setIsAuthModalOpen(true);
+  }, []);
 
   const handleSavedLinkSelect = (url) => {
     setSelectedUrl(url);
@@ -755,6 +771,8 @@ function App() {
     setVideoBriefLoading(false);
     setExtraContext('');
     setClientPage(CLIENT_PAGES.dashboard);
+    setSelectedUrl('');
+    setAuthModalMode('login');
     setIsAuthModalOpen(false);
     setIsPricingModalOpen(false);
     setShowSettings(false);
@@ -869,7 +887,7 @@ function App() {
           path="/"
         />
         <div className="flex-1">
-          <LandingPage onStart={() => setIsAuthModalOpen(true)} lang={lang} theme={theme} />
+          <LandingPage onStart={handleLandingStart} lang={lang} theme={theme} />
           <div className="fixed top-4 right-4 z-50 inline-flex items-center gap-2">
             <button
               onClick={toggleTheme}
@@ -902,6 +920,7 @@ function App() {
               onAuthSuccess={authSuccessHandler}
               lang={lang}
               onNotify={notify}
+              initialMode={authModalMode}
             />
           )}
         </div>
@@ -1146,6 +1165,7 @@ function App() {
           }}
           requireLogin={() => {
             setIsPricingModalOpen(false);
+            setAuthModalMode('login');
             setIsAuthModalOpen(true);
           }}
         />

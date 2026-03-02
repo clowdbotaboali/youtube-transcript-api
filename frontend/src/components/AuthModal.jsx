@@ -1,15 +1,21 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { FaEnvelope, FaEye, FaEyeSlash, FaKey, FaRocket, FaTimes } from 'react-icons/fa';
 import { supabase } from '../utils/supabase';
 import { LANG, tr } from '../utils/lang';
 
-function AuthModal({ isOpen, onClose, onAuthSuccess, lang = LANG.ar, onNotify }) {
-  const [isLogin, setIsLogin] = useState(true);
+function AuthModal({ isOpen, onClose, onAuthSuccess, lang = LANG.ar, onNotify, initialMode = 'login' }) {
+  const [isLogin, setIsLogin] = useState(initialMode !== 'signup');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setIsLogin(initialMode !== 'signup');
+    setError(null);
+  }, [initialMode, isOpen]);
 
   if (!isOpen) return null;
 
@@ -219,7 +225,7 @@ function AuthModal({ isOpen, onClose, onAuthSuccess, lang = LANG.ar, onNotify })
             </form>
 
             {isLogin && (
-              <div className="mt-3 flex items-center justify-between gap-3">
+              <div className="mt-3 flex items-center justify-start">
                 <button
                   type="button"
                   onClick={handleForgotPassword}
@@ -228,12 +234,6 @@ function AuthModal({ isOpen, onClose, onAuthSuccess, lang = LANG.ar, onNotify })
                 >
                   {tr(lang, 'نسيت كلمة المرور؟', 'Forgot password?', 'Mot de passe oublie ?')}
                 </button>
-                <a
-                  href="/admin"
-                  className="text-sm text-slate-600 hover:text-slate-900 hover:underline"
-                >
-                  {tr(lang, 'دخول الأدمن', 'Admin login', 'Connexion admin')}
-                </a>
               </div>
             )}
 
