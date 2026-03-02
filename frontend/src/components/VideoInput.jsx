@@ -61,7 +61,7 @@ function VideoInput({
             lang,
             'انتهت المهلة. تأكد من تسجيل الدخول ثم حاول مرة أخرى.',
             'Request timed out. Please re-login and try again.',
-            'Délai dépassé. Reconnectez-vous puis réessayez.'
+            'Delai depasse. Reconnectez-vous puis reessayez.'
           )
         );
         setLoading(false);
@@ -132,7 +132,7 @@ function VideoInput({
             lang,
             'انتهت مهلة الاستخراج. جرّب مرة أخرى.',
             'Extraction timed out. Please try again.',
-            "Délai d'extraction dépassé. Réessayez."
+            "Delai d'extraction depasse. Reessayez."
           )
         );
       } else {
@@ -154,18 +154,21 @@ function VideoInput({
   const selectedOutputLang = normalizeOutputLanguage(outputLang);
 
   return (
-    <div className="bg-white rounded-lg shadow-sm p-6 mb-6" dir={lang === LANG.ar ? 'rtl' : 'ltr'}>
+    <div
+      className="rounded-2xl border border-slate-200 bg-white shadow-sm p-5 sm:p-6"
+      dir={lang === LANG.ar ? 'rtl' : 'ltr'}
+    >
       <div className="flex items-center gap-2 mb-4">
         <FaYoutube className="text-red-600 text-3xl" />
-        <h2 className="text-2xl font-bold text-gray-800">
+        <h2 className="text-2xl font-black text-slate-900">
           {tr(lang, 'استخراج السكريبت من يوتيوب', 'Extract transcript from YouTube', 'Extraire la transcription YouTube')}
         </h2>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_220px] gap-3 items-end">
+        <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_220px] gap-4 items-end">
           <div>
-            <label htmlFor="youtube-url" className="mb-1 block text-sm font-semibold text-slate-700">
+            <label htmlFor="youtube-url" className="mb-1.5 block text-sm font-semibold text-slate-700">
               {tr(lang, 'رابط يوتيوب', 'YouTube URL', 'URL YouTube')}
             </label>
             <input
@@ -174,13 +177,14 @@ function VideoInput({
               value={url}
               onChange={handleChange}
               placeholder={tr(lang, 'أدخل رابط الفيديو هنا...', 'Paste YouTube URL here...', 'Collez le lien video ici...')}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+              className="w-full h-[52px] px-4 border border-slate-300 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 outline-none transition"
               disabled={loading || Boolean(accessRestrictionMessage)}
+              dir="ltr"
             />
           </div>
 
           <div>
-            <label htmlFor="extract-output-lang" className="mb-1 block text-sm font-semibold text-slate-700">
+            <label htmlFor="extract-output-lang" className="mb-1.5 block text-sm font-semibold text-slate-700">
               {tr(lang, 'لغة المخرجات', 'Output language', 'Langue de sortie')}
             </label>
             <select
@@ -188,7 +192,7 @@ function VideoInput({
               value={selectedOutputLang}
               onChange={(event) => onOutputLangChange?.(event.target.value)}
               disabled={loading || Boolean(accessRestrictionMessage)}
-              className="w-full px-3 py-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition disabled:bg-gray-100"
+              className="w-full h-[52px] px-3 border border-slate-300 rounded-xl bg-white focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 outline-none transition disabled:bg-gray-100"
             >
               {OUTPUT_LANGUAGE_OPTIONS.map((option) => (
                 <option key={option.code} value={option.code}>
@@ -214,7 +218,7 @@ function VideoInput({
         <button
           type="submit"
           disabled={loading || Boolean(accessRestrictionMessage)}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-200 flex items-center justify-center gap-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
+          className="w-full h-[52px] bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 rounded-xl transition duration-200 flex items-center justify-center gap-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
         >
           {loading ? (
             <>

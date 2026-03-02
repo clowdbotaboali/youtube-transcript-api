@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import {
   FaArrowRight,
   FaBookOpen,
@@ -7,8 +7,10 @@ import {
   FaComments,
   FaFileAlt,
   FaGraduationCap,
+  FaMoon,
   FaPlayCircle,
   FaRobot,
+  FaSun,
   FaUserTie
 } from 'react-icons/fa';
 import { LANG, tr } from '../utils/lang';
@@ -67,13 +69,25 @@ const isLikelyYoutubeUrl = (value) => {
   }
 };
 
-function LandingPage({ onStart, lang = LANG.en, theme = 'light' }) {
+function LandingPage({
+  onStart,
+  onLangChange,
+  onToggleTheme,
+  lang = LANG.en,
+  theme = 'light'
+}) {
   const isDark = theme === 'dark';
   const isArabic = lang === LANG.ar;
   const [heroUrl, setHeroUrl] = useState('');
   const [heroError, setHeroError] = useState('');
   const dir = isArabic ? 'rtl' : 'ltr';
   const t = (ar, en, fr) => tr(lang, ar, en, fr);
+
+  const painPoints = [
+    t('مقاطع طويلة وصعب ترجع لأهم النقاط.', 'Long videos are hard to scan and revisit.', 'Les videos longues sont difficiles a parcourir et revoir.'),
+    t('المحتوى متفرق بين نص وملخص وخطوات.', 'Context is scattered between transcript, summary, and steps.', 'Le contexte est disperse entre transcription, resume et etapes.'),
+    t('تحتاج مخرجات بلغة مناسبة للجمهور.', 'You need outputs in the language your audience uses.', 'Vous avez besoin de sorties dans la langue de votre audience.')
+  ];
 
   const audienceItems = [
     {
@@ -87,9 +101,9 @@ function LandingPage({ onStart, lang = LANG.en, theme = 'light' }) {
     },
     {
       icon: <FaBookOpen />,
-      title: t('صناع الكورسات', 'Course creators', 'Createurs de cours'),
+      title: t('صنّاع الكورسات', 'Course creators', 'Createurs de cours'),
       points: [
-        t('تحويل الفيديو إلى محتوى نصي جاهز', 'Turn videos into ready text content', 'Convertir la video en contenu texte pret'),
+        t('تحويل الفيديو لمحتوى نصي جاهز', 'Turn videos into ready text content', 'Convertir la video en contenu texte pret'),
         t('تنظيم الشرح إلى أجزاء واضحة', 'Organize teaching into clear sections', 'Organiser le contenu en sections claires'),
         t('تجهيز ملخصات ومراجع للطلاب', 'Prepare summaries and references', 'Preparer resumes et references')
       ]
@@ -139,13 +153,13 @@ function LandingPage({ onStart, lang = LANG.en, theme = 'light' }) {
     event.preventDefault();
     const nextUrl = heroUrl.trim();
     if (!nextUrl) {
-      setHeroError(t('حط رابط يوتيوب الأول.', 'Please paste a YouTube link first.', 'Collez un lien YouTube avant de continuer.'));
+      setHeroError(t('ضع رابط يوتيوب أولاً.', 'Please paste a YouTube link first.', 'Collez un lien YouTube avant de continuer.'));
       return;
     }
     if (!isLikelyYoutubeUrl(nextUrl)) {
       setHeroError(
         t(
-          'الرابط مش واضح إنه يوتيوب. جرّب تاني.',
+          'الرابط لا يبدو رابط يوتيوب صالح.',
           'This does not look like a valid YouTube URL.',
           "Ce lien ne ressemble pas a une URL YouTube valide."
         )
@@ -174,7 +188,7 @@ function LandingPage({ onStart, lang = LANG.en, theme = 'light' }) {
       <div className={`lp-glow absolute top-1/3 -right-24 w-[360px] h-[360px] rounded-full -z-10 ${isDark ? 'bg-indigo-500/20' : 'bg-indigo-300/30'}`} />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
-        <header className="flex items-center justify-between gap-4 mb-10">
+        <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-10">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-cyan-500 text-white flex items-center justify-center shadow-lg shadow-cyan-500/30">
               <FaBolt />
@@ -186,7 +200,37 @@ function LandingPage({ onStart, lang = LANG.en, theme = 'light' }) {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+
+          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+            <div
+              className={`inline-flex items-center gap-2 rounded-xl border px-2 py-1.5 ${
+                isDark ? 'border-slate-700 bg-slate-900/80' : 'border-slate-300 bg-white/90'
+              }`}
+            >
+              <button
+                type="button"
+                onClick={() => onToggleTheme?.()}
+                className={`w-9 h-9 rounded-lg inline-flex items-center justify-center transition ${
+                  isDark ? 'text-amber-200 hover:bg-slate-800' : 'text-slate-800 hover:bg-slate-100'
+                }`}
+                title={t('تبديل الوضع', 'Toggle theme', 'Basculer le theme')}
+              >
+                {isDark ? <FaSun /> : <FaMoon />}
+              </button>
+              <select
+                value={lang}
+                onChange={(event) => onLangChange?.(event.target.value)}
+                className={`h-9 rounded-lg px-2.5 border text-sm font-bold outline-none transition ${
+                  isDark ? 'border-slate-700 bg-slate-900 text-slate-100' : 'border-slate-300 bg-white text-slate-900'
+                }`}
+                title={t('تبديل اللغة', 'Switch language', 'Changer de langue')}
+              >
+                <option value={LANG.en}>EN</option>
+                <option value={LANG.ar}>AR</option>
+                <option value={LANG.fr}>FR</option>
+              </select>
+            </div>
+
             <NavLink href="/pricing" dark={isDark}>
               {t('الأسعار', 'Pricing', 'Tarification')}
             </NavLink>
@@ -205,87 +249,76 @@ function LandingPage({ onStart, lang = LANG.en, theme = 'light' }) {
           </div>
         </header>
 
-        <section className="grid lg:grid-cols-[1.05fr_0.95fr] gap-6 sm:gap-8 items-start mb-12">
-          <div className="reveal-up">
-            <h1 className={`text-4xl sm:text-5xl lg:text-6xl font-black leading-tight mb-3 ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
-              {t(
-                'حوّل فيديوهات يوتيوب إلى ملخصات مفهومة في دقائق',
-                'Turn YouTube videos into clear summaries in minutes',
-                'Transformez les videos YouTube en resumes clairs en quelques minutes'
-              )}
-            </h1>
-            <p className={`text-base sm:text-lg mb-6 max-w-2xl ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-              {t(
-                'للمحاضرات، الكورسات، والمحتوى التعليمي: نص + ملخص + خطوات عملية في مكان واحد.',
-                'For lectures, courses, and educational content: transcript, summary, and practical steps in one place.',
-                'Pour les cours et contenus educatifs : transcription, resume et etapes pratiques au meme endroit.'
-              )}
-            </p>
+        <section className="mb-12">
+          <div className={`reveal-up rounded-3xl border p-6 sm:p-8 lg:p-10 ${isDark ? 'border-slate-700 bg-slate-900/75' : 'border-slate-200 bg-white/90'}`}>
+            <div className="grid lg:grid-cols-[1.1fr_0.9fr] gap-6 sm:gap-8 items-start">
+              <div>
+                <h1 className={`text-4xl sm:text-5xl lg:text-6xl font-black leading-tight mb-3 ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
+                  {t(
+                    'حول فيديوهات يوتيوب إلى ملخصات مفهومة في دقائق',
+                    'Turn YouTube videos into clear summaries in minutes',
+                    'Transformez les videos YouTube en resumes clairs en quelques minutes'
+                  )}
+                </h1>
+                <p className={`text-base sm:text-lg mb-6 max-w-2xl ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                  {t(
+                    'للمحاضرات، الكورسات، والمحتوى التعليمي: نص + ملخص + خطوات عملية في مكان واحد.',
+                    'For lectures, courses, and educational content: transcript, summary, and practical steps in one place.',
+                    'Pour les cours et contenus educatifs : transcription, resume et etapes pratiques au meme endroit.'
+                  )}
+                </p>
 
-            <form onSubmit={handleStartFromHero} className={`rounded-2xl border p-4 sm:p-5 ${isDark ? 'border-slate-700 bg-slate-900/75' : 'border-slate-200 bg-white/90'}`}>
-              <label className={`block text-sm font-bold mb-2 ${isDark ? 'text-slate-100' : 'text-slate-800'}`}>
-                {t('ضع رابط يوتيوب وابدأ', 'Paste a YouTube URL and start', 'Collez un lien YouTube et commencez')}
-              </label>
-              <div className="grid sm:grid-cols-[1fr_auto] gap-3">
-                <input
-                  type="text"
-                  value={heroUrl}
-                  onChange={(e) => setHeroUrl(e.target.value)}
-                  placeholder={t('https://www.youtube.com/watch?v=...', 'https://www.youtube.com/watch?v=...', 'https://www.youtube.com/watch?v=...')}
-                  className={`w-full h-12 rounded-xl border px-4 outline-none transition ${
-                    isDark
-                      ? 'border-slate-600 bg-slate-950 text-slate-100 focus:border-cyan-500'
-                      : 'border-slate-300 bg-white text-slate-900 focus:border-cyan-500'
-                  }`}
-                  dir="ltr"
-                />
-                <button
-                  type="submit"
-                  className="h-12 px-5 rounded-xl bg-cyan-500 text-white font-black hover:bg-cyan-600 transition inline-flex items-center justify-center gap-2"
-                >
-                  {t('استخراج السكريبت', 'Extract Transcript', 'Extraire la transcription')}
-                  <FaArrowRight className={isArabic ? 'rotate-180' : ''} />
-                </button>
+                <form onSubmit={handleStartFromHero} className={`rounded-2xl border p-4 sm:p-5 ${isDark ? 'border-slate-700 bg-slate-950/50' : 'border-slate-200 bg-white'}`}>
+                  <label className={`block text-sm font-bold mb-2 ${isDark ? 'text-slate-100' : 'text-slate-800'}`}>
+                    {t('ضع رابط يوتيوب وابدأ', 'Paste a YouTube URL and start', 'Collez un lien YouTube et commencez')}
+                  </label>
+                  <div className="grid sm:grid-cols-[1fr_auto] gap-3">
+                    <input
+                      type="text"
+                      value={heroUrl}
+                      onChange={(e) => setHeroUrl(e.target.value)}
+                      placeholder={t('https://www.youtube.com/watch?v=...', 'https://www.youtube.com/watch?v=...', 'https://www.youtube.com/watch?v=...')}
+                      className={`w-full h-12 rounded-xl border px-4 outline-none transition ${
+                        isDark
+                          ? 'border-slate-600 bg-slate-950 text-slate-100 focus:border-cyan-500'
+                          : 'border-slate-300 bg-white text-slate-900 focus:border-cyan-500'
+                      }`}
+                      dir="ltr"
+                    />
+                    <button
+                      type="submit"
+                      className="h-12 px-5 rounded-xl bg-cyan-500 text-white font-black hover:bg-cyan-600 transition inline-flex items-center justify-center gap-2"
+                    >
+                      {t('استخراج السكريبت', 'Extract Transcript', 'Extraire la transcription')}
+                      <FaArrowRight className={isArabic ? 'rotate-180' : ''} />
+                    </button>
+                  </div>
+                  <p className={`text-xs mt-2 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                    {t(
+                      'عند الضغط هتروح التسجيل مباشرة، والاستخراج يتم بعد تسجيل الدخول.',
+                      'You will be redirected to sign up first. Extraction is available after login.',
+                      "Vous serez dirige vers l'inscription d'abord. L'extraction est active apres connexion."
+                    )}
+                  </p>
+                  {heroError ? (
+                    <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 text-rose-700 text-sm px-3 py-2">{heroError}</div>
+                  ) : null}
+                </form>
               </div>
-              <p className={`text-xs mt-2 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                {t(
-                  'عند الضغط هتروح التسجيل مباشرة، والاستخراج يتم بعد تسجيل الدخول.',
-                  'You will be redirected to sign up first. Extraction is available after login.',
-                  "Vous serez dirige vers l'inscription d'abord. L'extraction est active apres connexion."
-                )}
-              </p>
-              {heroError ? (
-                <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 text-rose-700 text-sm px-3 py-2">{heroError}</div>
-              ) : null}
-            </form>
-          </div>
 
-          <div className="reveal-up delay-1">
-            <div className={`rounded-3xl border p-5 ${isDark ? 'border-slate-700 bg-slate-900/80' : 'border-slate-200 bg-white/90'}`}>
-              <p className={`text-xs font-bold tracking-wider uppercase mb-3 ${isDark ? 'text-cyan-200' : 'text-cyan-700'}`}>{t('Demo Suggestion', 'Demo Suggestion', 'Suggestion Demo')}</p>
-              <h2 className={`text-xl font-black mb-3 ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>{t('فيديو مناسب لصورة الهوم', 'Recommended hero thumbnail video', "Video recommande pour l'image d'accueil")}</h2>
-              <img
-                src="https://img.youtube.com/vi/iG9CE55wbtY/hqdefault.jpg"
-                alt={t('صورة فيديو مقترح', 'Suggested video thumbnail', 'Miniature video suggeree')}
-                className="w-full rounded-2xl border border-slate-200"
-                loading="lazy"
-              />
-              <p className={`text-sm mt-3 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                {t(
-                  'الفيديو المقترح: TED Talk بجودة ترجمة عالية، مناسب لعرض فكرة الاستخراج والملخص.',
-                  'Suggested demo: a TED Talk with reliable captions, ideal to showcase transcript and summary flow.',
-                  "Suggestion: un TED Talk avec sous-titres fiables, ideal pour montrer le flux d'extraction."
-                )}
-              </p>
-              <a
-                href="https://www.youtube.com/watch?v=iG9CE55wbtY"
-                target="_blank"
-                rel="noreferrer"
-                className={`mt-3 inline-flex items-center gap-2 text-sm font-bold ${isDark ? 'text-cyan-300' : 'text-cyan-700'}`}
-              >
-                {t('شاهد الفيديو المقترح', 'Open suggested video', 'Ouvrir la video suggeree')}
-                <FaArrowRight className={isArabic ? 'rotate-180' : ''} />
-              </a>
+              <div className={`reveal-up delay-1 rounded-2xl border p-5 ${isDark ? 'border-slate-700 bg-slate-950/45' : 'border-slate-200 bg-slate-50/80'}`}>
+                <p className={`text-xs font-bold tracking-wider uppercase mb-3 ${isDark ? 'text-cyan-200' : 'text-cyan-700'}`}>
+                  {t('مشاكل بنحلها', 'Problems we solve', 'Problemes resolus')}
+                </p>
+                <ul className={`space-y-3 text-sm leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                  {painPoints.map((item, idx) => (
+                    <li key={`pain-${idx}`} className="flex items-start gap-2">
+                      <FaCheckCircle className="mt-0.5 text-emerald-500 shrink-0" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
           </div>
         </section>

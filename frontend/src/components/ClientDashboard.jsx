@@ -1,12 +1,12 @@
-import { FaBolt, FaHistory, FaMagic } from 'react-icons/fa';
+﻿import { FaBolt, FaHistory, FaMagic } from 'react-icons/fa';
 import { LANG, tr } from '../utils/lang';
 
 function ActionCard({ title, text, cta, onClick, tone, icon, theme = 'light' }) {
   const isDark = theme === 'dark';
 
   return (
-    <article className={`rounded-2xl border p-5 sm:p-6 bg-gradient-to-b ${tone}`}>
-      <div className={`w-11 h-11 rounded-xl flex items-center justify-center mb-4 ${isDark ? 'bg-slate-900/60 text-slate-100' : 'bg-white/70 text-slate-800'}`}>
+    <article className={`rounded-2xl border p-5 sm:p-6 bg-gradient-to-b ${tone} transition hover:-translate-y-0.5`}>
+      <div className={`w-11 h-11 rounded-xl flex items-center justify-center mb-4 ${isDark ? 'bg-slate-900/60 text-slate-100' : 'bg-white/75 text-slate-800'}`}>
         {icon}
       </div>
       <h3 className={`text-lg font-black mb-2 ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>{title}</h3>
@@ -19,6 +19,14 @@ function ActionCard({ title, text, cta, onClick, tone, icon, theme = 'light' }) 
         {cta}
       </button>
     </article>
+  );
+}
+
+function InfoChip({ label, value, tone }) {
+  return (
+    <span className={`${tone} rounded-full border px-3 py-1.5 text-sm`}>
+      <span className="font-semibold">{label}:</span> {value}
+    </span>
   );
 }
 
@@ -36,36 +44,41 @@ function ClientDashboard({
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <section className={`rounded-2xl border p-5 sm:p-7 ${isDark ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'}`}>
+      <section className={`rounded-3xl border p-5 sm:p-7 ${isDark ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'} shadow-sm`}>
         <p className={`text-xs uppercase tracking-[0.15em] mb-2 ${isDark ? 'text-cyan-300' : 'text-cyan-700'}`}>
           {tr(lang, 'نظرة سريعة', 'Quick Snapshot')}
         </p>
         <h2 className={`text-2xl sm:text-3xl font-black mb-2 ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
           {tr(lang, 'مرحبًا في مساحة العميل الخاصة بك', 'Welcome to your client workspace')}
         </h2>
-        <p className={`${isDark ? 'text-slate-300' : 'text-slate-600'} mb-4`}>
+        <p className={`${isDark ? 'text-slate-300' : 'text-slate-600'} mb-5`}>
           {tr(
             lang,
             'الخطة المجانية: 5 روابط فيديو فقط. بعد استخراج الفيديو يمكنك التلخيص والدردشة عليه بدون خصم إضافي.',
             'Free plan: 5 video links only. After extraction, summary and chat on that same video do not consume extra credits.'
           )}
         </p>
-        <div className="flex flex-wrap gap-3 text-sm">
-          <span className={`${isDark ? 'bg-cyan-950 text-cyan-200 border-cyan-800' : 'bg-cyan-50 text-cyan-800 border-cyan-200'} rounded-full border px-3 py-1.5`}>
-            {tr(lang, 'الحساب', 'Account')}: {userEmail || '-'}
-          </span>
-          <span className={`${isDark ? 'bg-amber-950 text-amber-200 border-amber-800' : 'bg-amber-50 text-amber-800 border-amber-200'} rounded-full border px-3 py-1.5`}>
-            {tr(lang, 'الرصيد الحالي', 'Current credits')}: {credits ?? '...'}
-          </span>
-          <span className={`${isDark ? 'bg-emerald-950 text-emerald-200 border-emerald-800' : 'bg-emerald-50 text-emerald-800 border-emerald-200'} rounded-full border px-3 py-1.5`}>
-            {tr(lang, 'المتبقي من المجانية', 'Free links remaining')}: {freeLinksRemaining} / 5
-          </span>
-          <span className={`${isDark ? 'bg-orange-950 text-orange-200 border-orange-800' : 'bg-orange-50 text-orange-800 border-orange-200'} rounded-full border px-3 py-1.5`}>
-            {tr(lang, 'الشحن المدفوع', 'Paid top-up')}: {tr(lang, 'يبدأ من', 'starts at')} 200 {tr(lang, 'نقطة', 'credits')} / $5
-          </span>
-          <span className={`${isDark ? 'bg-rose-950 text-rose-200 border-rose-800' : 'bg-rose-50 text-rose-800 border-rose-200'} rounded-full border px-3 py-1.5`}>
-            {tr(lang, 'خصومات تلقائية للشحنات الأكبر', 'Bonus credits for larger top-ups')}
-          </span>
+        <div className="flex flex-wrap gap-3">
+          <InfoChip
+            label={tr(lang, 'الحساب', 'Account')}
+            value={userEmail || '-'}
+            tone={isDark ? 'bg-cyan-950 text-cyan-200 border-cyan-800' : 'bg-cyan-50 text-cyan-800 border-cyan-200'}
+          />
+          <InfoChip
+            label={tr(lang, 'الرصيد الحالي', 'Current credits')}
+            value={credits ?? '...'}
+            tone={isDark ? 'bg-amber-950 text-amber-200 border-amber-800' : 'bg-amber-50 text-amber-800 border-amber-200'}
+          />
+          <InfoChip
+            label={tr(lang, 'المتبقي من المجانية', 'Free links remaining')}
+            value={`${freeLinksRemaining} / 5`}
+            tone={isDark ? 'bg-emerald-950 text-emerald-200 border-emerald-800' : 'bg-emerald-50 text-emerald-800 border-emerald-200'}
+          />
+          <InfoChip
+            label={tr(lang, 'الشحن المدفوع', 'Paid top-up')}
+            value={tr(lang, 'يبدأ من 200 نقطة / $5', 'starts at 200 credits / $5')}
+            tone={isDark ? 'bg-orange-950 text-orange-200 border-orange-800' : 'bg-orange-50 text-orange-800 border-orange-200'}
+          />
         </div>
       </section>
 

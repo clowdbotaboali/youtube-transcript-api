@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FaMoon, FaSpinner, FaSun } from 'react-icons/fa';
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { FaSpinner } from 'react-icons/fa';
 import VideoInput from './components/VideoInput';
 import TranscriptDisplay from './components/TranscriptDisplay';
 import ProcessingOptions from './components/ProcessingOptions';
@@ -13,6 +13,7 @@ import LocalServerGuide from './components/LocalServerGuide';
 import AuthModal from './components/AuthModal';
 import PricingModal from './components/PricingModal';
 import LandingPage from './components/LandingPage';
+import TopupCheckoutPage from './components/TopupCheckoutPage';
 import ToastStack from './components/ToastStack';
 import ClientHeader, { PAGES as CLIENT_PAGES } from './components/ClientHeader';
 import ClientDashboard from './components/ClientDashboard';
@@ -94,20 +95,20 @@ const buildFallbackVideoBrief = (titleValue, langCode) => {
   if (!title) return '';
   const compact = title.length > 90 ? `${title.slice(0, 87).trim()}...` : title;
   const lang = normalizeOutputLanguage(langCode);
-  if (lang === 'ar') return `ملخص سريع: ${compact}`;
-  if (lang === 'fr') return `Résumé rapide: ${compact}`;
+  if (lang === 'ar') return `Ù…Ù„Ø®Øµ Ø³Ø±ÙŠØ¹: ${compact}`;
+  if (lang === 'fr') return `RÃ©sumÃ© rapide: ${compact}`;
   if (lang === 'es') return `Resumen breve: ${compact}`;
   if (lang === 'de') return `Kurzzusammenfassung: ${compact}`;
   if (lang === 'it') return `Sintesi rapida: ${compact}`;
-  if (lang === 'pt') return `Resumo rápido: ${compact}`;
+  if (lang === 'pt') return `Resumo rÃ¡pido: ${compact}`;
   if (lang === 'tr') return `Kisa ozet: ${compact}`;
-  if (lang === 'ru') return `Краткое резюме: ${compact}`;
-  if (lang === 'hi') return `संक्षिप्त सार: ${compact}`;
+  if (lang === 'ru') return `ÐšÑ€Ð°Ñ‚ÐºÐ¾Ðµ Ñ€ÐµÐ·ÑŽÐ¼Ðµ: ${compact}`;
+  if (lang === 'hi') return `à¤¸à¤‚à¤•à¥à¤·à¤¿à¤ªà¥à¤¤ à¤¸à¤¾à¤°: ${compact}`;
   if (lang === 'id') return `Ringkasan singkat: ${compact}`;
-  if (lang === 'ur') return `خلاصہ مختصر: ${compact}`;
-  if (lang === 'zh') return `简要摘要：${compact}`;
-  if (lang === 'ja') return `要約: ${compact}`;
-  if (lang === 'ko') return `요약: ${compact}`;
+  if (lang === 'ur') return `Ø®Ù„Ø§ØµÛ Ù…Ø®ØªØµØ±: ${compact}`;
+  if (lang === 'zh') return `ç®€è¦æ‘˜è¦ï¼š${compact}`;
+  if (lang === 'ja') return `è¦ç´„: ${compact}`;
+  if (lang === 'ko') return `ìš”ì•½: ${compact}`;
   return `Quick brief: ${compact}`;
 };
 
@@ -188,6 +189,7 @@ function App() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState('login');
   const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
+  const [topupQuote, setTopupQuote] = useState(null);
   const [credits, setCredits] = useState(null);
   const [freeLinksRemaining, setFreeLinksRemaining] = useState(FREE_PLAN_REQUESTS);
   const [accountAccess, setAccountAccess] = useState({ status: 'active', reason: null });
@@ -202,6 +204,8 @@ function App() {
   const [localizedDescriptionInstructions, setLocalizedDescriptionInstructions] = useState([]);
   const [localizedDescriptionLoading, setLocalizedDescriptionLoading] = useState(false);
   const [extraContext, setExtraContext] = useState('');
+  const [passwordForm, setPasswordForm] = useState({ newPassword: '', confirmPassword: '' });
+  const [passwordSubmitting, setPasswordSubmitting] = useState(false);
   const [toasts, setToasts] = useState([]);
   const [currentPath, setCurrentPath] = useState(() => (hasWindow ? window.location.pathname : '/'));
   const videoBriefCacheRef = useRef(new Map());
@@ -260,7 +264,7 @@ function App() {
       },
       status: 403,
       lang,
-      fallbackAr: 'الحساب غير متاح حاليًا. تواصل مع الدعم.',
+      fallbackAr: 'Ø§Ù„Ø­Ø³Ø§Ø¨ ØºÙŠØ± Ù…ØªØ§Ø­ Ø­Ø§Ù„ÙŠÙ‹Ø§. ØªÙˆØ§ØµÙ„ Ù…Ø¹ Ø§Ù„Ø¯Ø¹Ù….',
       fallbackEn: 'This account is currently restricted. Contact support.',
       fallbackFr: 'Ce compte est actuellement restreint. Contactez le support.'
     });
@@ -375,6 +379,7 @@ function App() {
         } else {
           setCredits(null);
           setFreeLinksRemaining(FREE_PLAN_REQUESTS);
+          setTopupQuote(null);
         }
       })
       .catch(() => {
@@ -404,6 +409,8 @@ function App() {
         setLocalizedDescriptionInstructions([]);
         setLocalizedDescriptionLoading(false);
         setExtraContext('');
+        setTopupQuote(null);
+        setPasswordForm({ newPassword: '', confirmPassword: '' });
       }
     });
 
@@ -678,7 +685,7 @@ function App() {
     if (!user) {
       setAuthModalMode('login');
       setIsAuthModalOpen(true);
-      notify('info', tr(lang, 'يرجى تسجيل الدخول لاستخدام المعالجة بالذكاء الاصطناعي.', 'Please sign in to use AI processing.'));
+      notify('info', tr(lang, 'ÙŠØ±Ø¬Ù‰ ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„ Ù„Ø§Ø³ØªØ®Ø¯Ø§Ù… Ø§Ù„Ù…Ø¹Ø§Ù„Ø¬Ø© Ø¨Ø§Ù„Ø°ÙƒØ§Ø¡ Ø§Ù„Ø§ØµØ·Ù†Ø§Ø¹ÙŠ.', 'Please sign in to use AI processing.'));
       return;
     }
     if (accountAccess.status !== 'active') {
@@ -718,7 +725,7 @@ function App() {
             payload: data,
             status: response.status,
             lang,
-            fallbackAr: 'لا يمكن تنفيذ المعالجة حالياً.',
+            fallbackAr: 'Ù„Ø§ ÙŠÙ…ÙƒÙ† ØªÙ†ÙÙŠØ° Ø§Ù„Ù…Ø¹Ø§Ù„Ø¬Ø© Ø­Ø§Ù„ÙŠØ§Ù‹.',
             fallbackEn: 'AI processing is not available right now.',
             fallbackFr: "Le traitement IA n'est pas disponible actuellement."
           })
@@ -735,7 +742,7 @@ function App() {
             payload: data,
             status: response.status,
             lang,
-            fallbackAr: 'انتهت الجلسة. يرجى تسجيل الدخول مرة أخرى.',
+            fallbackAr: 'Ø§Ù†ØªÙ‡Øª Ø§Ù„Ø¬Ù„Ø³Ø©. ÙŠØ±Ø¬Ù‰ ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„ Ù…Ø±Ø© Ø£Ø®Ø±Ù‰.',
             fallbackEn: 'Session expired. Please sign in again.',
             fallbackFr: 'Session expiree. Veuillez vous reconnecter.'
           })
@@ -747,14 +754,14 @@ function App() {
             payload: data,
             status: response.status,
             lang,
-            fallbackAr: 'فشلت المعالجة.',
+            fallbackAr: 'ÙØ´Ù„Øª Ø§Ù„Ù…Ø¹Ø§Ù„Ø¬Ø©.',
             fallbackEn: 'Processing failed.',
             fallbackFr: 'Le traitement a echoue.'
           })
         );
       }
     } catch {
-      notify('error', tr(lang, 'فشل الاتصال بالخادم', 'Connection failed'));
+      notify('error', tr(lang, 'ÙØ´Ù„ Ø§Ù„Ø§ØªØµØ§Ù„ Ø¨Ø§Ù„Ø®Ø§Ø¯Ù…', 'Connection failed'));
     } finally {
       setProcessLoading(false);
     }
@@ -775,11 +782,11 @@ function App() {
       const data = await response.json().catch(() => ({}));
       const success = !!(response.ok && data.success);
       if (!success) {
-        notify('error', tr(lang, 'ØªØ¹Ø°Ø± Ø­ÙØ¸ Ø§Ù„Ù†ØªÙŠØ¬Ø©.', 'Failed to save result.'));
+        notify('error', tr(lang, 'Ã˜ÂªÃ˜Â¹Ã˜Â°Ã˜Â± Ã˜Â­Ã™ÂÃ˜Â¸ Ã˜Â§Ã™â€žÃ™â€ Ã˜ÂªÃ™Å Ã˜Â¬Ã˜Â©.', 'Failed to save result.'));
       }
       return success;
     } catch {
-      notify('error', tr(lang, 'ÙØ´Ù„ Ø§Ù„Ø§ØªØµØ§Ù„ Ø¨Ø§Ù„Ø®Ø§Ø¯Ù…', 'Connection failed'));
+      notify('error', tr(lang, 'Ã™ÂÃ˜Â´Ã™â€ž Ã˜Â§Ã™â€žÃ˜Â§Ã˜ÂªÃ˜ÂµÃ˜Â§Ã™â€ž Ã˜Â¨Ã˜Â§Ã™â€žÃ˜Â®Ã˜Â§Ã˜Â¯Ã™â€¦', 'Connection failed'));
       return false;
     }
   };
@@ -792,7 +799,7 @@ function App() {
       setClientPage(hasPendingUrl ? CLIENT_PAGES.workspace : CLIENT_PAGES.dashboard);
       setAuthModalMode('login');
       await refreshAccount();
-      notify('success', tr(lang, 'ØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„ Ø¨Ù†Ø¬Ø§Ø­.', 'Signed in successfully.'));
+      notify('success', tr(lang, 'Ã˜ÂªÃ™â€¦ Ã˜ÂªÃ˜Â³Ã˜Â¬Ã™Å Ã™â€ž Ã˜Â§Ã™â€žÃ˜Â¯Ã˜Â®Ã™Ë†Ã™â€ž Ã˜Â¨Ã™â€ Ã˜Â¬Ã˜Â§Ã˜Â­.', 'Signed in successfully.'));
     }
   };
 
@@ -808,6 +815,47 @@ function App() {
   const handleSavedLinkSelect = (url) => {
     setSelectedUrl(url);
     setClientPage(CLIENT_PAGES.workspace);
+  };
+
+  const openTopupPicker = useCallback(() => {
+    setTopupQuote(null);
+    setIsPricingModalOpen(true);
+  }, []);
+
+  const handleTopupProceed = useCallback((nextQuote) => {
+    setTopupQuote(nextQuote || null);
+    setIsPricingModalOpen(false);
+    setClientPage(CLIENT_PAGES.topup);
+  }, []);
+
+  const handlePasswordChange = async (event) => {
+    event.preventDefault();
+    const nextPassword = String(passwordForm.newPassword || '').trim();
+    const confirmPassword = String(passwordForm.confirmPassword || '').trim();
+
+    if (!nextPassword || nextPassword.length < 8) {
+      notify('error', tr(lang, 'ÙƒÙ„Ù…Ø© Ø§Ù„Ù…Ø±ÙˆØ± Ù„Ø§Ø²Ù… ØªÙƒÙˆÙ† 8 Ø£Ø­Ø±Ù Ø¹Ù„Ù‰ Ø§Ù„Ø£Ù‚Ù„.', 'Password must be at least 8 characters.'));
+      return;
+    }
+    if (nextPassword !== confirmPassword) {
+      notify('error', tr(lang, 'ØªØ£ÙƒÙŠØ¯ ÙƒÙ„Ù…Ø© Ø§Ù„Ù…Ø±ÙˆØ± ØºÙŠØ± Ù…Ø·Ø§Ø¨Ù‚.', 'Password confirmation does not match.'));
+      return;
+    }
+
+    setPasswordSubmitting(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: nextPassword });
+      if (error) {
+        notify('error', cleanText(error.message) || tr(lang, 'ÙØ´Ù„ ØªØºÙŠÙŠØ± ÙƒÙ„Ù…Ø© Ø§Ù„Ù…Ø±ÙˆØ±.', 'Failed to change password.'));
+        return;
+      }
+      setPasswordForm({ newPassword: '', confirmPassword: '' });
+      notify('success', tr(lang, 'ØªÙ… ØªØºÙŠÙŠØ± ÙƒÙ„Ù…Ø© Ø§Ù„Ù…Ø±ÙˆØ± Ø¨Ù†Ø¬Ø§Ø­.', 'Password updated successfully.'));
+    } catch {
+      notify('error', tr(lang, 'Ø­Ø¯Ø« Ø®Ø·Ø£ Ø£Ø«Ù†Ø§Ø¡ ØªØºÙŠÙŠØ± ÙƒÙ„Ù…Ø© Ø§Ù„Ù…Ø±ÙˆØ±.', 'Unexpected error while updating password.'));
+    } finally {
+      setPasswordSubmitting(false);
+    }
   };
 
   const handleLogout = async () => {
@@ -828,6 +876,8 @@ function App() {
     setAuthModalMode('login');
     setIsAuthModalOpen(false);
     setIsPricingModalOpen(false);
+    setTopupQuote(null);
+    setPasswordForm({ newPassword: '', confirmPassword: '' });
     setShowSettings(false);
 
     if (hasWindow) {
@@ -850,7 +900,7 @@ function App() {
       // Intentionally ignored.
     }
 
-    notify('success', tr(lang, 'ØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø®Ø±ÙˆØ¬ Ø¨Ù†Ø¬Ø§Ø­.', 'Signed out successfully.'));
+    notify('success', tr(lang, 'Ã˜ÂªÃ™â€¦ Ã˜ÂªÃ˜Â³Ã˜Â¬Ã™Å Ã™â€ž Ã˜Â§Ã™â€žÃ˜Â®Ã˜Â±Ã™Ë†Ã˜Â¬ Ã˜Â¨Ã™â€ Ã˜Â¬Ã˜Â§Ã˜Â­.', 'Signed out successfully.'));
 
     // Hard refresh to guarantee no in-memory auth state survives.
     if (hasWindow) {
@@ -900,12 +950,12 @@ function App() {
         <div className="flex-1 bg-slate-950 text-slate-100 flex items-center justify-center px-4" dir={rootDir}>
           <div className="max-w-lg w-full rounded-xl border border-slate-700 bg-slate-900/70 p-6 text-center">
             <h1 className="text-xl font-bold mb-3">
-              {tr(lang, 'Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø§Ù„Ù…ØµØ§Ø¯Ù‚Ø© ØºÙŠØ± Ù…ÙƒØªÙ…Ù„Ø©', 'Authentication configuration is missing')}
+              {tr(lang, 'Ã˜Â¥Ã˜Â¹Ã˜Â¯Ã˜Â§Ã˜Â¯Ã˜Â§Ã˜Âª Ã˜Â§Ã™â€žÃ™â€¦Ã˜ÂµÃ˜Â§Ã˜Â¯Ã™â€šÃ˜Â© Ã˜ÂºÃ™Å Ã˜Â± Ã™â€¦Ã™Æ’Ã˜ÂªÃ™â€¦Ã™â€žÃ˜Â©', 'Authentication configuration is missing')}
             </h1>
             <p className="text-slate-300 text-sm">
               {tr(
                 lang,
-                'Ø£Ø¶Ù Ù…ØªØºÙŠØ±Ø§Øª VITE_SUPABASE_URL Ùˆ VITE_SUPABASE_ANON_KEY ÙÙŠ Ø¨ÙŠØ¦Ø© Vercel Ø«Ù… Ø£Ø¹Ø¯ Ø§Ù„Ù†Ø´Ø±.',
+                'Ã˜Â£Ã˜Â¶Ã™Â Ã™â€¦Ã˜ÂªÃ˜ÂºÃ™Å Ã˜Â±Ã˜Â§Ã˜Âª VITE_SUPABASE_URL Ã™Ë† VITE_SUPABASE_ANON_KEY Ã™ÂÃ™Å  Ã˜Â¨Ã™Å Ã˜Â¦Ã˜Â© Vercel Ã˜Â«Ã™â€¦ Ã˜Â£Ã˜Â¹Ã˜Â¯ Ã˜Â§Ã™â€žÃ™â€ Ã˜Â´Ã˜Â±.',
                 'Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in Vercel environment variables, then redeploy.'
               )}
             </p>
@@ -927,7 +977,7 @@ function App() {
         <div className="flex-1 bg-slate-950 text-slate-100 flex items-center justify-center">
           <div className="flex items-center gap-2 text-sm">
             <FaSpinner className="animate-spin" />
-            <span>{tr(lang, 'Ø¬Ø§Ø±ÙŠ ØªØ¬Ù‡ÙŠØ² Ø§Ù„Ø¬Ù„Ø³Ø©...', 'Preparing session...')}</span>
+            <span>{tr(lang, 'Ã˜Â¬Ã˜Â§Ã˜Â±Ã™Å  Ã˜ÂªÃ˜Â¬Ã™â€¡Ã™Å Ã˜Â² Ã˜Â§Ã™â€žÃ˜Â¬Ã™â€žÃ˜Â³Ã˜Â©...', 'Preparing session...')}</span>
           </div>
         </div>
         <SiteFooter lang={lang} theme={theme} />
@@ -944,34 +994,13 @@ function App() {
           path="/"
         />
         <div className="flex-1">
-          <LandingPage onStart={handleLandingStart} lang={lang} theme={theme} />
-          <div className="fixed top-4 right-4 z-50 inline-flex items-center gap-2">
-            <button
-              onClick={toggleTheme}
-              className={`p-2.5 rounded-full border transition ${
-                theme === THEME.dark
-                  ? 'bg-slate-900 border-slate-700 text-amber-300 hover:bg-slate-800'
-                  : 'bg-white/90 border-slate-300 text-slate-900 hover:bg-white'
-              }`}
-              title={tr(lang, 'ØªØ¨Ø¯ÙŠÙ„ Ø§Ù„ÙˆØ¶Ø¹ Ø§Ù„Ù„ÙŠÙ„ÙŠ/Ø§Ù„Ù†Ù‡Ø§Ø±ÙŠ', 'Toggle dark/light mode', 'Basculer mode sombre/clair')}
-            >
-              {theme === THEME.dark ? <FaSun /> : <FaMoon />}
-            </button>
-            <select
-              value={lang}
-              onChange={(event) => handleLangChange(event.target.value)}
-              className={`px-3 py-1.5 rounded-full border text-sm font-semibold transition outline-none ${
-                theme === THEME.dark
-                  ? 'bg-slate-900 border-slate-700 text-slate-100 hover:bg-slate-800'
-                  : 'bg-white/90 border-slate-300 text-slate-900 hover:bg-white'
-              }`}
-              title={tr(lang, 'Switch language', 'Switch language', 'Changer la langue')}
-            >
-              <option value={LANG.en}>EN</option>
-              <option value={LANG.ar}>AR</option>
-              <option value={LANG.fr}>FR</option>
-            </select>
-          </div>
+          <LandingPage
+            onStart={handleLandingStart}
+            lang={lang}
+            theme={theme}
+            onLangChange={handleLangChange}
+            onToggleTheme={toggleTheme}
+          />
           <ToastStack items={toasts} onDismiss={dismissToast} />
           {isAuthModalOpen && (
             <AuthModal
@@ -1017,7 +1046,7 @@ function App() {
           onLangChange={handleLangChange}
           onToggleTheme={toggleTheme}
           onOpenSettings={canUseLocalGuide ? () => setShowSettings(true) : undefined}
-          onOpenPricing={() => setIsPricingModalOpen(true)}
+          onOpenPricing={openTopupPicker}
           onLogout={handleLogout}
         />
 
@@ -1030,15 +1059,15 @@ function App() {
             userEmail={user?.email}
             onStartExtract={() => setClientPage(CLIENT_PAGES.workspace)}
             onOpenHistory={() => setClientPage(CLIENT_PAGES.history)}
-            onOpenTopup={() => setIsPricingModalOpen(true)}
+            onOpenTopup={openTopupPicker}
           />
         )}
 
         {clientPage === CLIENT_PAGES.workspace && (
           <section className="space-y-4 sm:space-y-6">
             <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6">
-              <h2 className="text-xl sm:text-2xl font-black text-slate-900 mb-1">{tr(lang, 'Ù…Ø³Ø§Ø­Ø© Ø§Ø³ØªØ®Ø±Ø§Ø¬ Ø§Ù„Ø³ÙƒØ±ÙŠØ¨Øª', 'Transcript Extraction Workspace')}</h2>
-              <p className="text-sm text-slate-600">{tr(lang, 'Ø¶Ø¹ Ø§Ù„Ø±Ø§Ø¨Ø·ØŒ Ø§Ø³ØªØ®Ø±Ø¬ Ø§Ù„Ù†ØµØŒ Ø«Ù… Ø§Ø¨Ø¯Ø£ Ø§Ù„Ù…Ø¹Ø§Ù„Ø¬Ø© Ø£Ùˆ Ø§Ù„Ø¯Ø±Ø¯Ø´Ø©.', 'Paste a URL, extract transcript, then process or chat.')}</p>
+              <h2 className="text-xl sm:text-2xl font-black text-slate-900 mb-1">{tr(lang, 'Ã™â€¦Ã˜Â³Ã˜Â§Ã˜Â­Ã˜Â© Ã˜Â§Ã˜Â³Ã˜ÂªÃ˜Â®Ã˜Â±Ã˜Â§Ã˜Â¬ Ã˜Â§Ã™â€žÃ˜Â³Ã™Æ’Ã˜Â±Ã™Å Ã˜Â¨Ã˜Âª', 'Transcript Extraction Workspace')}</h2>
+              <p className="text-sm text-slate-600">{tr(lang, 'Ã˜Â¶Ã˜Â¹ Ã˜Â§Ã™â€žÃ˜Â±Ã˜Â§Ã˜Â¨Ã˜Â·Ã˜Å’ Ã˜Â§Ã˜Â³Ã˜ÂªÃ˜Â®Ã˜Â±Ã˜Â¬ Ã˜Â§Ã™â€žÃ™â€ Ã˜ÂµÃ˜Å’ Ã˜Â«Ã™â€¦ Ã˜Â§Ã˜Â¨Ã˜Â¯Ã˜Â£ Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â¹Ã˜Â§Ã™â€žÃ˜Â¬Ã˜Â© Ã˜Â£Ã™Ë† Ã˜Â§Ã™â€žÃ˜Â¯Ã˜Â±Ã˜Â¯Ã˜Â´Ã˜Â©.', 'Paste a URL, extract transcript, then process or chat.')}</p>
             </div>
             {accountRestrictionMessage ? (
               <div className="rounded-xl border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm font-medium">
@@ -1052,8 +1081,8 @@ function App() {
                   onClick={toggleLocalGuide}
                   className="inline-flex items-center gap-2 text-xs sm:text-sm px-3 py-1.5 rounded-full border border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100 transition"
                 >
-                  <span>{showLocalGuide ? tr(lang, 'Ø¥Ø®ÙØ§Ø¡', 'Hide') : tr(lang, 'Ø¥Ø¸Ù‡Ø§Ø±', 'Show')}</span>
-                  <span>{tr(lang, 'Ø¯Ù„ÙŠÙ„ Ø§Ù„Ø®Ø§Ø¯Ù… Ø§Ù„Ù…Ø­Ù„ÙŠ', 'Local backend guide')}</span>
+                  <span>{showLocalGuide ? tr(lang, 'Ã˜Â¥Ã˜Â®Ã™ÂÃ˜Â§Ã˜Â¡', 'Hide') : tr(lang, 'Ã˜Â¥Ã˜Â¸Ã™â€¡Ã˜Â§Ã˜Â±', 'Show')}</span>
+                  <span>{tr(lang, 'Ã˜Â¯Ã™â€žÃ™Å Ã™â€ž Ã˜Â§Ã™â€žÃ˜Â®Ã˜Â§Ã˜Â¯Ã™â€¦ Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â­Ã™â€žÃ™Å ', 'Local backend guide')}</span>
                 </button>
               </div>
             )}
@@ -1104,7 +1133,7 @@ function App() {
                         videoId={transcriptData.videoId}
                         apiUrl={apiUrl}
                         onCreditsChange={setCredits}
-                        onRequireTopup={() => setIsPricingModalOpen(true)}
+                        onRequireTopup={openTopupPicker}
                         lang={lang}
                       />
                     </div>
@@ -1138,8 +1167,8 @@ function App() {
         {clientPage === CLIENT_PAGES.history && (
           <section className="space-y-4 sm:space-y-6">
             <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6">
-              <h2 className="text-xl sm:text-2xl font-black text-slate-900 mb-1">{tr(lang, 'Ø§Ù„Ø³Ø¬Ù„ ÙˆØ§Ù„Ø±ÙˆØ§Ø¨Ø·', 'History & Saved Links')}</h2>
-              <p className="text-sm text-slate-600">{tr(lang, 'Ø±Ø§Ø¬Ø¹ Ù†ØªØ§Ø¦Ø¬Ùƒ Ø§Ù„Ø³Ø§Ø¨Ù‚Ø© ÙˆØ§Ø®ØªØ± Ø£ÙŠ Ø±Ø§Ø¨Ø· Ù…Ø­ÙÙˆØ¸ Ù„Ù„Ø¹ÙˆØ¯Ø© Ø¥Ù„Ù‰ Ù…Ø³Ø§Ø­Ø© Ø§Ù„Ø§Ø³ØªØ®Ø±Ø§Ø¬.', 'Review saved runs and open any saved link back in the extraction workspace.')}</p>
+              <h2 className="text-xl sm:text-2xl font-black text-slate-900 mb-1">{tr(lang, 'Ã˜Â§Ã™â€žÃ˜Â³Ã˜Â¬Ã™â€ž Ã™Ë†Ã˜Â§Ã™â€žÃ˜Â±Ã™Ë†Ã˜Â§Ã˜Â¨Ã˜Â·', 'History & Saved Links')}</h2>
+              <p className="text-sm text-slate-600">{tr(lang, 'Ã˜Â±Ã˜Â§Ã˜Â¬Ã˜Â¹ Ã™â€ Ã˜ÂªÃ˜Â§Ã˜Â¦Ã˜Â¬Ã™Æ’ Ã˜Â§Ã™â€žÃ˜Â³Ã˜Â§Ã˜Â¨Ã™â€šÃ˜Â© Ã™Ë†Ã˜Â§Ã˜Â®Ã˜ÂªÃ˜Â± Ã˜Â£Ã™Å  Ã˜Â±Ã˜Â§Ã˜Â¨Ã˜Â· Ã™â€¦Ã˜Â­Ã™ÂÃ™Ë†Ã˜Â¸ Ã™â€žÃ™â€žÃ˜Â¹Ã™Ë†Ã˜Â¯Ã˜Â© Ã˜Â¥Ã™â€žÃ™â€° Ã™â€¦Ã˜Â³Ã˜Â§Ã˜Â­Ã˜Â© Ã˜Â§Ã™â€žÃ˜Â§Ã˜Â³Ã˜ÂªÃ˜Â®Ã˜Â±Ã˜Â§Ã˜Â¬.', 'Review saved runs and open any saved link back in the extraction workspace.')}</p>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <SavedHistory apiUrl={apiUrl} user={user} lang={lang} onNotify={notify} />
@@ -1148,65 +1177,130 @@ function App() {
           </section>
         )}
 
+        {clientPage === CLIENT_PAGES.topup && (
+          <TopupCheckoutPage
+            user={user}
+            quote={topupQuote}
+            apiUrl={apiUrl}
+            lang={lang}
+            theme={theme}
+            onNotify={notify}
+            onBack={() => {
+              setClientPage(CLIENT_PAGES.account);
+              setIsPricingModalOpen(true);
+            }}
+            onTopupSubmitted={() => {
+              refreshAccount();
+            }}
+          />
+        )}
+
         {clientPage === CLIENT_PAGES.account && (
-          <section className="grid gap-4 sm:gap-5 md:grid-cols-2">
-            <article className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
-              <h2 className="text-xl font-black text-slate-900 mb-3">{tr(lang, 'Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø­Ø³Ø§Ø¨', 'Account Details')}</h2>
-              <div className="space-y-2 text-sm">
-                <p><span className="font-bold">{tr(lang, 'Ø§Ù„Ø¨Ø±ÙŠØ¯:', 'Email:')}</span> {user?.email || '-'}</p>
-                <p><span className="font-bold">{tr(lang, 'Ø§Ù„Ø±ØµÙŠØ¯:', 'Credits:')}</span> {credits ?? '...'}</p>
-                <p><span className="font-bold">{tr(lang, 'Ø§Ù„Ø®Ø·Ø© Ø§Ù„Ù…Ø¬Ø§Ù†ÙŠØ©:', 'Free plan:')}</span> {FREE_PLAN_REQUESTS} {tr(lang, 'Ø±ÙˆØ§Ø¨Ø· ÙÙ‚Ø·', 'links only')}</p>
-                <p><span className="font-bold">{tr(lang, 'Ø§Ù„Ù…ØªØ¨Ù‚ÙŠ Ù…Ù† Ø§Ù„Ù…Ø¬Ø§Ù†ÙŠØ©:', 'Free links remaining:')}</span> {freeLinksRemaining} / {FREE_PLAN_REQUESTS}</p>
-                <p><span className="font-bold">{tr(lang, 'ØªÙƒÙ„ÙØ© Ø§Ù„Ø±Ø§Ø¨Ø·:', 'Link cost:')}</span> {CREDIT_COST_PER_SUCCESS} {tr(lang, 'Ù†Ù‚Ø·Ø© Ù„ÙƒÙ„ Ø±Ø§Ø¨Ø· ÙÙŠØ¯ÙŠÙˆ Ø¬Ø¯ÙŠØ¯', 'credit per new video link')}</p>
-                <p><span className="font-bold">{tr(lang, 'Ø§Ù„Ø­Ø§Ù„Ø©:', 'Session:')}</span> {tr(lang, 'Ù…ØªØµÙ„', 'Active')}</p>
-                {accountAccess.status !== 'active' ? (
-                  <p>
-                    <span className="font-bold">{tr(lang, 'Ø­Ø§Ù„Ø© Ø§Ù„ÙˆØµÙˆÙ„:', 'Access status:')}</span>{' '}
-                    {accountAccess.status} {accountAccess.reason ? `(${accountAccess.reason})` : ''}
+          <section className="space-y-4 sm:space-y-5">
+            <div className="grid gap-4 sm:gap-5 md:grid-cols-2">
+              <article className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
+                <h2 className="text-xl font-black text-slate-900 mb-3">{tr(lang, 'بيانات الحساب', 'Account details')}</h2>
+                <div className="space-y-3 text-sm">
+                  <p><span className="font-bold">{tr(lang, 'البريد:', 'Email:')}</span> {user?.email || '-'}</p>
+                  <p><span className="font-bold">{tr(lang, 'الرصيد:', 'Credits:')}</span> {credits ?? '...'}</p>
+                  <p><span className="font-bold">{tr(lang, 'الخطة المجانية:', 'Free plan:')}</span> {FREE_PLAN_REQUESTS} {tr(lang, 'روابط فقط', 'links only')}</p>
+                  <p><span className="font-bold">{tr(lang, 'المتبقي من المجانية:', 'Free links remaining:')}</span> {freeLinksRemaining} / {FREE_PLAN_REQUESTS}</p>
+                  <p><span className="font-bold">{tr(lang, 'تكلفة الرابط:', 'Link cost:')}</span> {CREDIT_COST_PER_SUCCESS} {tr(lang, 'نقطة لكل رابط فيديو جديد', 'credit per new video link')}</p>
+                  <p><span className="font-bold">{tr(lang, 'الحالة:', 'Session:')}</span> {tr(lang, 'متصل', 'Active')}</p>
+                  {accountAccess.status !== 'active' ? (
+                    <p>
+                      <span className="font-bold">{tr(lang, 'حالة الوصول:', 'Access status:')}</span>{' '}
+                      {accountAccess.status} {accountAccess.reason ? `(${accountAccess.reason})` : ''}
+                    </p>
+                  ) : null}
+                </div>
+              </article>
+
+              <article className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
+                <h3 className="text-lg font-black text-slate-900 mb-3">{tr(lang, 'الخطط والشحن', 'Plans & top-up')}</h3>
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 mb-3">
+                  <p className="font-black text-emerald-900 mb-2">{tr(lang, 'الخطة المجانية', 'Free plan')}</p>
+                  <p className="text-sm text-emerald-800">{tr(lang, '5 روابط فيديو كبداية، ونفس الفيديو تقدر تعمل له تلخيص وشات بدون خصم إضافي.', '5 video links included, and same-video summary/chat do not consume extra credits.')}</p>
+                </div>
+                <div className="rounded-xl border border-orange-200 bg-orange-50 p-4">
+                  <p className="font-black text-orange-900 mb-2">{tr(lang, 'الشحن المدفوع', 'Paid top-up')}</p>
+                  <p className="text-sm text-orange-800 mb-3">
+                    {tr(lang, 'يبدأ من 5$ = 200 كريديت. التفاصيل الكاملة تفتح في صفحة مستقلة بعد اختيار المبلغ.', 'Starts at $5 = 200 credits. Full payment details open on a dedicated page after choosing the amount.')}
                   </p>
-                ) : null}
-              </div>
-            </article>
-            <article className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
-              <h3 className="text-lg font-black text-slate-900 mb-3">{tr(lang, 'Ø§Ù„Ø®Ø·Ø· ÙˆØ§Ù„Ø£Ø³Ø¹Ø§Ø±', 'Plans & Pricing')}</h3>
-              <div className="grid sm:grid-cols-2 gap-3 mb-4">
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
-                  <p className="font-black text-emerald-900">{tr(lang, 'Ø§Ù„Ø®Ø·Ø© Ø§Ù„Ù…Ø¬Ø§Ù†ÙŠØ©', 'Free Plan')}</p>
-                  <p className="text-xs text-emerald-800 mt-1">{tr(lang, 'Ø§Ø¨Ø¯Ø£ Ù…Ø¬Ø§Ù†Ù‹Ø§ Ø«Ù… Ø§Ø´Ø­Ù† Ø¹Ù†Ø¯ Ø§Ù„Ø­Ø§Ø¬Ø©.', 'Start free, then top up when needed.')}</p>
-                </div>
-                <div className="rounded-xl border border-orange-200 bg-orange-50 p-3">
-                  <p className="font-black text-orange-900">{tr(lang, 'Ø§Ù„Ø®Ø·Ø© Ø§Ù„Ù…Ø¯ÙÙˆØ¹Ø©', 'Paid Plan')}</p>
-                  <p className="text-xs text-orange-800 mt-1">{tr(lang, 'ØªØ¨Ø¯Ø£ Ù…Ù†', 'Starts at')} {PAID_PLAN_CREDITS} {tr(lang, 'Ù†Ù‚Ø·Ø© Ù…Ù‚Ø§Ø¨Ù„', 'credits for')} ${PAID_PLAN_PRICE_USD}</p>
-                  <p className="text-xs text-orange-800">{tr(lang, 'Ù…Ø¹ Ø®ØµÙˆÙ…Ø§Øª ØªÙ„Ù‚Ø§Ø¦ÙŠØ© Ù„Ù„Ø´Ø­Ù†Ø§Øª Ø§Ù„Ø£ÙƒØ¨Ø±.', 'With automatic bonus credits on larger top-ups.')}</p>
-                </div>
-              </div>
-              <h4 className="text-sm font-black text-slate-900 mb-3">{tr(lang, 'Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª Ø³Ø±ÙŠØ¹Ø©', 'Quick Actions')}</h4>
-              <div className="flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  onClick={() => setIsPricingModalOpen(true)}
-                  className="rounded-xl px-4 py-2 bg-orange-400 text-slate-950 font-extrabold hover:bg-orange-300 transition"
-                >
-                  {tr(lang, 'Ø·Ù„Ø¨ Ø´Ø­Ù†', 'Top-up request')}
-                </button>
-                {canUseLocalGuide && (
                   <button
                     type="button"
-                    onClick={() => setShowSettings(true)}
-                    className="rounded-xl px-4 py-2 bg-slate-900 text-white font-bold hover:bg-slate-800 transition"
+                    onClick={openTopupPicker}
+                    className="rounded-xl px-4 py-2 bg-orange-400 text-slate-950 font-extrabold hover:bg-orange-300 transition"
                   >
-                    {tr(lang, 'ÙØªØ­ Ø§Ù„Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª', 'Open settings')}
+                    {tr(lang, 'اختيار مبلغ الشحن', 'Choose top-up amount')}
                   </button>
-                )}
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="rounded-xl px-4 py-2 bg-red-500 text-white font-bold hover:bg-red-600 transition"
-                >
-                  {tr(lang, 'ØªØ³Ø¬ÙŠÙ„ Ø®Ø±ÙˆØ¬', 'Sign out')}
-                </button>
-              </div>
-            </article>
+                </div>
+              </article>
+            </div>
+
+            <div className="grid gap-4 sm:gap-5 md:grid-cols-2">
+              <article className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
+                <h3 className="text-lg font-black text-slate-900 mb-3">{tr(lang, 'أمان الحساب', 'Account security')}</h3>
+                <form onSubmit={handlePasswordChange} className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">{tr(lang, 'كلمة المرور الجديدة', 'New password')}</label>
+                    <input
+                      type="password"
+                      value={passwordForm.newPassword}
+                      onChange={(event) => setPasswordForm((prev) => ({ ...prev, newPassword: event.target.value }))}
+                      className="w-full rounded-xl border border-slate-300 px-3 py-2 outline-none focus:ring-2 focus:ring-cyan-500"
+                      placeholder={tr(lang, '8 أحرف على الأقل', 'At least 8 characters')}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">{tr(lang, 'تأكيد كلمة المرور', 'Confirm password')}</label>
+                    <input
+                      type="password"
+                      value={passwordForm.confirmPassword}
+                      onChange={(event) => setPasswordForm((prev) => ({ ...prev, confirmPassword: event.target.value }))}
+                      className="w-full rounded-xl border border-slate-300 px-3 py-2 outline-none focus:ring-2 focus:ring-cyan-500"
+                      placeholder={tr(lang, 'أعد إدخال كلمة المرور', 'Re-enter password')}
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={passwordSubmitting}
+                    className="rounded-xl px-4 py-2 bg-slate-900 text-white font-bold hover:bg-slate-800 transition disabled:opacity-60"
+                  >
+                    {passwordSubmitting ? tr(lang, 'جارٍ التحديث...', 'Updating...') : tr(lang, 'تحديث كلمة المرور', 'Update password')}
+                  </button>
+                </form>
+              </article>
+
+              <article className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
+                <h3 className="text-lg font-black text-slate-900 mb-3">{tr(lang, 'إجراءات سريعة', 'Quick actions')}</h3>
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    onClick={openTopupPicker}
+                    className="rounded-xl px-4 py-2 bg-orange-400 text-slate-950 font-extrabold hover:bg-orange-300 transition"
+                  >
+                    {tr(lang, 'فتح صفحة الشحن', 'Open top-up flow')}
+                  </button>
+                  {canUseLocalGuide && (
+                    <button
+                      type="button"
+                      onClick={() => setShowSettings(true)}
+                      className="rounded-xl px-4 py-2 bg-slate-900 text-white font-bold hover:bg-slate-800 transition"
+                    >
+                      {tr(lang, 'فتح الإعدادات', 'Open settings')}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="rounded-xl px-4 py-2 bg-red-500 text-white font-bold hover:bg-red-600 transition"
+                  >
+                    {tr(lang, 'تسجيل خروج', 'Sign out')}
+                  </button>
+                </div>
+              </article>
+            </div>
           </section>
         )}
       </div>
@@ -1216,13 +1310,10 @@ function App() {
           isOpen={isPricingModalOpen}
           onClose={() => setIsPricingModalOpen(false)}
           user={user}
-          apiUrl={apiUrl}
           lang={lang}
           theme={theme}
           onNotify={notify}
-          onTopupSubmitted={() => {
-            refreshAccount();
-          }}
+          onProceed={handleTopupProceed}
           requireLogin={() => {
             setIsPricingModalOpen(false);
             setAuthModalMode('login');
