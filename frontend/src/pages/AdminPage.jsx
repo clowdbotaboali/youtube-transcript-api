@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   FaBan,
   FaCheck,
@@ -30,6 +30,9 @@ const TABS = {
   settings: 'settings'
 };
 const PROVIDERS = ['groq', 'openrouter', 'openai', 'google', 'anthropic'];
+const EMPTY_PROVIDER_DRAFTS = Object.fromEntries(
+  PROVIDERS.map((provider) => [provider, { label: '', apiKey: '' }])
+);
 
 function normalizeModelOption(model) {
   if (typeof model === 'string') {
@@ -71,16 +74,16 @@ function serializeModelCatalog(catalog) {
 
 function statusLabel(status, lang) {
   const value = String(status || '').toLowerCase();
-  if (value === 'approved') return tr(lang, 'مقبول', 'Approved', 'Approuve');
-  if (value === 'rejected') return tr(lang, 'مرفوض', 'Rejected', 'Rejete');
-  return tr(lang, 'معلق', 'Pending', 'En attente');
+  if (value === 'approved') return tr(lang, 'Ù…Ù‚Ø¨ÙˆÙ„', 'Approved', 'Approuve');
+  if (value === 'rejected') return tr(lang, 'Ù…Ø±ÙÙˆØ¶', 'Rejected', 'Rejete');
+  return tr(lang, 'Ù…Ø¹Ù„Ù‚', 'Pending', 'En attente');
 }
 
 function accessLabel(status, lang) {
   const value = String(status || 'active').toLowerCase();
-  if (value === 'blocked') return tr(lang, 'محظور', 'Blocked', 'Bloque');
-  if (value === 'suspended') return tr(lang, 'معلق', 'Suspended', 'Suspendu');
-  return tr(lang, 'نشط', 'Active', 'Actif');
+  if (value === 'blocked') return tr(lang, 'Ù…Ø­Ø¸ÙˆØ±', 'Blocked', 'Bloque');
+  if (value === 'suspended') return tr(lang, 'Ù…Ø¹Ù„Ù‚', 'Suspended', 'Suspendu');
+  return tr(lang, 'Ù†Ø´Ø·', 'Active', 'Actif');
 }
 
 function badgeClass(status) {
@@ -104,6 +107,20 @@ function shortId(value) {
   const text = String(value || '');
   if (text.length <= 14) return text;
   return `${text.slice(0, 6)}...${text.slice(-4)}`;
+}
+
+function keyRuntimeBadgeClass(runtimeStatus) {
+  const status = String(runtimeStatus || 'idle').toLowerCase();
+  if (status === 'success') return 'bg-emerald-100 text-emerald-700';
+  if (status === 'failure') return 'bg-red-100 text-red-700';
+  return 'bg-slate-100 text-slate-600';
+}
+
+function keyRuntimeLabel(runtimeStatus, lang) {
+  const status = String(runtimeStatus || 'idle').toLowerCase();
+  if (status === 'success') return tr(lang, 'ÙØ¹Ø§Ù„ Ø§Ù„Ø¢Ù†', 'Working');
+  if (status === 'failure') return tr(lang, 'ÙØ´Ù„ Ø¢Ø®Ø± Ù…Ø­Ø§ÙˆÙ„Ø©', 'Last check failed');
+  return tr(lang, 'Ù„Ù… ÙŠÙØ³ØªØ®Ø¯Ù… Ø¨Ø¹Ø¯', 'Not used yet');
 }
 
 function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) {
@@ -139,16 +156,14 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
     modelCatalog: {}
   });
 
-  const [aiKeysDraft, setAiKeysDraft] = useState({
-    groq: '',
-    openrouter: '',
-    openai: '',
-    google: '',
-    anthropic: ''
+  const [aiKeysDraft, setAiKeysDraft] = useState(() => ({ ...EMPTY_PROVIDER_DRAFTS }));
+  const [transcriptApiMeta, setTranscriptApiMeta] = useState({
+    keysCount: 0,
+    activeKeyId: '',
+    keys: [],
+    updatedAt: null
   });
-
-  const [transcriptApiMeta, setTranscriptApiMeta] = useState({ keysCount: 0, keysMasked: [] });
-  const [transcriptKeysText, setTranscriptKeysText] = useState('');
+  const [transcriptKeyDraft, setTranscriptKeyDraft] = useState({ label: '', apiKey: '' });
 
   const authedFetch = useCallback(
     async (path, options = {}) => {
@@ -173,7 +188,7 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
             ? data.error
             : (data.error && typeof data.error === 'object' ? data.error.message : '')
         );
-        throw new Error(errMessage || tr(lang, 'فشل الطلب', 'Request failed', 'Echec de la requete'));
+        throw new Error(errMessage || tr(lang, 'ÙØ´Ù„ Ø§Ù„Ø·Ù„Ø¨', 'Request failed', 'Echec de la requete'));
       }
       return data;
     },
@@ -234,25 +249,31 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
     });
   }, [authedFetch]);
 
-  const loadAiConfig = useCallback(async () => {
-    const data = await authedFetch('/api/admin/ai/config');
-    const selectedProvider = data.data?.selectedProvider || 'groq';
-    const modelCatalog = normalizeModelCatalog(data.data?.modelCatalog);
-    const selectedModel = String(data.data?.selectedModel || '').trim();
+  const applyAiConfigData = useCallback((payload) => {
+    const selectedProvider = payload?.selectedProvider || 'groq';
+    const modelCatalog = normalizeModelCatalog(payload?.modelCatalog);
+    const selectedModel = String(payload?.selectedModel || '').trim();
     const providerModels = Array.isArray(modelCatalog[selectedProvider]) ? modelCatalog[selectedProvider] : [];
     setAiConfig({
       selectedProvider,
       selectedModel: selectedModel || providerModels[0]?.id || '',
-      providers: data.data?.providers || {},
+      providers: payload?.providers || {},
       modelCatalog
     });
-  }, [authedFetch]);
+  }, []);
+
+  const loadAiConfig = useCallback(async () => {
+    const data = await authedFetch('/api/admin/ai/config');
+    applyAiConfigData(data.data || {});
+  }, [authedFetch, applyAiConfigData]);
 
   const loadTranscriptApiConfig = useCallback(async () => {
     const data = await authedFetch('/api/admin/transcript-api/config');
     setTranscriptApiMeta({
       keysCount: Number(data.data?.keysCount || 0),
-      keysMasked: Array.isArray(data.data?.keysMasked) ? data.data.keysMasked : []
+      activeKeyId: cleanText(data.data?.activeKeyId),
+      keys: Array.isArray(data.data?.keys) ? data.data.keys : [],
+      updatedAt: data.data?.updatedAt || null
     });
   }, [authedFetch]);
   const loadAll = useCallback(async () => {
@@ -271,7 +292,7 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
         loadTranscriptApiConfig()
       ]);
     } catch (err) {
-      setError(cleanText(err.message) || tr(lang, 'تعذر تحميل بيانات الأدمن', 'Failed to load admin data', 'Echec du chargement admin'));
+      setError(cleanText(err.message) || tr(lang, 'ØªØ¹Ø°Ø± ØªØ­Ù…ÙŠÙ„ Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø£Ø¯Ù…Ù†', 'Failed to load admin data', 'Echec du chargement admin'));
     } finally {
       setLoading(false);
     }
@@ -290,7 +311,7 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
     try {
       await fn();
     } catch (err) {
-      setError(cleanText(err.message) || tr(lang, 'حدث خطأ غير متوقع', 'Unexpected error', 'Erreur inattendue'));
+      setError(cleanText(err.message) || tr(lang, 'Ø­Ø¯Ø« Ø®Ø·Ø£ ØºÙŠØ± Ù…ØªÙˆÙ‚Ø¹', 'Unexpected error', 'Erreur inattendue'));
     } finally {
       setBusyAction('');
     }
@@ -313,13 +334,13 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
             ? data.error
             : (data.error && typeof data.error === 'object' ? data.error.message : '')
         );
-        throw new Error(loginError || tr(lang, 'فشل تسجيل دخول الأدمن', 'Admin login failed', 'Connexion admin echouee'));
+        throw new Error(loginError || tr(lang, 'ÙØ´Ù„ ØªØ³Ø¬ÙŠÙ„ Ø¯Ø®ÙˆÙ„ Ø§Ù„Ø£Ø¯Ù…Ù†', 'Admin login failed', 'Connexion admin echouee'));
       }
       localStorage.setItem(ADMIN_TOKEN_KEY, data.token);
       setToken(data.token);
       setLoginForm((prev) => ({ ...prev, password: '' }));
     } catch (err) {
-      setError(cleanText(err.message) || tr(lang, 'فشل تسجيل دخول الأدمن', 'Admin login failed', 'Connexion admin echouee'));
+      setError(cleanText(err.message) || tr(lang, 'ÙØ´Ù„ ØªØ³Ø¬ÙŠÙ„ Ø¯Ø®ÙˆÙ„ Ø§Ù„Ø£Ø¯Ù…Ù†', 'Admin login failed', 'Connexion admin echouee'));
     } finally {
       setLoading(false);
     }
@@ -342,9 +363,9 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
       instructionsFr: ''
     });
     setAiConfig({ selectedProvider: 'groq', selectedModel: 'llama-3.3-70b-versatile', providers: {}, modelCatalog: {} });
-    setAiKeysDraft({ groq: '', openrouter: '', openai: '', google: '', anthropic: '' });
-    setTranscriptApiMeta({ keysCount: 0, keysMasked: [] });
-    setTranscriptKeysText('');
+    setAiKeysDraft({ ...EMPTY_PROVIDER_DRAFTS });
+    setTranscriptApiMeta({ keysCount: 0, activeKeyId: '', keys: [], updatedAt: null });
+    setTranscriptKeyDraft({ label: '', apiKey: '' });
     setTab(TABS.overview);
   };
 
@@ -355,7 +376,7 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
         body: JSON.stringify({ status })
       });
       await Promise.all([loadPayments(), loadUsers(), loadOverview()]);
-      setNotice(status === 'approved' ? tr(lang, 'تم اعتماد الطلب.', 'Payment approved.') : tr(lang, 'تم رفض الطلب.', 'Payment rejected.'));
+      setNotice(status === 'approved' ? tr(lang, 'ØªÙ… Ø§Ø¹ØªÙ…Ø§Ø¯ Ø§Ù„Ø·Ù„Ø¨.', 'Payment approved.') : tr(lang, 'ØªÙ… Ø±ÙØ¶ Ø§Ù„Ø·Ù„Ø¨.', 'Payment rejected.'));
     });
   };
 
@@ -366,20 +387,20 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
         body: JSON.stringify({ action })
       });
       await Promise.all([loadUsers(), loadOverview()]);
-      setNotice(tr(lang, 'تم تحديث حالة المستخدم.', 'User status updated.'));
+      setNotice(tr(lang, 'ØªÙ… ØªØ­Ø¯ÙŠØ« Ø­Ø§Ù„Ø© Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù….', 'User status updated.'));
     });
   };
 
   const deleteUser = async (userId) => {
     const confirmed = window.confirm(
-      tr(lang, 'سيتم حذف المستخدم وكل بياناته نهائيًا. هل تريد المتابعة؟', 'This will permanently delete the user and related data. Continue?')
+      tr(lang, 'Ø³ÙŠØªÙ… Ø­Ø°Ù Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… ÙˆÙƒÙ„ Ø¨ÙŠØ§Ù†Ø§ØªÙ‡ Ù†Ù‡Ø§Ø¦ÙŠÙ‹Ø§. Ù‡Ù„ ØªØ±ÙŠØ¯ Ø§Ù„Ù…ØªØ§Ø¨Ø¹Ø©ØŸ', 'This will permanently delete the user and related data. Continue?')
     );
     if (!confirmed) return;
 
     await withAction(`delete:${userId}`, async () => {
       await authedFetch(`/api/admin/users/${userId}`, { method: 'DELETE' });
       await Promise.all([loadUsers(), loadOverview(), loadPayments()]);
-      setNotice(tr(lang, 'تم حذف المستخدم.', 'User deleted.'));
+      setNotice(tr(lang, 'ØªÙ… Ø­Ø°Ù Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù….', 'User deleted.'));
     });
   };
 
@@ -391,61 +412,115 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
         body: JSON.stringify(billingConfig)
       });
       await loadBillingConfig();
-      setNotice(tr(lang, 'تم حفظ إعدادات الدفع.', 'Billing settings saved.'));
+      setNotice(tr(lang, 'ØªÙ… Ø­ÙØ¸ Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø§Ù„Ø¯ÙØ¹.', 'Billing settings saved.'));
     });
   };
 
-  const loadProviderModels = async (provider) => {
+  const loadProviderModels = async (provider, keyId = '') => {
     await withAction(`models:${provider}`, async () => {
-      const apiKey = String(aiKeysDraft[provider] || '').trim();
       const data = await authedFetch('/api/admin/ai/models', {
         method: 'POST',
-        body: JSON.stringify({ provider, ...(apiKey ? { apiKey } : {}) })
+        body: JSON.stringify({ provider, ...(keyId ? { keyId } : {}) })
       });
-      const normalizedModels = Array.isArray(data.data?.models)
-        ? data.data.models.map((item) => normalizeModelOption(item)).filter(Boolean)
-        : [];
-      setAiConfig((prev) => {
-        const nextModelCatalog = { ...(prev.modelCatalog || {}), [provider]: normalizedModels };
-        const providerModelIds = normalizedModels.map((item) => item.id);
-        const shouldAdjustSelectedModel =
-          prev.selectedProvider === provider && !providerModelIds.includes(prev.selectedModel);
-        return {
-          ...prev,
-          selectedModel: shouldAdjustSelectedModel ? (providerModelIds[0] || '') : prev.selectedModel,
-          modelCatalog: nextModelCatalog
-        };
-      });
-      setNotice(tr(lang, 'تم تحميل الموديلات.', 'Provider models loaded.'));
+      applyAiConfigData(data.data?.config || {});
+      setNotice(tr(lang, 'تم تحميل الموديلات بنجاح.', 'Provider models loaded.'));
     });
   };
 
+  const addAiProviderKey = async (provider) => {
+    const draft = aiKeysDraft[provider] || {};
+    const apiKey = cleanText(draft.apiKey).trim();
+    const label = cleanText(draft.label).trim();
+    if (!apiKey) {
+      setError(tr(lang, 'أدخل API Key قبل الإضافة.', 'Enter API key before adding.'));
+      return;
+    }
+
+    await withAction(`ai:add:${provider}`, async () => {
+      const data = await authedFetch('/api/admin/ai/config', {
+        method: 'POST',
+        body: JSON.stringify({
+          keyAction: {
+            type: 'add',
+            provider,
+            apiKey,
+            label,
+            enabled: true,
+            setActive: true
+          }
+        })
+      });
+      applyAiConfigData(data.data || {});
+      setAiKeysDraft((prev) => ({ ...prev, [provider]: { label: '', apiKey: '' } }));
+      setNotice(tr(lang, 'تمت إضافة المفتاح وحفظه.', 'API key added.'));
+    });
+  };
+
+  const setAiProviderActiveKey = async (provider, keyId) => {
+    await withAction(`ai:active:${provider}:${keyId}`, async () => {
+      const data = await authedFetch('/api/admin/ai/config', {
+        method: 'POST',
+        body: JSON.stringify({
+          keyAction: {
+            type: 'set-active',
+            provider,
+            keyId
+          }
+        })
+      });
+      applyAiConfigData(data.data || {});
+      setNotice(tr(lang, 'تم تعيين المفتاح الفعّال.', 'Active key updated.'));
+    });
+  };
+
+  const setAiProviderKeyEnabled = async (provider, keyId, enabled) => {
+    await withAction(`ai:enabled:${provider}:${keyId}`, async () => {
+      const data = await authedFetch('/api/admin/ai/config', {
+        method: 'POST',
+        body: JSON.stringify({
+          keyAction: {
+            type: 'set-enabled',
+            provider,
+            keyId,
+            enabled
+          }
+        })
+      });
+      applyAiConfigData(data.data || {});
+      setNotice(enabled ? tr(lang, 'تم تفعيل المفتاح.', 'Key enabled.') : tr(lang, 'تم تعطيل المفتاح.', 'Key disabled.'));
+    });
+  };
+
+  const deleteAiProviderKey = async (provider, keyId) => {
+    await withAction(`ai:delete:${provider}:${keyId}`, async () => {
+      const data = await authedFetch('/api/admin/ai/config', {
+        method: 'POST',
+        body: JSON.stringify({
+          keyAction: {
+            type: 'delete',
+            provider,
+            keyId
+          }
+        })
+      });
+      applyAiConfigData(data.data || {});
+      setNotice(tr(lang, 'تم حذف المفتاح.', 'Key deleted.'));
+    });
+  };
   const saveAi = async (e) => {
     e.preventDefault();
     await withAction('ai:save', async () => {
       const payload = {
         selectedProvider: aiConfig.selectedProvider,
         selectedModel: aiConfig.selectedModel,
-        providers: Object.fromEntries(
-          PROVIDERS.map((provider) => [provider, { apiKey: String(aiKeysDraft[provider] || '').trim() }])
-        ),
         modelCatalog: serializeModelCatalog(aiConfig.modelCatalog)
       };
       const data = await authedFetch('/api/admin/ai/config', {
         method: 'POST',
         body: JSON.stringify(payload)
       });
-      const nextProvider = data.data?.selectedProvider || aiConfig.selectedProvider;
-      const nextModelCatalog = normalizeModelCatalog(data.data?.modelCatalog);
-      const savedModel = String(data.data?.selectedModel || aiConfig.selectedModel || '').trim();
-      const providerModels = Array.isArray(nextModelCatalog[nextProvider]) ? nextModelCatalog[nextProvider] : [];
-      setAiConfig({
-        selectedProvider: nextProvider,
-        selectedModel: savedModel || providerModels[0]?.id || '',
-        providers: data.data?.providers || {},
-        modelCatalog: nextModelCatalog
-      });
-      setAiKeysDraft({ groq: '', openrouter: '', openai: '', google: '', anthropic: '' });
+      applyAiConfigData(data.data || {});
+      setAiKeysDraft({ ...EMPTY_PROVIDER_DRAFTS });
       setNotice(tr(lang, 'تم حفظ إعدادات الذكاء الاصطناعي.', 'AI settings saved.'));
     });
   };
@@ -454,52 +529,74 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
     const confirmed = window.confirm(
       tr(
         lang,
-        'سيتم حذف المفتاح المحفوظ لهذا المزود. هل تريد المتابعة؟',
-        'This will remove the saved key for this provider. Continue?'
+        'سيتم حذف كل مفاتيح هذا المزود. هل تريد المتابعة؟',
+        'This will remove all keys for this provider. Continue?'
       )
     );
     if (!confirmed) return;
 
     await withAction(`ai:clear:${provider}`, async () => {
-      const payload = {
-        selectedProvider: aiConfig.selectedProvider,
-        selectedModel: aiConfig.selectedModel,
-        clearProviders: [provider],
-        modelCatalog: serializeModelCatalog(aiConfig.modelCatalog)
-      };
       const data = await authedFetch('/api/admin/ai/config', {
         method: 'POST',
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+          keyAction: {
+            type: 'clear-all',
+            provider
+          }
+        })
       });
-      const nextProvider = data.data?.selectedProvider || aiConfig.selectedProvider;
-      const nextModelCatalog = normalizeModelCatalog(data.data?.modelCatalog);
-      const savedModel = String(data.data?.selectedModel || aiConfig.selectedModel || '').trim();
-      const providerModels = Array.isArray(nextModelCatalog[nextProvider]) ? nextModelCatalog[nextProvider] : [];
-      setAiConfig({
-        selectedProvider: nextProvider,
-        selectedModel: savedModel || providerModels[0]?.id || '',
-        providers: data.data?.providers || {},
-        modelCatalog: nextModelCatalog
-      });
-      setAiKeysDraft((prev) => ({ ...prev, [provider]: '' }));
-      setNotice(tr(lang, 'تم حذف المفتاح المحفوظ.', 'Saved provider key removed.'));
+      applyAiConfigData(data.data || {});
+      setAiKeysDraft((prev) => ({ ...prev, [provider]: { label: '', apiKey: '' } }));
+      setNotice(tr(lang, 'تم مسح مفاتيح المزود.', 'Provider keys cleared.'));
     });
   };
 
-  const saveTranscriptApiKeys = async (e) => {
+  const addTranscriptApiKey = async (e) => {
     e.preventDefault();
+    const apiKey = cleanText(transcriptKeyDraft.apiKey).trim();
+    const label = cleanText(transcriptKeyDraft.label).trim();
+    if (!apiKey) {
+      setError(tr(lang, 'أدخل مفتاح Transcript API قبل الإضافة.', 'Enter Transcript API key before adding.'));
+      return;
+    }
+
     await withAction('transcript:save', async () => {
-      const keys = String(transcriptKeysText || '')
-        .split(/\r?\n/)
-        .map((item) => item.trim())
-        .filter(Boolean);
-      await authedFetch('/api/admin/transcript-api/config', {
+      const data = await authedFetch('/api/admin/transcript-api/config', {
         method: 'POST',
-        body: JSON.stringify({ keys })
+        body: JSON.stringify({
+          keyAction: {
+            type: 'add',
+            apiKey,
+            label,
+            enabled: true,
+            setActive: true
+          }
+        })
       });
-      setTranscriptKeysText('');
-      await loadTranscriptApiConfig();
-      setNotice(tr(lang, 'تم حفظ مفاتيح Transcript API.', 'Transcript API keys saved.'));
+      setTranscriptApiMeta({
+        keysCount: Number(data.data?.keysCount || 0),
+        activeKeyId: cleanText(data.data?.activeKeyId),
+        keys: Array.isArray(data.data?.keys) ? data.data.keys : [],
+        updatedAt: data.data?.updatedAt || null
+      });
+      setTranscriptKeyDraft({ label: '', apiKey: '' });
+      setNotice(tr(lang, 'تمت إضافة مفتاح Transcript API.', 'Transcript API key added.'));
+    });
+  };
+
+  const updateTranscriptKeyAction = async (action, busyKey, successMessage) => {
+    await withAction(busyKey, async () => {
+      const data = await authedFetch('/api/admin/transcript-api/config', {
+        method: 'POST',
+        body: JSON.stringify({ keyAction: action })
+      });
+      setTranscriptApiMeta({
+        keysCount: Number(data.data?.keysCount || 0),
+        activeKeyId: cleanText(data.data?.activeKeyId),
+        keys: Array.isArray(data.data?.keys) ? data.data.keys : [],
+        updatedAt: data.data?.updatedAt || null
+      });
+      setNotice(successMessage);
     });
   };
 
@@ -508,17 +605,12 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
       tr(lang, 'سيتم حذف كل مفاتيح Transcript API المحفوظة. هل تريد المتابعة؟', 'This will remove all saved Transcript API keys. Continue?')
     );
     if (!confirmed) return;
-    await withAction('transcript:clear', async () => {
-      await authedFetch('/api/admin/transcript-api/config', {
-        method: 'POST',
-        body: JSON.stringify({ keys: [] })
-      });
-      setTranscriptKeysText('');
-      await loadTranscriptApiConfig();
-      setNotice(tr(lang, 'تم حذف جميع مفاتيح Transcript API.', 'All Transcript API keys were removed.'));
-    });
+    await updateTranscriptKeyAction(
+      { type: 'clear-all' },
+      'transcript:clear',
+      tr(lang, 'تم حذف جميع مفاتيح Transcript API.', 'All Transcript API keys were removed.')
+    );
   };
-
   const saveSettings = async (e) => {
     e.preventDefault();
     await withAction('settings:save', async () => {
@@ -537,7 +629,7 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
       }
       setSettings((prev) => ({ ...prev, password: '' }));
       await loadOverview();
-      setNotice(tr(lang, 'تم حفظ إعدادات الأدمن.', 'Admin settings saved.'));
+      setNotice(tr(lang, 'ØªÙ… Ø­ÙØ¸ Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø§Ù„Ø£Ø¯Ù…Ù†.', 'Admin settings saved.'));
     });
   };
 
@@ -562,23 +654,23 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
     return (
       <>
         <SeoMeta
-          title={tr(lang, 'دخول الأدمن | Transcript AI', 'Admin Login | Transcript AI', 'Connexion Admin | Transcript AI')}
-          description={tr(lang, 'تسجيل دخول لوحة الأدمن.', 'Admin panel login.', 'Connexion admin.')}
+          title={tr(lang, 'Ø¯Ø®ÙˆÙ„ Ø§Ù„Ø£Ø¯Ù…Ù† | Transcript AI', 'Admin Login | Transcript AI', 'Connexion Admin | Transcript AI')}
+          description={tr(lang, 'ØªØ³Ø¬ÙŠÙ„ Ø¯Ø®ÙˆÙ„ Ù„ÙˆØ­Ø© Ø§Ù„Ø£Ø¯Ù…Ù†.', 'Admin panel login.', 'Connexion admin.')}
           path="/admin"
         />
         <main className="min-h-screen bg-[linear-gradient(180deg,#0b1220_0%,#111827_100%)] text-white flex items-center justify-center p-4 pt-24">
           <form onSubmit={handleLogin} className="w-full max-w-md rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
-            <h1 className="text-3xl font-black mb-2">{tr(lang, 'الأدمن', 'Admin', 'Admin')}</h1>
-            <p className="text-sm text-slate-300 mb-5">{tr(lang, 'تسجيل دخول لوحة التحكم', 'Control panel sign in', 'Connexion panneau')}</p>
+            <h1 className="text-3xl font-black mb-2">{tr(lang, 'Ø§Ù„Ø£Ø¯Ù…Ù†', 'Admin', 'Admin')}</h1>
+            <p className="text-sm text-slate-300 mb-5">{tr(lang, 'ØªØ³Ø¬ÙŠÙ„ Ø¯Ø®ÙˆÙ„ Ù„ÙˆØ­Ø© Ø§Ù„ØªØ­ÙƒÙ…', 'Control panel sign in', 'Connexion panneau')}</p>
 
-            <label className="block text-sm mb-1">{tr(lang, 'اسم المستخدم أو البريد', 'Username or email', 'Nom utilisateur ou e-mail')}</label>
+            <label className="block text-sm mb-1">{tr(lang, 'Ø§Ø³Ù… Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… Ø£Ùˆ Ø§Ù„Ø¨Ø±ÙŠØ¯', 'Username or email', 'Nom utilisateur ou e-mail')}</label>
             <input
               value={loginForm.identifier}
               onChange={(e) => setLoginForm((prev) => ({ ...prev, identifier: e.target.value }))}
               className="w-full rounded-lg bg-white/10 border border-white/20 px-3 py-2 mb-3 outline-none focus:border-cyan-300"
             />
 
-            <label className="block text-sm mb-1">{tr(lang, 'كلمة المرور', 'Password', 'Mot de passe')}</label>
+            <label className="block text-sm mb-1">{tr(lang, 'ÙƒÙ„Ù…Ø© Ø§Ù„Ù…Ø±ÙˆØ±', 'Password', 'Mot de passe')}</label>
             <input
               type="password"
               value={loginForm.password}
@@ -593,7 +685,7 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
               disabled={loading}
               className="w-full rounded-lg py-2.5 bg-cyan-500 text-slate-950 font-black hover:bg-cyan-400 transition disabled:opacity-60"
             >
-              {loading ? tr(lang, 'جارٍ الدخول...', 'Signing in...', 'Connexion...') : tr(lang, 'دخول الأدمن', 'Admin Sign In', 'Connexion Admin')}
+              {loading ? tr(lang, 'Ø¬Ø§Ø±Ù Ø§Ù„Ø¯Ø®ÙˆÙ„...', 'Signing in...', 'Connexion...') : tr(lang, 'Ø¯Ø®ÙˆÙ„ Ø§Ù„Ø£Ø¯Ù…Ù†', 'Admin Sign In', 'Connexion Admin')}
             </button>
           </form>
         </main>
@@ -604,8 +696,8 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
   return (
     <>
       <SeoMeta
-        title={tr(lang, 'لوحة الأدمن | Transcript AI', 'Admin Panel | Transcript AI', 'Panneau Admin | Transcript AI')}
-        description={tr(lang, 'لوحة إدارة Transcript AI.', 'Transcript AI administration panel.', 'Panneau administration.')}
+        title={tr(lang, 'Ù„ÙˆØ­Ø© Ø§Ù„Ø£Ø¯Ù…Ù† | Transcript AI', 'Admin Panel | Transcript AI', 'Panneau Admin | Transcript AI')}
+        description={tr(lang, 'Ù„ÙˆØ­Ø© Ø¥Ø¯Ø§Ø±Ø© Transcript AI.', 'Transcript AI administration panel.', 'Panneau administration.')}
         path="/admin"
       />
       <main
@@ -618,31 +710,31 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
           <header className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 mb-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h1 className="text-2xl font-black text-slate-900">{tr(lang, 'لوحة الأدمن', 'Admin Panel', 'Panneau admin')}</h1>
+                <h1 className="text-2xl font-black text-slate-900">{tr(lang, 'Ù„ÙˆØ­Ø© Ø§Ù„Ø£Ø¯Ù…Ù†', 'Admin Panel', 'Panneau admin')}</h1>
                 <p className="text-sm text-slate-500">{overview?.admin?.email || '-'}</p>
               </div>
               <div className="flex items-center gap-2">
                 <button onClick={loadAll} className="rounded-lg border border-slate-300 px-3 py-2 text-sm hover:bg-slate-50">
-                  {loading ? tr(lang, 'جارٍ التحديث...', 'Refreshing...', 'Actualisation...') : tr(lang, 'تحديث', 'Refresh', 'Actualiser')}
+                  {loading ? tr(lang, 'Ø¬Ø§Ø±Ù Ø§Ù„ØªØ­Ø¯ÙŠØ«...', 'Refreshing...', 'Actualisation...') : tr(lang, 'ØªØ­Ø¯ÙŠØ«', 'Refresh', 'Actualiser')}
                 </button>
                 <button
                   onClick={handleLogout}
                   className="inline-flex items-center gap-2 rounded-lg border border-red-200 text-red-700 px-3 py-2 text-sm hover:bg-red-50"
                 >
                   <FaSignOutAlt />
-                  <span>{tr(lang, 'خروج', 'Logout', 'Deconnexion')}</span>
+                  <span>{tr(lang, 'Ø®Ø±ÙˆØ¬', 'Logout', 'Deconnexion')}</span>
                 </button>
               </div>
             </div>
 
             <div className="mt-4 flex flex-wrap gap-2">
-              <button onClick={() => setTab(TABS.overview)} className={`rounded-lg px-3 py-2 text-sm ${tab === TABS.overview ? 'bg-slate-900 text-white' : 'border border-slate-300'}`}>{tr(lang, 'نظرة عامة', 'Overview', 'Apercu')}</button>
-              <button onClick={() => setTab(TABS.users)} className={`rounded-lg px-3 py-2 text-sm ${tab === TABS.users ? 'bg-slate-900 text-white' : 'border border-slate-300'}`}>{tr(lang, 'المستخدمون', 'Users', 'Utilisateurs')}</button>
-              <button onClick={() => setTab(TABS.payments)} className={`rounded-lg px-3 py-2 text-sm ${tab === TABS.payments ? 'bg-slate-900 text-white' : 'border border-slate-300'}`}>{tr(lang, 'المدفوعات', 'Payments', 'Paiements')}</button>
-              <button onClick={() => setTab(TABS.usage)} className={`rounded-lg px-3 py-2 text-sm ${tab === TABS.usage ? 'bg-slate-900 text-white' : 'border border-slate-300'}`}>{tr(lang, 'سجل الاستخدام', 'Usage Analytics', 'Analytique')}</button>
-              <button onClick={() => setTab(TABS.billing)} className={`rounded-lg px-3 py-2 text-sm ${tab === TABS.billing ? 'bg-slate-900 text-white' : 'border border-slate-300'}`}>{tr(lang, 'بيانات الدفع', 'Billing', 'Paiement')}</button>
-              <button onClick={() => setTab(TABS.ai)} className={`rounded-lg px-3 py-2 text-sm ${tab === TABS.ai ? 'bg-slate-900 text-white' : 'border border-slate-300'}`}>{tr(lang, 'إدارة APIs', 'AI & APIs', 'IA & APIs')}</button>
-              <button onClick={() => setTab(TABS.settings)} className={`rounded-lg px-3 py-2 text-sm ${tab === TABS.settings ? 'bg-slate-900 text-white' : 'border border-slate-300'}`}>{tr(lang, 'الإعدادات', 'Settings', 'Parametres')}</button>
+              <button onClick={() => setTab(TABS.overview)} className={`rounded-lg px-3 py-2 text-sm ${tab === TABS.overview ? 'bg-slate-900 text-white' : 'border border-slate-300'}`}>{tr(lang, 'Ù†Ø¸Ø±Ø© Ø¹Ø§Ù…Ø©', 'Overview', 'Apercu')}</button>
+              <button onClick={() => setTab(TABS.users)} className={`rounded-lg px-3 py-2 text-sm ${tab === TABS.users ? 'bg-slate-900 text-white' : 'border border-slate-300'}`}>{tr(lang, 'Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…ÙˆÙ†', 'Users', 'Utilisateurs')}</button>
+              <button onClick={() => setTab(TABS.payments)} className={`rounded-lg px-3 py-2 text-sm ${tab === TABS.payments ? 'bg-slate-900 text-white' : 'border border-slate-300'}`}>{tr(lang, 'Ø§Ù„Ù…Ø¯ÙÙˆØ¹Ø§Øª', 'Payments', 'Paiements')}</button>
+              <button onClick={() => setTab(TABS.usage)} className={`rounded-lg px-3 py-2 text-sm ${tab === TABS.usage ? 'bg-slate-900 text-white' : 'border border-slate-300'}`}>{tr(lang, 'Ø³Ø¬Ù„ Ø§Ù„Ø§Ø³ØªØ®Ø¯Ø§Ù…', 'Usage Analytics', 'Analytique')}</button>
+              <button onClick={() => setTab(TABS.billing)} className={`rounded-lg px-3 py-2 text-sm ${tab === TABS.billing ? 'bg-slate-900 text-white' : 'border border-slate-300'}`}>{tr(lang, 'Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø¯ÙØ¹', 'Billing', 'Paiement')}</button>
+              <button onClick={() => setTab(TABS.ai)} className={`rounded-lg px-3 py-2 text-sm ${tab === TABS.ai ? 'bg-slate-900 text-white' : 'border border-slate-300'}`}>{tr(lang, 'Ø¥Ø¯Ø§Ø±Ø© APIs', 'AI & APIs', 'IA & APIs')}</button>
+              <button onClick={() => setTab(TABS.settings)} className={`rounded-lg px-3 py-2 text-sm ${tab === TABS.settings ? 'bg-slate-900 text-white' : 'border border-slate-300'}`}>{tr(lang, 'Ø§Ù„Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª', 'Settings', 'Parametres')}</button>
             </div>
           </header>
 
@@ -652,19 +744,19 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
           {tab === TABS.overview && (
             <section className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
               <article className="rounded-xl border border-slate-200 bg-white p-4">
-                <p className="text-xs text-slate-500 mb-1">{tr(lang, 'إجمالي المستخدمين', 'Total Users')}</p>
+                <p className="text-xs text-slate-500 mb-1">{tr(lang, 'Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…ÙŠÙ†', 'Total Users')}</p>
                 <p className="text-2xl font-black text-slate-900">{overview?.usersCount ?? 0}</p>
               </article>
               <article className="rounded-xl border border-slate-200 bg-white p-4">
-                <p className="text-xs text-slate-500 mb-1">{tr(lang, 'مدفوعات معلقة', 'Pending Payments')}</p>
+                <p className="text-xs text-slate-500 mb-1">{tr(lang, 'Ù…Ø¯ÙÙˆØ¹Ø§Øª Ù…Ø¹Ù„Ù‚Ø©', 'Pending Payments')}</p>
                 <p className="text-2xl font-black text-amber-600">{overview?.payments?.pending ?? paymentStats.pending}</p>
               </article>
               <article className="rounded-xl border border-slate-200 bg-white p-4">
-                <p className="text-xs text-slate-500 mb-1">{tr(lang, 'مدفوعات مقبولة', 'Approved Payments')}</p>
+                <p className="text-xs text-slate-500 mb-1">{tr(lang, 'Ù…Ø¯ÙÙˆØ¹Ø§Øª Ù…Ù‚Ø¨ÙˆÙ„Ø©', 'Approved Payments')}</p>
                 <p className="text-2xl font-black text-emerald-600">{overview?.payments?.approved ?? paymentStats.approved}</p>
               </article>
               <article className="rounded-xl border border-slate-200 bg-white p-4">
-                <p className="text-xs text-slate-500 mb-1">{tr(lang, 'روابط فريدة مستخرجة', 'Unique Extracted Links')}</p>
+                <p className="text-xs text-slate-500 mb-1">{tr(lang, 'Ø±ÙˆØ§Ø¨Ø· ÙØ±ÙŠØ¯Ø© Ù…Ø³ØªØ®Ø±Ø¬Ø©', 'Unique Extracted Links')}</p>
                 <p className="text-2xl font-black text-cyan-700">{overview?.usage?.uniqueExtractedLinks ?? 0}</p>
               </article>
             </section>
@@ -673,34 +765,34 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
             <section className="space-y-4">
               <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <article className="rounded-xl border border-slate-200 bg-white p-4">
-                  <p className="text-xs text-slate-500 mb-1">{tr(lang, 'إجمالي الطلبات', 'Total Requests')}</p>
+                  <p className="text-xs text-slate-500 mb-1">{tr(lang, 'Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø§Ù„Ø·Ù„Ø¨Ø§Øª', 'Total Requests')}</p>
                   <p className="text-2xl font-black text-slate-900">{usageStats?.totalRequests ?? 0}</p>
                 </article>
                 <article className="rounded-xl border border-slate-200 bg-white p-4">
-                  <p className="text-xs text-slate-500 mb-1">{tr(lang, 'نسبة النجاح', 'Success Rate')}</p>
+                  <p className="text-xs text-slate-500 mb-1">{tr(lang, 'Ù†Ø³Ø¨Ø© Ø§Ù„Ù†Ø¬Ø§Ø­', 'Success Rate')}</p>
                   <p className="text-2xl font-black text-emerald-600">{usageStats?.successRate ?? 0}%</p>
                 </article>
                 <article className="rounded-xl border border-slate-200 bg-white p-4">
-                  <p className="text-xs text-slate-500 mb-1">{tr(lang, 'متوسط زمن الاستجابة', 'Avg Response Time')}</p>
+                  <p className="text-xs text-slate-500 mb-1">{tr(lang, 'Ù…ØªÙˆØ³Ø· Ø²Ù…Ù† Ø§Ù„Ø§Ø³ØªØ¬Ø§Ø¨Ø©', 'Avg Response Time')}</p>
                   <p className="text-2xl font-black text-cyan-700">{usageStats?.avgResponseMs ?? 0}ms</p>
                 </article>
                 <article className="rounded-xl border border-slate-200 bg-white p-4">
-                  <p className="text-xs text-slate-500 mb-1">{tr(lang, 'فترة التقرير', 'Report Window')}</p>
+                  <p className="text-xs text-slate-500 mb-1">{tr(lang, 'ÙØªØ±Ø© Ø§Ù„ØªÙ‚Ø±ÙŠØ±', 'Report Window')}</p>
                   <p className="text-2xl font-black text-slate-900">{usageStats?.days ?? 7}d</p>
                 </article>
               </div>
 
               <article className="rounded-2xl border border-slate-200 bg-white p-4">
-                <h3 className="font-black text-slate-900 mb-3">{tr(lang, 'أكثر المسارات استخدامًا', 'Top Routes')}</h3>
+                <h3 className="font-black text-slate-900 mb-3">{tr(lang, 'Ø£ÙƒØ«Ø± Ø§Ù„Ù…Ø³Ø§Ø±Ø§Øª Ø§Ø³ØªØ®Ø¯Ø§Ù…Ù‹Ø§', 'Top Routes')}</h3>
                 <div className="overflow-auto">
                   <table className="w-full min-w-[680px] text-sm">
                     <thead className="bg-slate-50">
                       <tr className={lang === LANG.ar ? 'text-right' : 'text-left'}>
-                        <th className="p-2">{tr(lang, 'المسار', 'Route')}</th>
-                        <th className="p-2">{tr(lang, 'إجمالي', 'Total')}</th>
-                        <th className="p-2">{tr(lang, 'نجاح', 'Success')}</th>
-                        <th className="p-2">{tr(lang, 'فشل', 'Failed')}</th>
-                        <th className="p-2">{tr(lang, 'متوسط الاستجابة', 'Avg ms')}</th>
+                        <th className="p-2">{tr(lang, 'Ø§Ù„Ù…Ø³Ø§Ø±', 'Route')}</th>
+                        <th className="p-2">{tr(lang, 'Ø¥Ø¬Ù…Ø§Ù„ÙŠ', 'Total')}</th>
+                        <th className="p-2">{tr(lang, 'Ù†Ø¬Ø§Ø­', 'Success')}</th>
+                        <th className="p-2">{tr(lang, 'ÙØ´Ù„', 'Failed')}</th>
+                        <th className="p-2">{tr(lang, 'Ù…ØªÙˆØ³Ø· Ø§Ù„Ø§Ø³ØªØ¬Ø§Ø¨Ø©', 'Avg ms')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -723,20 +815,20 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
             <section className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
               <div className="p-4 border-b border-slate-200 flex items-center gap-2">
                 <FaUsers className="text-slate-600" />
-                <h2 className="font-black text-slate-900">{tr(lang, 'المستخدمون', 'Users')}</h2>
+                <h2 className="font-black text-slate-900">{tr(lang, 'Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…ÙˆÙ†', 'Users')}</h2>
               </div>
               <div className="overflow-auto">
                 <table className="w-full min-w-[1200px] text-sm">
                   <thead className="bg-slate-50">
                     <tr className={lang === LANG.ar ? 'text-right' : 'text-left'}>
-                      <th className="p-3">{tr(lang, 'البريد', 'Email')}</th>
-                      <th className="p-3">{tr(lang, 'الرصيد', 'Credits')}</th>
-                      <th className="p-3">{tr(lang, 'الحالة', 'Status')}</th>
-                      <th className="p-3">{tr(lang, 'مدفوعات مقبولة', 'Approved Payments')}</th>
-                      <th className="p-3">{tr(lang, 'مدفوعات معلقة', 'Pending Payments')}</th>
-                      <th className="p-3">{tr(lang, 'الكريديت المدفوع', 'Paid Credits')}</th>
-                      <th className="p-3">{tr(lang, 'تاريخ الإنشاء', 'Created')}</th>
-                      <th className="p-3">{tr(lang, 'الإجراءات', 'Actions')}</th>
+                      <th className="p-3">{tr(lang, 'Ø§Ù„Ø¨Ø±ÙŠØ¯', 'Email')}</th>
+                      <th className="p-3">{tr(lang, 'Ø§Ù„Ø±ØµÙŠØ¯', 'Credits')}</th>
+                      <th className="p-3">{tr(lang, 'Ø§Ù„Ø­Ø§Ù„Ø©', 'Status')}</th>
+                      <th className="p-3">{tr(lang, 'Ù…Ø¯ÙÙˆØ¹Ø§Øª Ù…Ù‚Ø¨ÙˆÙ„Ø©', 'Approved Payments')}</th>
+                      <th className="p-3">{tr(lang, 'Ù…Ø¯ÙÙˆØ¹Ø§Øª Ù…Ø¹Ù„Ù‚Ø©', 'Pending Payments')}</th>
+                      <th className="p-3">{tr(lang, 'Ø§Ù„ÙƒØ±ÙŠØ¯ÙŠØª Ø§Ù„Ù…Ø¯ÙÙˆØ¹', 'Paid Credits')}</th>
+                      <th className="p-3">{tr(lang, 'ØªØ§Ø±ÙŠØ® Ø§Ù„Ø¥Ù†Ø´Ø§Ø¡', 'Created')}</th>
+                      <th className="p-3">{tr(lang, 'Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª', 'Actions')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -768,7 +860,7 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
                                 className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs border border-emerald-200 text-emerald-700 hover:bg-emerald-50"
                               >
                                 <FaPlayCircle />
-                                <span>{tr(lang, 'تفعيل', 'Activate')}</span>
+                                <span>{tr(lang, 'ØªÙØ¹ÙŠÙ„', 'Activate')}</span>
                               </button>
                               <button
                                 type="button"
@@ -777,7 +869,7 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
                                 className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs border border-orange-200 text-orange-700 hover:bg-orange-50"
                               >
                                 <FaPauseCircle />
-                                <span>{tr(lang, 'تعليق', 'Suspend')}</span>
+                                <span>{tr(lang, 'ØªØ¹Ù„ÙŠÙ‚', 'Suspend')}</span>
                               </button>
                               <button
                                 type="button"
@@ -786,7 +878,7 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
                                 className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs border border-red-200 text-red-700 hover:bg-red-50"
                               >
                                 <FaBan />
-                                <span>{tr(lang, 'حظر', 'Block')}</span>
+                                <span>{tr(lang, 'Ø­Ø¸Ø±', 'Block')}</span>
                               </button>
                               <button
                                 type="button"
@@ -795,7 +887,7 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
                                 className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs border border-slate-300 text-slate-700 hover:bg-slate-50"
                               >
                                 <FaTrashAlt />
-                                <span>{tr(lang, 'حذف', 'Delete')}</span>
+                                <span>{tr(lang, 'Ø­Ø°Ù', 'Delete')}</span>
                               </button>
                             </div>
                           </td>
@@ -811,20 +903,20 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
             <section className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
               <div className="p-4 border-b border-slate-200 flex items-center gap-2">
                 <FaCreditCard className="text-slate-600" />
-                <h2 className="font-black text-slate-900">{tr(lang, 'المدفوعات', 'Payments')}</h2>
+                <h2 className="font-black text-slate-900">{tr(lang, 'Ø§Ù„Ù…Ø¯ÙÙˆØ¹Ø§Øª', 'Payments')}</h2>
               </div>
               <div className="overflow-auto">
                 <table className="w-full min-w-[1200px] text-sm">
                   <thead className="bg-slate-50">
                     <tr className={lang === LANG.ar ? 'text-right' : 'text-left'}>
-                      <th className="p-3">{tr(lang, 'المستخدم', 'User')}</th>
-                      <th className="p-3">{tr(lang, 'الوسيلة', 'Method')}</th>
-                      <th className="p-3">{tr(lang, 'المبلغ', 'Amount')}</th>
-                      <th className="p-3">{tr(lang, 'الكريديت', 'Credits')}</th>
-                      <th className="p-3">{tr(lang, 'الحالة', 'Status')}</th>
-                      <th className="p-3">{tr(lang, 'المرجع', 'Reference')}</th>
-                      <th className="p-3">{tr(lang, 'صورة التحويل', 'Proof')}</th>
-                      <th className="p-3">{tr(lang, 'الإجراءات', 'Actions')}</th>
+                      <th className="p-3">{tr(lang, 'Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…', 'User')}</th>
+                      <th className="p-3">{tr(lang, 'Ø§Ù„ÙˆØ³ÙŠÙ„Ø©', 'Method')}</th>
+                      <th className="p-3">{tr(lang, 'Ø§Ù„Ù…Ø¨Ù„Øº', 'Amount')}</th>
+                      <th className="p-3">{tr(lang, 'Ø§Ù„ÙƒØ±ÙŠØ¯ÙŠØª', 'Credits')}</th>
+                      <th className="p-3">{tr(lang, 'Ø§Ù„Ø­Ø§Ù„Ø©', 'Status')}</th>
+                      <th className="p-3">{tr(lang, 'Ø§Ù„Ù…Ø±Ø¬Ø¹', 'Reference')}</th>
+                      <th className="p-3">{tr(lang, 'ØµÙˆØ±Ø© Ø§Ù„ØªØ­ÙˆÙŠÙ„', 'Proof')}</th>
+                      <th className="p-3">{tr(lang, 'Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª', 'Actions')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -852,7 +944,7 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
                               className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs border border-cyan-200 text-cyan-700 hover:bg-cyan-50"
                             >
                               <FaImage />
-                              <span>{tr(lang, 'عرض', 'View')}</span>
+                              <span>{tr(lang, 'Ø¹Ø±Ø¶', 'View')}</span>
                             </a>
                           ) : (
                             <span className="text-xs text-slate-500">-</span>
@@ -867,7 +959,7 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
                                 className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs border border-emerald-200 text-emerald-700 hover:bg-emerald-50"
                               >
                                 <FaCheck />
-                                <span>{tr(lang, 'موافقة', 'Approve')}</span>
+                                <span>{tr(lang, 'Ù…ÙˆØ§ÙÙ‚Ø©', 'Approve')}</span>
                               </button>
                               <button
                                 onClick={() => reviewPayment(item.id, 'rejected')}
@@ -875,7 +967,7 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
                                 className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs border border-red-200 text-red-700 hover:bg-red-50"
                               >
                                 <FaTimes />
-                                <span>{tr(lang, 'رفض', 'Reject')}</span>
+                                <span>{tr(lang, 'Ø±ÙØ¶', 'Reject')}</span>
                               </button>
                             </div>
                           ) : (
@@ -893,11 +985,11 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
             <section className="rounded-2xl border border-slate-200 bg-white p-5">
               <div className="flex items-center gap-2 mb-4">
                 <FaWallet className="text-slate-600" />
-                <h2 className="font-black text-slate-900">{tr(lang, 'بيانات استقبال المدفوعات', 'Payment Receiver Settings')}</h2>
+                <h2 className="font-black text-slate-900">{tr(lang, 'Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ø³ØªÙ‚Ø¨Ø§Ù„ Ø§Ù„Ù…Ø¯ÙÙˆØ¹Ø§Øª', 'Payment Receiver Settings')}</h2>
               </div>
               <form onSubmit={saveBilling} className="grid md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold mb-1">{tr(lang, 'اسم الحساب', 'Account name')}</label>
+                  <label className="block text-sm font-semibold mb-1">{tr(lang, 'Ø§Ø³Ù… Ø§Ù„Ø­Ø³Ø§Ø¨', 'Account name')}</label>
                   <input value={billingConfig.accountName} onChange={(e) => setBillingConfig((prev) => ({ ...prev, accountName: e.target.value }))} className={inputClass} />
                 </div>
                 <div>
@@ -909,24 +1001,24 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
                   <input value={billingConfig.vodafoneCashNumber} onChange={(e) => setBillingConfig((prev) => ({ ...prev, vodafoneCashNumber: e.target.value }))} className={inputClass} />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-1">{tr(lang, 'قناة الدعم', 'Support contact')}</label>
+                  <label className="block text-sm font-semibold mb-1">{tr(lang, 'Ù‚Ù†Ø§Ø© Ø§Ù„Ø¯Ø¹Ù…', 'Support contact')}</label>
                   <input value={billingConfig.supportContact} onChange={(e) => setBillingConfig((prev) => ({ ...prev, supportContact: e.target.value }))} className={inputClass} />
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-semibold mb-1">{tr(lang, 'تعليمات عربي', 'Arabic instructions')}</label>
+                  <label className="block text-sm font-semibold mb-1">{tr(lang, 'ØªØ¹Ù„ÙŠÙ…Ø§Øª Ø¹Ø±Ø¨ÙŠ', 'Arabic instructions')}</label>
                   <textarea rows={3} value={billingConfig.instructionsAr} onChange={(e) => setBillingConfig((prev) => ({ ...prev, instructionsAr: e.target.value }))} className={inputClass} />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-1">{tr(lang, 'تعليمات إنجليزي', 'English instructions')}</label>
+                  <label className="block text-sm font-semibold mb-1">{tr(lang, 'ØªØ¹Ù„ÙŠÙ…Ø§Øª Ø¥Ù†Ø¬Ù„ÙŠØ²ÙŠ', 'English instructions')}</label>
                   <textarea rows={3} value={billingConfig.instructionsEn} onChange={(e) => setBillingConfig((prev) => ({ ...prev, instructionsEn: e.target.value }))} className={inputClass} />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-1">{tr(lang, 'تعليمات فرنسي', 'French instructions')}</label>
+                  <label className="block text-sm font-semibold mb-1">{tr(lang, 'ØªØ¹Ù„ÙŠÙ…Ø§Øª ÙØ±Ù†Ø³ÙŠ', 'French instructions')}</label>
                   <textarea rows={3} value={billingConfig.instructionsFr} onChange={(e) => setBillingConfig((prev) => ({ ...prev, instructionsFr: e.target.value }))} className={inputClass} />
                 </div>
                 <div className="md:col-span-2">
                   <button type="submit" disabled={busyAction === 'billing:save'} className="rounded-lg px-4 py-2 bg-slate-900 text-white font-bold hover:bg-slate-800 disabled:opacity-60">
-                    {busyAction === 'billing:save' ? tr(lang, 'جارٍ الحفظ...', 'Saving...') : tr(lang, 'حفظ إعدادات الدفع', 'Save billing settings')}
+                    {busyAction === 'billing:save' ? tr(lang, 'Ø¬Ø§Ø±Ù Ø§Ù„Ø­ÙØ¸...', 'Saving...') : tr(lang, 'Ø­ÙØ¸ Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø§Ù„Ø¯ÙØ¹', 'Save billing settings')}
                   </button>
                 </div>
               </form>
@@ -943,35 +1035,155 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
 
                 <form onSubmit={saveAi} className="space-y-4">
                   <div className="grid lg:grid-cols-2 gap-4">
-                    {PROVIDERS.map((provider) => (
-                      <div key={provider} className="rounded-xl border border-slate-200 p-3">
-                        <div className="flex items-center justify-between gap-2 mb-2">
-                          <p className="text-sm font-black">{provider.toUpperCase()}</p>
-                          <div className="flex items-center gap-2">
+                    {PROVIDERS.map((provider) => {
+                      const providerMeta = aiConfig.providers?.[provider] || {};
+                      const providerKeys = Array.isArray(providerMeta.keys) ? providerMeta.keys : [];
+                      const draft = aiKeysDraft[provider] || { label: '', apiKey: '' };
+
+                      return (
+                        <div key={provider} className="rounded-xl border border-slate-200 p-3">
+                          <div className="flex items-center justify-between gap-2 mb-2">
+                            <p className="text-sm font-black">{provider.toUpperCase()}</p>
+                            <div className="flex items-center gap-2">
+                              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-700">
+                                {tr(lang, 'مفاتيح', 'Keys')}: {providerKeys.length}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => loadProviderModels(provider)}
+                                disabled={busyAction === `models:${provider}` || providerKeys.length === 0}
+                                className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs border border-cyan-200 text-cyan-700 hover:bg-cyan-50 disabled:opacity-60"
+                              >
+                                <FaRobot />
+                                <span>{tr(lang, 'تحميل الموديلات', 'Load models')}</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => clearAiProviderKey(provider)}
+                                disabled={busyAction === `ai:clear:${provider}` || providerKeys.length === 0}
+                                className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs border border-red-200 text-red-700 hover:bg-red-50 disabled:opacity-60"
+                              >
+                                <FaTrashAlt />
+                                <span>{tr(lang, 'مسح الكل', 'Clear all')}</span>
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="grid md:grid-cols-[1fr_1.2fr_auto] gap-2">
+                            <input
+                              value={draft.label || ''}
+                              onChange={(e) => setAiKeysDraft((prev) => ({
+                                ...prev,
+                                [provider]: { ...(prev[provider] || {}), label: e.target.value }
+                              }))}
+                              placeholder={tr(lang, 'عنوان المفتاح (مثال: حساب الشركة)', 'Key label (e.g. Company account)')}
+                              className={inputClass}
+                            />
+                            <input
+                              type="password"
+                              value={draft.apiKey || ''}
+                              onChange={(e) => setAiKeysDraft((prev) => ({
+                                ...prev,
+                                [provider]: { ...(prev[provider] || {}), apiKey: e.target.value }
+                              }))}
+                              placeholder={tr(lang, 'الصق API Key', 'Paste API key')}
+                              className={inputClass}
+                            />
                             <button
                               type="button"
-                              onClick={() => loadProviderModels(provider)}
-                              disabled={busyAction === `models:${provider}`}
-                              className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs border border-cyan-200 text-cyan-700 hover:bg-cyan-50 disabled:opacity-60"
+                              onClick={() => addAiProviderKey(provider)}
+                              disabled={busyAction === `ai:add:${provider}`}
+                              className="rounded-lg px-3 py-2 bg-slate-900 text-white text-sm font-bold hover:bg-slate-800 disabled:opacity-60"
                             >
-                              <FaRobot />
-                              <span>{tr(lang, 'تحميل الموديلات', 'Load models')}</span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => clearAiProviderKey(provider)}
-                              disabled={busyAction === `ai:clear:${provider}` || !aiConfig.providers?.[provider]?.hasKey}
-                              className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs border border-red-200 text-red-700 hover:bg-red-50 disabled:opacity-60"
-                            >
-                              <FaTrashAlt />
-                              <span>{tr(lang, 'حذف المفتاح', 'Clear key')}</span>
+                              {busyAction === `ai:add:${provider}` ? tr(lang, 'جارٍ...', 'Saving...') : tr(lang, 'إضافة', 'Add')}
                             </button>
                           </div>
+
+                          <div className="mt-3 space-y-2 max-h-56 overflow-auto pr-1">
+                            {providerKeys.length > 0 ? (
+                              providerKeys.map((key) => (
+                                <div
+                                  key={key.id}
+                                  className={`rounded-lg border p-2 ${
+                                    key.runtimeStatus === 'success'
+                                      ? 'border-emerald-300 bg-emerald-50'
+                                      : key.runtimeStatus === 'failure'
+                                        ? 'border-red-200 bg-red-50'
+                                        : 'border-slate-200 bg-white'
+                                  }`}
+                                >
+                                  <div className="flex flex-wrap items-center justify-between gap-2">
+                                    <div>
+                                      <p className="text-sm font-bold text-slate-900">{cleanText(key.label) || key.id}</p>
+                                      <p className="text-xs text-slate-500">{key.maskedKey || '-'}</p>
+                                    </div>
+                                    <div className="flex flex-wrap items-center gap-1">
+                                      <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${keyRuntimeBadgeClass(key.runtimeStatus)}`}>
+                                        {keyRuntimeLabel(key.runtimeStatus, lang)}
+                                      </span>
+                                      {key.isActive ? (
+                                        <span className="rounded-full bg-blue-100 text-blue-700 px-2 py-0.5 text-[11px] font-bold">
+                                          {tr(lang, 'الافتراضي', 'Active')}
+                                        </span>
+                                      ) : null}
+                                      <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${key.enabled ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'}`}>
+                                        {key.enabled ? tr(lang, 'مفعّل', 'Enabled') : tr(lang, 'معطّل', 'Disabled')}
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  <div className="mt-2 flex flex-wrap items-center gap-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => setAiProviderActiveKey(provider, key.id)}
+                                      disabled={key.isActive || key.enabled === false || busyAction === `ai:active:${provider}:${key.id}`}
+                                      className="rounded-md border border-blue-200 text-blue-700 px-2 py-1 text-xs hover:bg-blue-50 disabled:opacity-60"
+                                    >
+                                      {tr(lang, 'تعيين كافتراضي', 'Set active')}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setAiProviderKeyEnabled(provider, key.id, key.enabled === false)}
+                                      disabled={busyAction === `ai:enabled:${provider}:${key.id}`}
+                                      className="rounded-md border border-slate-300 text-slate-700 px-2 py-1 text-xs hover:bg-slate-50 disabled:opacity-60"
+                                    >
+                                      {key.enabled === false ? tr(lang, 'تفعيل', 'Enable') : tr(lang, 'تعطيل', 'Disable')}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => loadProviderModels(provider, key.id)}
+                                      disabled={busyAction === `models:${provider}` || key.enabled === false}
+                                      className="rounded-md border border-cyan-200 text-cyan-700 px-2 py-1 text-xs hover:bg-cyan-50 disabled:opacity-60"
+                                    >
+                                      {tr(lang, 'اختبار وتحميل موديلات', 'Test & load models')}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => deleteAiProviderKey(provider, key.id)}
+                                      disabled={busyAction === `ai:delete:${provider}:${key.id}`}
+                                      className="rounded-md border border-red-200 text-red-700 px-2 py-1 text-xs hover:bg-red-50 disabled:opacity-60"
+                                    >
+                                      {tr(lang, 'حذف', 'Delete')}
+                                    </button>
+                                  </div>
+
+                                  {key.lastUsedAt ? (
+                                    <p className="mt-1 text-[11px] text-slate-500">
+                                      {tr(lang, 'آخر استخدام:', 'Last used:')} {formatDate(key.lastUsedAt, lang)}
+                                    </p>
+                                  ) : null}
+                                  {key.lastError ? (
+                                    <p className="mt-1 text-[11px] text-red-600">{key.lastError}</p>
+                                  ) : null}
+                                </div>
+                              ))
+                            ) : (
+                              <p className="text-xs text-slate-500">{tr(lang, 'لا توجد مفاتيح محفوظة لهذا المزود.', 'No saved keys for this provider.')}</p>
+                            )}
+                          </div>
                         </div>
-                        <input type="password" placeholder={tr(lang, 'الصق API Key (اختياري)', 'Paste API key (optional update)')} value={aiKeysDraft[provider]} onChange={(e) => setAiKeysDraft((prev) => ({ ...prev, [provider]: e.target.value }))} className={inputClass} />
-                        <p className="text-xs text-slate-500 mt-2">{aiConfig.providers?.[provider]?.hasKey ? tr(lang, 'مفتاح محفوظ.', 'Key is saved.') : tr(lang, 'لا يوجد مفتاح محفوظ.', 'No saved key.')}</p>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
 
                   <div className="grid md:grid-cols-2 gap-4">
@@ -1025,54 +1237,141 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
                   <h2 className="font-black text-slate-900">{tr(lang, 'إدارة مفاتيح Transcript API', 'Transcript API Key Pool')}</h2>
                 </div>
 
-                <div className="rounded-lg border border-slate-200 p-3 mb-4 text-sm text-slate-700">
+                <div className="rounded-lg border border-slate-200 p-3 mb-4 text-sm text-slate-700 space-y-1">
                   <p><span className="font-bold">{tr(lang, 'عدد المفاتيح:', 'Keys count:')}</span> {transcriptApiMeta.keysCount}</p>
-                  <p className="text-xs text-slate-500 mt-1">{tr(lang, 'مفاتيح مخفية:', 'Masked keys:')} {transcriptApiMeta.keysMasked.join(' , ') || '-'}</p>
+                  <p><span className="font-bold">{tr(lang, 'المفتاح الفعّال:', 'Active key:')}</span> {cleanText(transcriptApiMeta.activeKeyId) || '-'}</p>
+                  <p className="text-xs text-slate-500">{tr(lang, 'آخر تحديث:', 'Last update:')} {transcriptApiMeta.updatedAt ? formatDate(transcriptApiMeta.updatedAt, lang) : '-'}</p>
                 </div>
 
-                <form onSubmit={saveTranscriptApiKeys}>
-                  <label className="block text-sm font-semibold mb-1">{tr(lang, 'الصق المفاتيح (كل مفتاح في سطر)', 'Paste keys (one key per line)')}</label>
-                  <textarea rows={6} value={transcriptKeysText} onChange={(e) => setTranscriptKeysText(e.target.value)} className={inputClass} />
-                  <div className="mt-3 flex items-center gap-2">
-                    <button type="submit" disabled={busyAction === 'transcript:save'} className="rounded-lg px-4 py-2 bg-slate-900 text-white font-bold hover:bg-slate-800 disabled:opacity-60">
-                      {busyAction === 'transcript:save' ? tr(lang, 'جارٍ الحفظ...', 'Saving...') : tr(lang, 'حفظ المفاتيح', 'Save keys')}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={clearTranscriptApiKeys}
-                      disabled={busyAction === 'transcript:clear' || transcriptApiMeta.keysCount === 0}
-                      className="rounded-lg px-4 py-2 border border-red-200 text-red-700 font-bold hover:bg-red-50 disabled:opacity-60"
-                    >
-                      {busyAction === 'transcript:clear' ? tr(lang, 'جارٍ المسح...', 'Clearing...') : tr(lang, 'حذف كل المفاتيح', 'Clear all keys')}
-                    </button>
-                  </div>
+                <form onSubmit={addTranscriptApiKey} className="grid md:grid-cols-[1fr_1.2fr_auto] gap-2">
+                  <input
+                    value={transcriptKeyDraft.label}
+                    onChange={(e) => setTranscriptKeyDraft((prev) => ({ ...prev, label: e.target.value }))}
+                    placeholder={tr(lang, 'عنوان المفتاح (مثال: الحساب الرئيسي)', 'Key label (e.g. Primary account)')}
+                    className={inputClass}
+                  />
+                  <input
+                    type="password"
+                    value={transcriptKeyDraft.apiKey}
+                    onChange={(e) => setTranscriptKeyDraft((prev) => ({ ...prev, apiKey: e.target.value }))}
+                    placeholder={tr(lang, 'الصق Transcript API Key', 'Paste Transcript API key')}
+                    className={inputClass}
+                  />
+                  <button type="submit" disabled={busyAction === 'transcript:save'} className="rounded-lg px-4 py-2 bg-slate-900 text-white font-bold hover:bg-slate-800 disabled:opacity-60">
+                    {busyAction === 'transcript:save' ? tr(lang, 'جارٍ...', 'Saving...') : tr(lang, 'إضافة', 'Add')}
+                  </button>
                 </form>
+
+                <div className="mt-4 space-y-2 max-h-72 overflow-auto pr-1">
+                  {transcriptApiMeta.keys.length > 0 ? (
+                    transcriptApiMeta.keys.map((key) => (
+                      <div
+                        key={key.id}
+                        className={`rounded-lg border p-3 ${
+                          key.runtimeStatus === 'success'
+                            ? 'border-emerald-300 bg-emerald-50'
+                            : key.runtimeStatus === 'failure'
+                              ? 'border-red-200 bg-red-50'
+                              : 'border-slate-200 bg-white'
+                        }`}
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div>
+                            <p className="font-bold text-slate-900">{cleanText(key.label) || key.id}</p>
+                            <p className="text-xs text-slate-500">{key.maskedKey || '-'}</p>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-1">
+                            <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${keyRuntimeBadgeClass(key.runtimeStatus)}`}>
+                              {keyRuntimeLabel(key.runtimeStatus, lang)}
+                            </span>
+                            {key.isActive ? (
+                              <span className="rounded-full bg-blue-100 text-blue-700 px-2 py-0.5 text-[11px] font-bold">
+                                {tr(lang, 'الفعّال', 'Active')}
+                              </span>
+                            ) : null}
+                            <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${key.enabled ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'}`}>
+                              {key.enabled ? tr(lang, 'مفعّل', 'Enabled') : tr(lang, 'معطّل', 'Disabled')}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="mt-2 flex flex-wrap items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => updateTranscriptKeyAction({ type: 'set-active', keyId: key.id }, `transcript:active:${key.id}`, tr(lang, 'تم تعيين المفتاح الفعّال.', 'Active key updated.'))}
+                            disabled={key.isActive || key.enabled === false || busyAction === `transcript:active:${key.id}`}
+                            className="rounded-md border border-blue-200 text-blue-700 px-2 py-1 text-xs hover:bg-blue-50 disabled:opacity-60"
+                          >
+                            {tr(lang, 'تعيين كافتراضي', 'Set active')}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => updateTranscriptKeyAction({ type: 'set-enabled', keyId: key.id, enabled: key.enabled === false }, `transcript:enabled:${key.id}`, key.enabled === false ? tr(lang, 'تم تفعيل المفتاح.', 'Key enabled.') : tr(lang, 'تم تعطيل المفتاح.', 'Key disabled.'))}
+                            disabled={busyAction === `transcript:enabled:${key.id}`}
+                            className="rounded-md border border-slate-300 text-slate-700 px-2 py-1 text-xs hover:bg-slate-50 disabled:opacity-60"
+                          >
+                            {key.enabled === false ? tr(lang, 'تفعيل', 'Enable') : tr(lang, 'تعطيل', 'Disable')}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => updateTranscriptKeyAction({ type: 'delete', keyId: key.id }, `transcript:delete:${key.id}`, tr(lang, 'تم حذف المفتاح.', 'Key deleted.'))}
+                            disabled={busyAction === `transcript:delete:${key.id}`}
+                            className="rounded-md border border-red-200 text-red-700 px-2 py-1 text-xs hover:bg-red-50 disabled:opacity-60"
+                          >
+                            {tr(lang, 'حذف', 'Delete')}
+                          </button>
+                        </div>
+
+                        {key.lastUsedAt ? (
+                          <p className="mt-1 text-[11px] text-slate-500">
+                            {tr(lang, 'آخر استخدام:', 'Last used:')} {formatDate(key.lastUsedAt, lang)}
+                          </p>
+                        ) : null}
+                        {key.lastError ? (
+                          <p className="mt-1 text-[11px] text-red-600">{key.lastError}</p>
+                        ) : null}
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-slate-500">{tr(lang, 'لا توجد مفاتيح Transcript API محفوظة حتى الآن.', 'No Transcript API keys saved yet.')}</p>
+                  )}
+                </div>
+
+                <div className="mt-3">
+                  <button
+                    type="button"
+                    onClick={clearTranscriptApiKeys}
+                    disabled={busyAction === 'transcript:clear' || transcriptApiMeta.keysCount === 0}
+                    className="rounded-lg px-4 py-2 border border-red-200 text-red-700 font-bold hover:bg-red-50 disabled:opacity-60"
+                  >
+                    {busyAction === 'transcript:clear' ? tr(lang, 'جارٍ المسح...', 'Clearing...') : tr(lang, 'حذف كل المفاتيح', 'Clear all keys')}
+                  </button>
+                </div>
               </article>
             </section>
           )}
-
           {tab === TABS.settings && (
             <section className="rounded-2xl border border-slate-200 bg-white p-5">
               <div className="flex items-center gap-2 mb-4">
                 <FaCog className="text-slate-600" />
-                <h2 className="font-black text-slate-900">{tr(lang, 'إعدادات الأدمن', 'Admin Settings')}</h2>
+                <h2 className="font-black text-slate-900">{tr(lang, 'Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø§Ù„Ø£Ø¯Ù…Ù†', 'Admin Settings')}</h2>
               </div>
               <form onSubmit={saveSettings} className="grid md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold mb-1">{tr(lang, 'اسم المستخدم', 'Username')}</label>
+                  <label className="block text-sm font-semibold mb-1">{tr(lang, 'Ø§Ø³Ù… Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…', 'Username')}</label>
                   <input value={settings.username} onChange={(e) => setSettings((prev) => ({ ...prev, username: e.target.value }))} className={inputClass} />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-1">{tr(lang, 'البريد الإلكتروني', 'Email')}</label>
+                  <label className="block text-sm font-semibold mb-1">{tr(lang, 'Ø§Ù„Ø¨Ø±ÙŠØ¯ Ø§Ù„Ø¥Ù„ÙƒØªØ±ÙˆÙ†ÙŠ', 'Email')}</label>
                   <input value={settings.email} onChange={(e) => setSettings((prev) => ({ ...prev, email: e.target.value }))} className={inputClass} />
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-semibold mb-1">{tr(lang, 'كلمة مرور جديدة (اختياري)', 'New password (optional)')}</label>
+                  <label className="block text-sm font-semibold mb-1">{tr(lang, 'ÙƒÙ„Ù…Ø© Ù…Ø±ÙˆØ± Ø¬Ø¯ÙŠØ¯Ø© (Ø§Ø®ØªÙŠØ§Ø±ÙŠ)', 'New password (optional)')}</label>
                   <input type="password" value={settings.password} onChange={(e) => setSettings((prev) => ({ ...prev, password: e.target.value }))} className={inputClass} />
                 </div>
                 <div className="md:col-span-2">
                   <button type="submit" disabled={busyAction === 'settings:save'} className="rounded-lg px-4 py-2 bg-slate-900 text-white font-bold hover:bg-slate-800 disabled:opacity-60">
-                    {busyAction === 'settings:save' ? tr(lang, 'جارٍ الحفظ...', 'Saving...') : tr(lang, 'حفظ الإعدادات', 'Save settings')}
+                    {busyAction === 'settings:save' ? tr(lang, 'Ø¬Ø§Ø±Ù Ø§Ù„Ø­ÙØ¸...', 'Saving...') : tr(lang, 'Ø­ÙØ¸ Ø§Ù„Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª', 'Save settings')}
                   </button>
                 </div>
               </form>
@@ -1085,4 +1384,7 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
 }
 
 export default AdminPage;
+
+
+
 

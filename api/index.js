@@ -101,6 +101,10 @@ const rateLimitStore = {
   genericByUser: new Map()
 };
 const transcriptMemoryCache = new Map();
+const apiKeyRuntimeState = {
+  ai: new Map(),
+  transcript: new Map()
+};
 
 function validateEnvironment() {
   const required = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'];
@@ -807,6 +811,229 @@ function normalizeApiKeys(rawKeys) {
   return Array.from(unique);
 }
 
+function normalizeBoolean(value, fallback = true) {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') {
+    const text = value.trim().toLowerCase();
+    if (['1', 'true', 'yes', 'on'].includes(text)) return true;
+    if (['0', 'false', 'no', 'off'].includes(text)) return false;
+  }
+  return fallback;
+}
+
+function buildApiKeyEntryId(apiKey, prefix = 'key') {
+  const key = String(apiKey || '').trim();
+  const seed = key || `${Date.now()}:${Math.random()}`;
+  return `${prefix}_${makeHash(seed).slice(0, 16)}`;
+}
+
+function normalizeApiKeyEntries(rawEntries, { labelPrefix = 'Key', idPrefix = 'key' } = {}) {
+  const source = Array.isArray(rawEntries) ? rawEntries : normalizeApiKeys(rawEntries);
+  const dedupe = new Map();
+
+  for (const item of source) {
+    if (!item) continue;
+    let apiKey = '';
+    let label = '';
+    let id = '';
+    let enabled = true;
+
+    if (typeof item === 'string') {
+      apiKey = String(item || '').trim();
+    } else if (typeof item === 'object') {
+      apiKey = String(item.apiKey || item.key || item.secret || '').trim();
+      label = String(item.label || item.title || item.name || '').trim();
+      id = String(item.id || '').trim();
+      enabled = normalizeBoolean(item.enabled, true);
+    }
+
+    if (!apiKey) continue;
+    const uniqueKey = apiKey.toLowerCase();
+    if (dedupe.has(uniqueKey)) {
+      const existing = dedupe.get(uniqueKey);
+      if (!existing.label && label) existing.label = label;
+      if (enabled === false) existing.enabled = false;
+      continue;
+    }
+
+    dedupe.set(uniqueKey, {
+      id: id || buildApiKeyEntryId(apiKey, idPrefix),
+      label: label || `${labelPrefix} ${dedupe.size + 1}`,
+      apiKey,
+      enabled
+    });
+  }
+
+  return Array.from(dedupe.values());
+}
+
+function ensureActiveKeyId(entries, activeKeyId = '') {
+  const list = Array.isArray(entries) ? entries : [];
+  const active = String(activeKeyId || '').trim();
+  const byId = new Map(list.map((item) => [String(item.id || '').trim(), item]));
+  if (active && byId.has(active) && byId.get(active)?.enabled !== false) return active;
+  const firstEnabled = list.find((item) => item.enabled !== false);
+  if (firstEnabled?.id) return String(firstEnabled.id);
+  return list[0]?.id ? String(list[0].id) : '';
+}
+
+function resolveActiveKeyEntry(entries, activeKeyId = '') {
+  const list = Array.isArray(entries) ? entries : [];
+  const active = ensureActiveKeyId(list, activeKeyId);
+  if (!active) return null;
+  return list.find((item) => String(item.id || '').trim() === active) || null;
+}
+
+function orderKeyCandidates(entries, activeKeyId = '') {
+  const list = (Array.isArray(entries) ? entries : []).filter((item) => item?.enabled !== false && String(item.apiKey || '').trim());
+  if (!list.length) return [];
+  const active = ensureActiveKeyId(list, activeKeyId);
+  const primary = list.find((item) => String(item.id || '').trim() === active);
+  const fallback = list.filter((item) => String(item.id || '').trim() !== active);
+  return primary ? [primary, ...fallback] : fallback;
+}
+
+function runtimeStateKey(scope, provider, keyId) {
+  const normalizedScope = scope === 'transcript' ? 'transcript' : 'ai';
+  const providerPart = normalizedScope === 'transcript' ? 'transcript' : String(provider || 'unknown').trim().toLowerCase();
+  const idPart = String(keyId || '').trim();
+  return `${providerPart}:${idPart}`;
+}
+
+function getRuntimeState(scope, provider, keyId) {
+  const bucket = scope === 'transcript' ? apiKeyRuntimeState.transcript : apiKeyRuntimeState.ai;
+  const key = runtimeStateKey(scope, provider, keyId);
+  return bucket.get(key) || null;
+}
+
+function recordRuntimeState(scope, provider, keyId, { success, errorMessage = '' } = {}) {
+  const bucket = scope === 'transcript' ? apiKeyRuntimeState.transcript : apiKeyRuntimeState.ai;
+  const key = runtimeStateKey(scope, provider, keyId);
+  const prev = bucket.get(key) || {
+    successCount: 0,
+    failureCount: 0,
+    lastStatus: 'idle',
+    lastUsedAt: null,
+    lastError: ''
+  };
+  const next = {
+    successCount: Number(prev.successCount || 0),
+    failureCount: Number(prev.failureCount || 0),
+    lastStatus: prev.lastStatus || 'idle',
+    lastUsedAt: new Date().toISOString(),
+    lastError: prev.lastError || ''
+  };
+
+  if (success) {
+    next.successCount += 1;
+    next.lastStatus = 'success';
+    next.lastError = '';
+  } else {
+    next.failureCount += 1;
+    next.lastStatus = 'failure';
+    next.lastError = String(errorMessage || '').trim();
+  }
+
+  bucket.set(key, next);
+  return next;
+}
+
+function sanitizeKeyEntriesForAdmin(entries, { scope, provider, activeKeyId } = {}) {
+  const list = Array.isArray(entries) ? entries : [];
+  const active = ensureActiveKeyId(list, activeKeyId);
+
+  return list.map((item) => {
+    const runtime = getRuntimeState(scope, provider, item.id) || {};
+    return {
+      id: String(item.id || ''),
+      label: String(item.label || ''),
+      enabled: item.enabled !== false,
+      maskedKey: maskApiKey(item.apiKey),
+      isActive: String(item.id || '') === active,
+      runtimeStatus: runtime.lastStatus || 'idle',
+      lastUsedAt: runtime.lastUsedAt || null,
+      lastError: runtime.lastError || '',
+      successCount: Number(runtime.successCount || 0),
+      failureCount: Number(runtime.failureCount || 0)
+    };
+  });
+}
+
+function applyApiKeyAction(entries, activeKeyId, keyAction, { labelPrefix = 'Key', idPrefix = 'key' } = {}) {
+  const current = normalizeApiKeyEntries(entries, { labelPrefix, idPrefix });
+  let list = current.map((item) => ({ ...item }));
+  let nextActive = ensureActiveKeyId(list, activeKeyId);
+  const action = keyAction && typeof keyAction === 'object' ? keyAction : null;
+  if (!action) {
+    return { keys: list, activeKeyId: nextActive };
+  }
+
+  const actionType = String(action.type || '').trim().toLowerCase();
+  const targetId = String(action.keyId || action.id || '').trim();
+
+  if (actionType === 'clear-all') {
+    return { keys: [], activeKeyId: '' };
+  }
+
+  if (actionType === 'add') {
+    const apiKey = String(action.apiKey || action.key || '').trim();
+    if (!apiKey) {
+      throw new Error('API key is required');
+    }
+    const keyId = String(action.id || '').trim() || buildApiKeyEntryId(apiKey, idPrefix);
+    const label = String(action.label || action.title || '').trim() || `${labelPrefix} ${list.length + 1}`;
+    const enabled = normalizeBoolean(action.enabled, true);
+
+    const byKeyIndex = list.findIndex((item) => String(item.apiKey || '') === apiKey);
+    const byIdIndex = list.findIndex((item) => String(item.id || '') === keyId);
+    const targetIndex = byKeyIndex >= 0 ? byKeyIndex : byIdIndex;
+    if (targetIndex >= 0) {
+      list[targetIndex] = {
+        ...list[targetIndex],
+        id: keyId,
+        label,
+        apiKey,
+        enabled
+      };
+    } else {
+      list.push({ id: keyId, label, apiKey, enabled });
+    }
+
+    if (action.setActive === true || !nextActive) {
+      nextActive = keyId;
+    }
+  } else if (actionType === 'delete') {
+    if (!targetId) throw new Error('keyId is required');
+    list = list.filter((item) => String(item.id || '') !== targetId);
+    if (nextActive === targetId) {
+      nextActive = '';
+    }
+  } else if (actionType === 'set-active') {
+    if (!targetId) throw new Error('keyId is required');
+    const target = list.find((item) => String(item.id || '') === targetId);
+    if (!target) throw new Error('Key not found');
+    if (target.enabled === false) throw new Error('Cannot activate a disabled key');
+    nextActive = targetId;
+  } else if (actionType === 'set-enabled') {
+    if (!targetId) throw new Error('keyId is required');
+    const enabled = normalizeBoolean(action.enabled, true);
+    let found = false;
+    list = list.map((item) => {
+      if (String(item.id || '') !== targetId) return item;
+      found = true;
+      return { ...item, enabled };
+    });
+    if (!found) throw new Error('Key not found');
+  } else if (actionType === 'replace') {
+    const replacement = normalizeApiKeyEntries(action.keys || [], { labelPrefix, idPrefix });
+    list = replacement;
+    nextActive = String(action.activeKeyId || '').trim() || '';
+  }
+
+  nextActive = ensureActiveKeyId(list, nextActive);
+  return { keys: list, activeKeyId: nextActive };
+}
+
 async function getConfigOwnerId(supabase) {
   const admin = await loadOrBootstrapAdminConfig(supabase);
   return admin.userId;
@@ -991,19 +1218,24 @@ function defaultAiProviderConfig() {
     selectedModel: 'llama-3.3-70b-versatile',
     providers: {
       groq: {
-        apiKey: ''
+        keys: [],
+        activeKeyId: ''
       },
       openrouter: {
-        apiKey: ''
+        keys: [],
+        activeKeyId: ''
       },
       openai: {
-        apiKey: ''
+        keys: [],
+        activeKeyId: ''
       },
       google: {
-        apiKey: ''
+        keys: [],
+        activeKeyId: ''
       },
       anthropic: {
-        apiKey: ''
+        keys: [],
+        activeKeyId: ''
       }
     },
     modelCatalog: {},
@@ -1019,6 +1251,31 @@ function normalizeProviderName(value) {
   return 'groq';
 }
 
+function normalizeAiProviderEntry(providerName, rawValue) {
+  const value = rawValue && typeof rawValue === 'object' ? rawValue : {};
+  const keys = normalizeApiKeyEntries(value.keys || [], {
+    labelPrefix: `${providerName.toUpperCase()} key`,
+    idPrefix: `ai_${providerName}`
+  });
+  const legacyKey = String(value.apiKey || '').trim();
+  if (legacyKey && !keys.some((item) => String(item.apiKey || '') === legacyKey)) {
+    keys.push({
+      id: buildApiKeyEntryId(legacyKey, `ai_${providerName}`),
+      label: `${providerName.toUpperCase()} legacy`,
+      apiKey: legacyKey,
+      enabled: true
+    });
+  }
+
+  const activeKeyId = ensureActiveKeyId(keys, value.activeKeyId);
+  const activeEntry = resolveActiveKeyEntry(keys, activeKeyId);
+  return {
+    keys,
+    activeKeyId,
+    apiKey: String(activeEntry?.apiKey || '').trim()
+  };
+}
+
 function normalizeAiConfigPayload(raw) {
   const defaults = defaultAiProviderConfig();
   const payload = raw && typeof raw === 'object' ? raw : {};
@@ -1026,10 +1283,8 @@ function normalizeAiConfigPayload(raw) {
   const mergedProviders = {};
 
   for (const provider of Object.keys(defaults.providers)) {
-    const current = providers[provider] && typeof providers[provider] === 'object' ? providers[provider] : {};
-    mergedProviders[provider] = {
-      apiKey: String(current.apiKey || defaults.providers[provider].apiKey || '').trim()
-    };
+    const current = providers[provider] && typeof providers[provider] === 'object' ? providers[provider] : defaults.providers[provider];
+    mergedProviders[provider] = normalizeAiProviderEntry(provider, current);
   }
 
   const selectedProvider = normalizeProviderName(payload.selectedProvider || defaults.selectedProvider);
@@ -1048,10 +1303,20 @@ function normalizeAiConfigPayload(raw) {
 function sanitizeAiConfigForAdmin(config) {
   const providers = {};
   for (const [provider, value] of Object.entries(config.providers || {})) {
-    const key = String(value?.apiKey || '').trim();
+    const keys = normalizeApiKeyEntries(value?.keys || [], {
+      labelPrefix: `${provider.toUpperCase()} key`,
+      idPrefix: `ai_${provider}`
+    });
+    const activeKeyId = ensureActiveKeyId(keys, value?.activeKeyId);
     providers[provider] = {
-      hasKey: Boolean(key),
-      maskedKey: key ? maskApiKey(key) : ''
+      hasKey: keys.length > 0,
+      keysCount: keys.length,
+      activeKeyId,
+      keys: sanitizeKeyEntriesForAdmin(keys, {
+        scope: 'ai',
+        provider,
+        activeKeyId
+      })
     };
   }
 
@@ -1094,9 +1359,21 @@ async function saveAiProviderConfig(supabase, config) {
   return normalized;
 }
 
+function getAiProviderKeyCandidates(config, provider) {
+  const normalizedProvider = normalizeProviderName(provider);
+  const providerConfig = config?.providers?.[normalizedProvider] || {};
+  const keys = normalizeApiKeyEntries(providerConfig.keys || [], {
+    labelPrefix: `${normalizedProvider.toUpperCase()} key`,
+    idPrefix: `ai_${normalizedProvider}`
+  });
+  const activeKeyId = ensureActiveKeyId(keys, providerConfig.activeKeyId);
+  return orderKeyCandidates(keys, activeKeyId);
+}
+
 function defaultTranscriptApiConfig() {
   return {
     keys: [],
+    activeKeyId: '',
     updatedAt: new Date().toISOString()
   };
 }
@@ -1104,8 +1381,14 @@ function defaultTranscriptApiConfig() {
 function normalizeTranscriptApiConfig(payload) {
   const defaults = defaultTranscriptApiConfig();
   const data = payload && typeof payload === 'object' ? payload : {};
+  const keys = normalizeApiKeyEntries(data.keys || defaults.keys, {
+    labelPrefix: 'Transcript key',
+    idPrefix: 'tap'
+  });
+  const activeKeyId = ensureActiveKeyId(keys, data.activeKeyId);
   return {
-    keys: normalizeApiKeys(data.keys || defaults.keys),
+    keys,
+    activeKeyId,
     updatedAt: data.updatedAt || defaults.updatedAt
   };
 }
@@ -1138,6 +1421,33 @@ async function saveTranscriptApiConfig(supabase, config) {
     payload: normalized
   });
   return normalized;
+}
+
+function sanitizeTranscriptApiConfigForAdmin(config) {
+  const keys = normalizeApiKeyEntries(config?.keys || [], {
+    labelPrefix: 'Transcript key',
+    idPrefix: 'tap'
+  });
+  const activeKeyId = ensureActiveKeyId(keys, config?.activeKeyId);
+  return {
+    keysCount: keys.length,
+    activeKeyId,
+    keys: sanitizeKeyEntriesForAdmin(keys, {
+      scope: 'transcript',
+      provider: 'transcript',
+      activeKeyId
+    }),
+    updatedAt: config?.updatedAt || null
+  };
+}
+
+function getTranscriptApiKeyCandidates(config) {
+  const keys = normalizeApiKeyEntries(config?.keys || [], {
+    labelPrefix: 'Transcript key',
+    idPrefix: 'tap'
+  });
+  const activeKeyId = ensureActiveKeyId(keys, config?.activeKeyId);
+  return orderKeyCandidates(keys, activeKeyId);
 }
 
 async function ensurePaymentProofBucket(supabase) {
@@ -1528,31 +1838,9 @@ async function createMultiProviderChatCompletion({ supabase, messages, temperatu
   const config = await loadOrBootstrapAiProviderConfig(supabase);
   const provider = normalizeProviderName(config.selectedProvider);
   const model = String(config.selectedModel || defaultModelForProvider(provider)).trim() || defaultModelForProvider(provider);
-  const key = String(config.providers?.[provider]?.apiKey || '').trim();
-
-  const selectedKey = key;
-  if (!selectedKey) {
+  const candidates = getAiProviderKeyCandidates(config, provider);
+  if (candidates.length === 0) {
     throw new Error(`AI provider "${provider}" is not configured with an API key`);
-  }
-
-  if (provider === 'google') {
-    return requestGoogleCompletion({
-      apiKey: selectedKey,
-      model,
-      messages,
-      temperature,
-      maxTokens
-    });
-  }
-
-  if (provider === 'anthropic') {
-    return requestAnthropicCompletion({
-      apiKey: selectedKey,
-      model,
-      messages,
-      temperature,
-      maxTokens
-    });
   }
 
   const endpointByProvider = {
@@ -1560,22 +1848,59 @@ async function createMultiProviderChatCompletion({ supabase, messages, temperatu
     openrouter: 'https://openrouter.ai/api/v1',
     openai: 'https://api.openai.com/v1'
   };
+  let lastError = null;
 
-  return requestOpenAiCompatibleCompletion({
-    baseUrl: endpointByProvider[provider] || endpointByProvider.groq,
-    apiKey: selectedKey,
-    model,
-    messages,
-    temperature,
-    maxTokens,
-    extraHeaders:
-      provider === 'openrouter'
-        ? {
-            'HTTP-Referer': 'https://youtube-transcript-api-lilac.vercel.app',
-            'X-Title': 'Transcript AI'
-          }
-        : {}
-  });
+  for (const keyEntry of candidates) {
+    const selectedKey = String(keyEntry.apiKey || '').trim();
+    if (!selectedKey) continue;
+    try {
+      let completion = null;
+      if (provider === 'google') {
+        completion = await requestGoogleCompletion({
+          apiKey: selectedKey,
+          model,
+          messages,
+          temperature,
+          maxTokens
+        });
+      } else if (provider === 'anthropic') {
+        completion = await requestAnthropicCompletion({
+          apiKey: selectedKey,
+          model,
+          messages,
+          temperature,
+          maxTokens
+        });
+      } else {
+        completion = await requestOpenAiCompatibleCompletion({
+          baseUrl: endpointByProvider[provider] || endpointByProvider.groq,
+          apiKey: selectedKey,
+          model,
+          messages,
+          temperature,
+          maxTokens,
+          extraHeaders:
+            provider === 'openrouter'
+              ? {
+                  'HTTP-Referer': 'https://youtube-transcript-api-lilac.vercel.app',
+                  'X-Title': 'Transcript AI'
+                }
+              : {}
+        });
+      }
+
+      recordRuntimeState('ai', provider, keyEntry.id, { success: true });
+      return completion;
+    } catch (error) {
+      lastError = error;
+      recordRuntimeState('ai', provider, keyEntry.id, {
+        success: false,
+        errorMessage: error?.message || 'AI key failed'
+      });
+    }
+  }
+
+  throw new Error(lastError?.message || `All API keys failed for provider "${provider}"`);
 }
 
 async function getCachedExtractRecord(supabase, userId, videoId) {
@@ -1641,7 +1966,45 @@ function extractUrlsFromText(value) {
   const domainMatches = text.match(/\b(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:\/[^\s<>"')\]]*)?/gi) || [];
   const candidates = [...protocolMatches, ...domainMatches];
 
+  const decodeRedirectTarget = (candidateUrl) => {
+    try {
+      let parsed = new URL(candidateUrl);
+      const host = String(parsed.hostname || '').toLowerCase();
+      const isYouTubeRedirectHost = host === 'youtube.com' || host.endsWith('.youtube.com');
+      const isRedirectPath = String(parsed.pathname || '').toLowerCase() === '/redirect';
+      if (!isYouTubeRedirectHost || !isRedirectPath) return candidateUrl;
+
+      let target = parsed.searchParams.get('q') || parsed.searchParams.get('url') || '';
+      if (!target) return candidateUrl;
+      for (let i = 0; i < 2; i += 1) {
+        try {
+          const decoded = decodeURIComponent(target);
+          if (decoded === target) break;
+          target = decoded;
+        } catch {
+          break;
+        }
+      }
+      parsed = new URL(target);
+      return parsed.toString();
+    } catch {
+      return candidateUrl;
+    }
+  };
+
+  const isInternalPlatformHost = (hostname) => {
+    const host = String(hostname || '').toLowerCase();
+    if (!host) return true;
+    if (host === 'youtube.com' || host.endsWith('.youtube.com')) return true;
+    if (host === 'youtu.be') return true;
+    if (host === 'google.com' || host.endsWith('.google.com')) return true;
+    if (host === 'googleusercontent.com' || host.endsWith('.googleusercontent.com')) return true;
+    if (host === 'gstatic.com' || host.endsWith('.gstatic.com')) return true;
+    return false;
+  };
+
   const unique = new Map();
+  const external = [];
   for (const raw of candidates) {
     let url = String(raw || '').trim();
     if (!url) continue;
@@ -1656,6 +2019,8 @@ function extractUrlsFromText(value) {
       }
     }
 
+    url = decodeRedirectTarget(url);
+
     try {
       const parsed = new URL(url);
       if (!parsed.hostname || !parsed.hostname.includes('.')) continue;
@@ -1663,10 +2028,16 @@ function extractUrlsFromText(value) {
       const dedupeKey = normalized.toLowerCase();
       if (!unique.has(dedupeKey)) {
         unique.set(dedupeKey, normalized);
+        if (!isInternalPlatformHost(parsed.hostname)) {
+          external.push(normalized);
+        }
       }
     } catch {
       // Skip malformed URL candidates.
     }
+  }
+  if (external.length > 0) {
+    return Array.from(new Set(external)).slice(0, 20);
   }
   return Array.from(unique.values()).slice(0, 20);
 }
@@ -1674,6 +2045,13 @@ function extractUrlsFromText(value) {
 function extractInstructionLines(value) {
   const text = String(value || '');
   if (!text) return [];
+
+  const splitInlineSteps = (line) => {
+    const raw = String(line || '');
+    if (!raw) return [];
+    const parts = raw.split(/\s+(?=(?:\d{1,2}[.)-]\s+|step\s+\d+[:.\-]?))/gi);
+    return parts.length > 1 ? parts : [raw];
+  };
 
   const normalizeLine = (rawLine) => {
     let line = decodeXmlEntities(String(rawLine || '').trim());
@@ -1683,12 +2061,13 @@ function extractInstructionLines(value) {
     line = line.replace(/^\s*(?:\d+[.)-]|[-*]|\u2022)\s+/, '');
     line = line.replace(/\s*(?:[\u2014\u2013-]|\.)\s*\d+\s*$/, '');
     line = line.replace(/\s+/g, ' ').trim();
-    if (line.length < 12 || line.length > 180) return '';
+    if (line.length < 8 || line.length > 220) return '';
     return line;
   };
 
   const lines = text
     .split(/\r?\n/)
+    .flatMap(splitInlineSteps)
     .map(normalizeLine)
     .filter(Boolean);
 
@@ -1717,7 +2096,7 @@ function extractInstructionLines(value) {
     if (!normalized || seen.has(normalized)) continue;
     seen.add(normalized);
     picked.push(item.line);
-    if (picked.length >= 10) break;
+    if (picked.length >= 12) break;
   }
   return picked;
 }
@@ -1811,6 +2190,47 @@ function decodeJsonEscapedString(raw) {
   }
 }
 
+function extractJsonObjectAfterMarker(text, marker) {
+  const source = String(text || '');
+  const start = source.indexOf(marker);
+  if (start < 0) return '';
+  const objectStart = source.indexOf('{', start + marker.length);
+  if (objectStart < 0) return '';
+
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (let i = objectStart; i < source.length; i += 1) {
+    const char = source[i];
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (char === '\\') {
+        escaped = true;
+      } else if (char === '"') {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (char === '"') {
+      inString = true;
+      continue;
+    }
+    if (char === '{') {
+      depth += 1;
+      continue;
+    }
+    if (char === '}') {
+      depth -= 1;
+      if (depth === 0) {
+        return source.slice(objectStart, i + 1);
+      }
+    }
+  }
+  return '';
+}
+
 async function fetchYouTubeWatchDescription(videoId) {
   const canonicalUrl = `https://www.youtube.com/watch?v=${videoId}&hl=en`;
   try {
@@ -1833,17 +2253,107 @@ async function fetchYouTubeWatchDescription(videoId) {
     if (!html) return '';
 
     const candidates = [];
-    const regex = /"shortDescription":"((?:\\.|[^"\\])*)"/g;
-    let match;
-    while ((match = regex.exec(html)) !== null) {
-      if (match[1]) {
-        const decoded = decodeJsonEscapedString(match[1]);
-        if (decoded) candidates.push(decodeXmlEntities(decoded));
+
+    const escapedPatterns = [
+      /"shortDescription":"((?:\\.|[^"\\])*)"/g,
+      /"attributedDescriptionBodyText":\{"content":"((?:\\.|[^"\\])*)"/g,
+      /"description":\{"simpleText":"((?:\\.|[^"\\])*)"/g
+    ];
+    for (const regex of escapedPatterns) {
+      let match;
+      while ((match = regex.exec(html)) !== null) {
+        if (match[1]) {
+          const decoded = decodeJsonEscapedString(match[1]);
+          if (decoded) candidates.push(decodeXmlEntities(decoded));
+        }
+        if (candidates.length >= 4) break;
       }
-      if (candidates.length >= 3) break;
+      if (candidates.length >= 4) break;
     }
 
-    return candidates.find((item) => item.length >= 20) || '';
+    if (candidates.length === 0) {
+      const playerJsonText = extractJsonObjectAfterMarker(html, 'ytInitialPlayerResponse =');
+      if (playerJsonText) {
+        const playerJson = parseJsonSafe(playerJsonText, null);
+        const shortDescription = String(playerJson?.videoDetails?.shortDescription || '').trim();
+        if (shortDescription) {
+          candidates.push(decodeXmlEntities(shortDescription));
+        }
+      }
+    }
+
+    if (candidates.length === 0) {
+      const metaMatch = html.match(/<meta\s+name="description"\s+content="([^"]+)"/i);
+      if (metaMatch?.[1]) {
+        const decodedMeta = decodeXmlEntities(metaMatch[1]);
+        if (decodedMeta) candidates.push(decodedMeta);
+      }
+    }
+
+    const bestDirect = candidates.find((item) => item.length >= 20) || '';
+    if (bestDirect) return bestDirect;
+
+    // Fallback for bot-check / restricted watch pages on some hosts.
+    const jinaResponse = await fetchWithTimeout(
+      `https://r.jina.ai/http://www.youtube.com/watch?v=${videoId}`,
+      {
+        method: 'GET',
+        headers: {
+          'User-Agent': USER_AGENT,
+          Accept: 'text/plain,text/markdown'
+        }
+      },
+      7000,
+      'Jina watch fallback'
+    );
+    if (!jinaResponse.ok) return '';
+    const jinaText = await jinaResponse.text();
+    if (!jinaText) return '';
+
+    const blocks = jinaText
+      .split(/\r?\n\r?\n+/)
+      .map((line) => String(line || '').replace(/\s+/g, ' ').trim())
+      .filter(Boolean);
+    if (!blocks.length) return '';
+
+    let candidate =
+      blocks.find((block) => /video_description/i.test(block)) ||
+      blocks.find((block) => /\.\.\.more|…more/i.test(block)) ||
+      '';
+
+    if (!candidate) {
+      const chaptersIndex = blocks.findIndex((block) => /^chapters$/i.test(block));
+      if (chaptersIndex > 0) {
+        for (let i = chaptersIndex - 1; i >= Math.max(0, chaptersIndex - 5); i -= 1) {
+          const block = blocks[i];
+          if (!block) continue;
+          if (/^(?:\d[\d,.]*\s+views|subscribe|share|save|download)$/i.test(block)) continue;
+          if (block.length >= 20) {
+            candidate = block;
+            break;
+          }
+        }
+      }
+    }
+
+    if (!candidate) {
+      candidate = blocks.find((block) => block.length >= 20 && /https?:\/\/|www\./i.test(block)) || '';
+    }
+    if (!candidate) return '';
+
+    const chapterSnippets = blocks
+      .filter((block) => /####/.test(block) && /\b\d{1,2}:\d{2}(?::\d{2})?\b/.test(block))
+      .slice(0, 8)
+      .map((block) => block.replace(/#+/g, ' ').replace(/\s+/g, ' ').trim())
+      .filter(Boolean);
+
+    const merged = chapterSnippets.length ? `${candidate}\n${chapterSnippets.join('\n')}` : candidate;
+
+    return merged
+      .replace(/\[\s*([^\]]+?)\s*\]\((https?:\/\/[^\s)]+)\)/g, '$1 $2')
+      .replace(/\.\.\.more|…more/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
   } catch {
     return '';
   }
@@ -2673,14 +3183,16 @@ function isUsableTranscript(text = '') {
 }
 
 async function fetchWithTranscriptApi(videoUrl, supabase) {
-  const config = supabase ? await loadOrBootstrapTranscriptApiConfig(supabase) : { keys: [] };
-  const keys = normalizeApiKeys(config?.keys || []);
-  if (keys.length === 0) return null;
+  const config = supabase ? await loadOrBootstrapTranscriptApiConfig(supabase) : { keys: [], activeKeyId: '' };
+  const candidates = getTranscriptApiKeyCandidates(config);
+  if (candidates.length === 0) return null;
 
   const encodedUrl = encodeURIComponent(videoUrl);
   let lastError = null;
 
-  for (const apiKey of keys) {
+  for (const keyEntry of candidates) {
+    const apiKey = String(keyEntry.apiKey || '').trim();
+    if (!apiKey) continue;
     try {
       const response = await fetchWithTimeout(
         `https://transcriptapi.com/api/v2/youtube/transcript?video_url=${encodedUrl}`,
@@ -2698,20 +3210,39 @@ async function fetchWithTranscriptApi(videoUrl, supabase) {
 
       if (!response.ok) {
         lastError = new Error(`TranscriptAPI failed with status ${response.status}`);
+        recordRuntimeState('transcript', 'transcript', keyEntry.id, {
+          success: false,
+          errorMessage: lastError.message
+        });
         continue;
       }
 
       const data = await response.json().catch(() => null);
       if (!data?.transcript || !Array.isArray(data.transcript)) {
         lastError = new Error('TranscriptAPI response did not include transcript');
+        recordRuntimeState('transcript', 'transcript', keyEntry.id, {
+          success: false,
+          errorMessage: lastError.message
+        });
         continue;
       }
 
       const transcript = data.transcript.map((item) => item.text || '').join(' ').trim();
-      if (transcript) return transcript;
+      if (transcript) {
+        recordRuntimeState('transcript', 'transcript', keyEntry.id, { success: true });
+        return transcript;
+      }
       lastError = new Error('TranscriptAPI returned empty transcript');
+      recordRuntimeState('transcript', 'transcript', keyEntry.id, {
+        success: false,
+        errorMessage: lastError.message
+      });
     } catch (error) {
       lastError = error;
+      recordRuntimeState('transcript', 'transcript', keyEntry.id, {
+        success: false,
+        errorMessage: error?.message || 'Transcript key failed'
+      });
     }
   }
 
@@ -3395,22 +3926,86 @@ export default async function handler(req, res) {
       }
 
       const current = await loadOrBootstrapAiProviderConfig(supabase);
-      const currentProviders = current.providers || {};
+      const currentProviders = current.providers && typeof current.providers === 'object' ? current.providers : {};
       const incomingProviders = body.providers && typeof body.providers === 'object' ? body.providers : {};
-      const clearProviders = new Set(
-        Array.isArray(body.clearProviders)
-          ? body.clearProviders.map((item) => normalizeProviderName(item))
-          : []
-      );
+      const clearProviders = new Set(Array.isArray(body.clearProviders) ? body.clearProviders.map((item) => normalizeProviderName(item)) : []);
+
       const mergedProviders = {};
-      for (const provider of Object.keys(currentProviders)) {
-        const currentKey = String(currentProviders[provider]?.apiKey || '').trim();
-        const incomingKey = String(incomingProviders?.[provider]?.apiKey || '').trim();
-        mergedProviders[provider] = {
-          apiKey: clearProviders.has(provider)
-            ? ''
-            : (incomingKey || currentKey)
-        };
+      for (const provider of Object.keys(defaultAiProviderConfig().providers)) {
+        const baseProvider = normalizeAiProviderEntry(provider, currentProviders[provider] || {});
+        let nextKeys = baseProvider.keys;
+        let nextActiveKeyId = baseProvider.activeKeyId;
+        const incoming = incomingProviders[provider] && typeof incomingProviders[provider] === 'object'
+          ? incomingProviders[provider]
+          : {};
+
+        if (clearProviders.has(provider)) {
+          nextKeys = [];
+          nextActiveKeyId = '';
+        } else {
+          if (Array.isArray(incoming.keys)) {
+            nextKeys = normalizeApiKeyEntries(incoming.keys, {
+              labelPrefix: `${provider.toUpperCase()} key`,
+              idPrefix: `ai_${provider}`
+            });
+            nextActiveKeyId = String(incoming.activeKeyId || nextActiveKeyId || '').trim();
+          }
+
+          const incomingSingleKey = String(incoming.apiKey || '').trim();
+          if (incomingSingleKey) {
+            const applied = applyApiKeyAction(nextKeys, nextActiveKeyId, {
+              type: 'add',
+              label: String(incoming.label || '').trim() || `${provider.toUpperCase()} manual`,
+              apiKey: incomingSingleKey,
+              enabled: true,
+              setActive: true
+            }, {
+              labelPrefix: `${provider.toUpperCase()} key`,
+              idPrefix: `ai_${provider}`
+            });
+            nextKeys = applied.keys;
+            nextActiveKeyId = applied.activeKeyId;
+          }
+
+          if (incoming.keyAction && typeof incoming.keyAction === 'object') {
+            const applied = applyApiKeyAction(nextKeys, nextActiveKeyId, incoming.keyAction, {
+              labelPrefix: `${provider.toUpperCase()} key`,
+              idPrefix: `ai_${provider}`
+            });
+            nextKeys = applied.keys;
+            nextActiveKeyId = applied.activeKeyId;
+          }
+
+          if (incoming.activeKeyId) {
+            nextActiveKeyId = String(incoming.activeKeyId || '').trim();
+          }
+        }
+
+        nextActiveKeyId = ensureActiveKeyId(nextKeys, nextActiveKeyId);
+        mergedProviders[provider] = normalizeAiProviderEntry(provider, {
+          keys: nextKeys,
+          activeKeyId: nextActiveKeyId
+        });
+      }
+
+      if (body.keyAction && typeof body.keyAction === 'object') {
+        const keyAction = body.keyAction;
+        const provider = normalizeProviderName(keyAction.provider || body.selectedProvider || current.selectedProvider);
+        const providerBase = mergedProviders[provider] || normalizeAiProviderEntry(provider, {});
+        const applied = applyApiKeyAction(
+          providerBase.keys,
+          providerBase.activeKeyId,
+          keyAction,
+          {
+            labelPrefix: `${provider.toUpperCase()} key`,
+            idPrefix: `ai_${provider}`
+          }
+        );
+        mergedProviders[provider] = normalizeAiProviderEntry(provider, {
+          ...providerBase,
+          keys: applied.keys,
+          activeKeyId: applied.activeKeyId
+        });
       }
 
       const next = normalizeAiConfigPayload({
@@ -3448,8 +4043,37 @@ export default async function handler(req, res) {
       const provider = normalizeProviderName(body.provider);
       const config = await loadOrBootstrapAiProviderConfig(supabase);
       const keyFromBody = String(body.apiKey || '').trim();
-      const key = keyFromBody || String(config.providers?.[provider]?.apiKey || '').trim();
-      const models = await fetchProviderModels(provider, key);
+      const preferredKeyId = String(body.keyId || '').trim();
+      const providerConfig = normalizeAiProviderEntry(provider, config.providers?.[provider] || {});
+      const candidates = keyFromBody
+        ? [{ id: 'manual', apiKey: keyFromBody, enabled: true }]
+        : orderKeyCandidates(providerConfig.keys, preferredKeyId || providerConfig.activeKeyId);
+      if (candidates.length === 0) {
+        return res.status(400).json({ success: false, error: `No configured API keys for provider "${provider}"` });
+      }
+
+      let models = [];
+      let lastError = null;
+      for (const keyEntry of candidates) {
+        try {
+          models = await fetchProviderModels(provider, String(keyEntry.apiKey || '').trim());
+          if (keyEntry.id !== 'manual') {
+            recordRuntimeState('ai', provider, keyEntry.id, { success: true });
+          }
+          break;
+        } catch (error) {
+          lastError = error;
+          if (keyEntry.id !== 'manual') {
+            recordRuntimeState('ai', provider, keyEntry.id, {
+              success: false,
+              errorMessage: error?.message || 'Model fetch failed'
+            });
+          }
+        }
+      }
+      if (!Array.isArray(models) || models.length === 0) {
+        throw new Error(lastError?.message || `Failed to load models for provider "${provider}"`);
+      }
 
       const modelCatalog = {
         ...(config.modelCatalog || {}),
@@ -3482,11 +4106,7 @@ export default async function handler(req, res) {
       const config = await loadOrBootstrapTranscriptApiConfig(supabase);
       return res.json({
         success: true,
-        data: {
-          keysCount: config.keys.length,
-          keysMasked: config.keys.map((key) => maskApiKey(key)),
-          updatedAt: config.updatedAt
-        }
+        data: sanitizeTranscriptApiConfigForAdmin(config)
       });
     }
 
@@ -3499,19 +4119,36 @@ export default async function handler(req, res) {
       if (!adminSession) {
         return res.status(401).json({ success: false, error: 'Admin authentication required' });
       }
-      const keys = normalizeApiKeys(body.keys || []);
+
+      const current = await loadOrBootstrapTranscriptApiConfig(supabase);
+      let nextKeys = current.keys;
+      let nextActiveKeyId = current.activeKeyId;
+
+      if (body.keyAction && typeof body.keyAction === 'object') {
+        const applied = applyApiKeyAction(nextKeys, nextActiveKeyId, body.keyAction, {
+          labelPrefix: 'Transcript key',
+          idPrefix: 'tap'
+        });
+        nextKeys = applied.keys;
+        nextActiveKeyId = applied.activeKeyId;
+      } else if (Object.prototype.hasOwnProperty.call(body, 'keys')) {
+        nextKeys = normalizeApiKeyEntries(body.keys || [], {
+          labelPrefix: 'Transcript key',
+          idPrefix: 'tap'
+        });
+        nextActiveKeyId = ensureActiveKeyId(nextKeys, body.activeKeyId || current.activeKeyId || '');
+      }
+
       const saved = await saveTranscriptApiConfig(supabase, {
-        keys,
+        ...current,
+        keys: nextKeys,
+        activeKeyId: nextActiveKeyId,
         updatedBy: adminSession.config.username,
         updatedAt: new Date().toISOString()
       });
       return res.json({
         success: true,
-        data: {
-          keysCount: saved.keys.length,
-          keysMasked: saved.keys.map((key) => maskApiKey(key)),
-          updatedAt: saved.updatedAt
-        }
+        data: sanitizeTranscriptApiConfigForAdmin(saved)
       });
     }
 
