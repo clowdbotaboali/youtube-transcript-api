@@ -18,7 +18,9 @@
     "inputPlaceholder": "https://www.youtube.com/watch?v=...",
     "primaryCta": "Essayez 1 video gratuitement",
     "secondaryCta": "Commencer gratuitement",
+    "trustLine": "Aucune carte requise • 5 videos gratuites par jour",
     "helper": "Votre premiere extraction fonctionne sans inscription. Apres le resultat, creez un compte gratuit pour continuer.",
+    "loadingHint": "Recuperation de la transcription et preparation de l'apercu...",
     "errors": {
       "empty": "Collez d'abord une URL YouTube.",
       "invalid": "Ce lien ne ressemble pas a une URL YouTube valide."
@@ -42,6 +44,24 @@
     "createAccount": "Creer un compte gratuit",
     "haveAccount": "J'ai deja un compte"
   },
+  "whatYouGet": {
+    "title": "Ce que vous obtenez immediatement",
+    "subtitle": "Une sortie exploitable tout de suite, pas un texte brut confus.",
+    "items": [
+      {
+        "title": "Transcription complete",
+        "text": "Une version texte claire de la video pour recherche, revision et reference."
+      },
+      {
+        "title": "Resume rapide",
+        "text": "Les idees essentielles condensees pour comprendre plus vite."
+      },
+      {
+        "title": "Etapes d'action",
+        "text": "Des actions structurees que vous pouvez appliquer directement."
+      }
+    ]
+  },
   "trust": {
     "title": "Pourquoi choisir Transcript AI ?",
     "items": [
@@ -61,15 +81,39 @@
         "title": "Economise des heures chaque semaine",
         "text": "Transformez un long temps de visionnage en notes actionnables."
       }
-    ],
+    ]
+  },
+  "socialProof": {
+    "title": "Adopte par des etudiants et createurs",
     "stats": [
       {
+        "id": "videos_processed",
         "value": "1 000+",
-        "label": "transcriptions generees"
+        "label": "videos traitees"
       },
       {
-        "value": "Etudiants et createurs",
-        "label": "utilisent Transcript AI"
+        "id": "lecture_usage",
+        "value": "Utilise en cours et formations en ligne",
+        "label": "flux de travail centres education"
+      },
+      {
+        "id": "growth",
+        "value": "En croissance chaque jour",
+        "label": "nouvelle activite quotidienne"
+      }
+    ],
+    "testimonials": [
+      {
+        "quote": "Je resume des cours de 90 minutes en quelques minutes avant les examens.",
+        "role": "Etudiante en medecine"
+      },
+      {
+        "quote": "Les etapes d'action m'evitent de revoir toute la video pour trouver les taches.",
+        "role": "Createur de formation"
+      },
+      {
+        "quote": "Notre equipe transforme les longues videos en notes internes structurees.",
+        "role": "Lead equipe startup"
       }
     ]
   },
@@ -88,8 +132,10 @@
     },
     "pro": {
       "badge": "PRO",
+      "popularBadge": "Le plus populaire",
       "limit": "Jusqu'a 500 videos par jour",
       "price": "$5 / 200 credits",
+      "valueSummary": "Pour utilisateurs intensifs et createurs",
       "features": [
         "Traitement prioritaire",
         "Fonctionnalites futures incluses",
@@ -102,29 +148,29 @@
     "title": "Questions frequentes",
     "items": [
       {
-        "q": "Est-ce un service officiel YouTube ?",
+        "q": "Est-ce affilie a YouTube ?",
         "a": "Non. Transcript AI est un outil de productivite independant qui traite les liens YouTube publics."
-      },
-      {
-        "q": "Est-ce gratuit ?",
-        "a": "Oui, vous pouvez essayer une video gratuitement en mode invite, puis continuer avec un compte gratuit."
-      },
-      {
-        "q": "Comment fonctionnent les credits ?",
-        "a": "Chaque nouvelle video extraite consomme des credits selon votre plan. La recharge commence a 5 $ pour 200 credits."
       },
       {
         "q": "Ai-je besoin d'un compte ?",
         "a": "Pas pour la premiere extraction invite. Un compte est requis pour continuer et sauvegarder l'historique."
       },
       {
+        "q": "Comment fonctionnent les credits ?",
+        "a": "Chaque nouvelle video extraite consomme des credits selon votre plan. La recharge commence a 5 $ pour 200 credits."
+      },
+      {
         "q": "Mes donnees sont-elles stockees ?",
         "a": "Nous stockons uniquement les donnees necessaires au fonctionnement et a la securite du service. Les fichiers video originaux ne sont pas stockes."
+      },
+      {
+        "q": "Puis-je arreter a tout moment ?",
+        "a": "Oui. Aucun engagement long terme impose. Vous pouvez arreter les recharges quand vous voulez."
       }
     ]
   },
   "finalCta": {
-    "headline": "Arretez de revoir les videos. Extrayez les idees maintenant.",
+    "headline": "Arretez de revoir les videos longues. Extrayez les idees instantanement.",
     "button": "Creer un compte gratuit"
   }
 }
