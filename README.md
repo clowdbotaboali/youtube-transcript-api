@@ -63,7 +63,14 @@ Optional:
 ### Frontend (`frontend`)
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
+- `VITE_TURNSTILE_SITE_KEY` (or `NEXT_PUBLIC_TURNSTILE_SITE_KEY` / `NEXT_PUBLIC_CF_TURNSTILE_SITE_KEY`)
 - `VITE_API_URL` (optional; defaults to same origin on production)
+
+Google OAuth note:
+- Google login must be enabled in Supabase Auth Providers.
+- Allowed redirect URLs must include:
+  - `https://transcripta.tech/auth/callback`
+  - `https://www.transcripta.tech/auth/callback`
 
 ## Database Setup
 
@@ -215,4 +222,3 @@ Workflow file:
    - Billing proof upload and admin review
    - Admin usage dashboard
 5. Confirm legal/footer/pricing pages on production routes.
-

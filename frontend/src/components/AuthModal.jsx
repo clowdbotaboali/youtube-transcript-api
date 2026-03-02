@@ -82,7 +82,14 @@ function AuthModal({ isOpen, onClose, onAuthSuccess, lang = LANG.ar, onNotify, i
     if (code === 'ANTI_BOT_REQUIRED' || code === 'ANTI_BOT_INVALID' || code === 'ANTI_BOT_UNAVAILABLE') {
       return tr(lang, 'فشل تحقق الحماية. أعد المحاولة.', 'Anti-bot verification failed. Please try again.');
     }
-    return err?.message || tr(lang, 'فشلت عملية المصادقة.', 'Authentication failed.');
+    if (msg.includes('unsupported provider') || msg.includes('provider is not enabled')) {
+      return tr(
+        lang,
+        'Google login is not configured yet. Please contact support.',
+        'Google login is not configured yet. Please contact support.'
+      );
+    }
+    return err?.message || tr(lang, 'Authentication failed.', 'Authentication failed.');
   };
 
   const buildRedirectUrl = () => {
@@ -122,16 +129,28 @@ function AuthModal({ isOpen, onClose, onAuthSuccess, lang = LANG.ar, onNotify, i
     setGoogleLoading(true);
     setError('');
     try {
-      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+      const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: buildRedirectUrl(),
+          skipBrowserRedirect: true,
           queryParams: {
             prompt: 'select_account'
           }
         }
       });
       if (oauthError) throw oauthError;
+      const redirectUrl = String(data?.url || '').trim();
+      if (!redirectUrl) {
+        throw new Error(
+          tr(
+            lang,
+            'Could not start Google login. Check Supabase provider configuration.',
+            'Could not start Google login. Check Supabase provider configuration.'
+          )
+        );
+      }
+      window.location.assign(redirectUrl);
     } catch (err) {
       setError(mapAuthError(err));
       setGoogleLoading(false);

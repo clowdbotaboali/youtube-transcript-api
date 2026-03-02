@@ -33,7 +33,13 @@ function AntiBotCheck({ onTokenChange, theme = 'auto' }) {
   const containerRef = useRef(null);
   const widgetIdRef = useRef(null);
   const [widgetError, setWidgetError] = useState('');
-  const siteKey = String(import.meta.env.VITE_TURNSTILE_SITE_KEY || '').trim();
+  const siteKey = String(
+    import.meta.env.VITE_TURNSTILE_SITE_KEY ||
+      import.meta.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ||
+      import.meta.env.VITE_CF_TURNSTILE_SITE_KEY ||
+      import.meta.env.NEXT_PUBLIC_CF_TURNSTILE_SITE_KEY ||
+      ''
+  ).trim();
   const missingSiteKey = !siteKey;
 
   useEffect(() => {
