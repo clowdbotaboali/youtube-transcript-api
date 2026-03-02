@@ -8,9 +8,6 @@
   - `POST /api/auth/resend-verification`
 - Google OAuth uses Supabase OAuth directly from frontend (`signInWithOAuth`) with callback to `/auth/callback?next=/dashboard`.
 - Server enforces email verification for protected APIs only (`/api/me`, transcript/AI/history/billing/chat routes).
-- Edge middleware (`middleware.js`) adds:
-  - IP rate limiting for signup/login at edge.
-  - Guard for `/dashboard` and transcript APIs using Supabase token verification.
 - Quota enforcement is server-side only via Supabase RPC and `user_usage` table.
 
 ## 2) Supabase schema / SQL
@@ -23,18 +20,13 @@
   - Explicit function grants: executable by `service_role` only.
   - updated `handle_new_user()` trigger function to bootstrap `user_usage`
 
-## 3) Middleware implementation
-- File: `middleware.js`
-- Matchers:
-  - `/dashboard/:path*`
-  - `/api/transcript/:path*`
-  - `/api/transcripts/:path*`
-  - `/api/auth/signup`
-  - `/api/auth/login`
-- Behavior:
-  - Signup: max 3 requests/IP/30 days.
-  - Login: max 10 requests/IP/10 minutes.
-  - Protected route access requires valid Supabase access token + verified email.
+## 3) Route protection implementation
+- API-level protection is enforced in `api/index.js` for:
+  - `/api/me`
+  - `/api/transcript/*`, `/api/transcripts/*`
+  - `/api/ai/*`, `/api/history*`, `/api/links*`, `/api/billing*`, `/api/chat/*`
+- Auth checks are server-side (`getAuthedUser`) + email verification checks.
+- Signup/login abuse limits are enforced server-side with IP/user keyed windows.
 
 ## 4) Google OAuth setup (Supabase + Vercel)
 1. Supabase dashboard -> Authentication -> Providers -> enable Google.
@@ -60,7 +52,6 @@
   - `authSignupIp`: 3 / 30 days
   - `authLoginIp`: 10 / 10 minutes
   - `authResendIp`: 6 / 10 minutes
-- Edge-level early checks in `middleware.js` for signup/login.
 
 ## 7) Usage quota enforcement
 - Server-side only via `consume_user_quota`.
