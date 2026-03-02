@@ -129,3 +129,20 @@ CREATE INDEX IF NOT EXISTS idx_api_request_logs_ip_created
   ON public.api_request_logs (ip, created_at DESC);
 
 ALTER TABLE public.api_request_logs ENABLE ROW LEVEL SECURITY;
+
+-- Monthly quota usage table
+CREATE TABLE IF NOT EXISTS public.user_usage (
+  user_id uuid PRIMARY KEY REFERENCES public.users(id) ON DELETE CASCADE,
+  monthly_quota integer NOT NULL DEFAULT 5 CHECK (monthly_quota >= 0),
+  used_this_month integer NOT NULL DEFAULT 0 CHECK (used_this_month >= 0),
+  last_reset_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
+  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+  updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE public.user_usage ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view their own usage." ON public.user_usage
+  FOR SELECT USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can update their own usage." ON public.user_usage;

@@ -9,6 +9,8 @@ let groqClient = null;
 let supabaseClient = null;
 const FREE_PLAN_CREDITS = 5;
 const CREDIT_COST_PER_SUCCESS = 1;
+const MONTHLY_FREE_QUOTA = 5;
+const QUOTA_RESET_WINDOW_DAYS = 30;
 const USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 const YTDL_AGENT = ytdl.createAgent();
@@ -29,6 +31,9 @@ const AI_CONFIG_TYPE = 'ai_provider_config';
 const AI_CONFIG_VIDEO_ID = 'ai_providers';
 const TRANSCRIPT_API_CONFIG_TYPE = 'transcript_api_config';
 const TRANSCRIPT_API_VIDEO_ID = 'transcript_api_keys';
+const EMAIL_NOT_VERIFIED_CODE = 'EMAIL_NOT_VERIFIED';
+const OAUTH_REDIRECT_DEFAULT_PATH = '/auth/callback?next=/dashboard';
+const TURNSTILE_VERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
 const ADMIN_DEFAULT_USERNAME = 'admin';
 const ADMIN_DEFAULT_EMAIL = process.env.ADMIN_EMAIL || 'admin@transcriptai-eg.com';
 const ADMIN_DEFAULT_PASSWORD = process.env.ADMIN_PASSWORD || 'Aa01015415601@@@@@';
@@ -72,6 +77,9 @@ const FEATURE_ACCESS_BY_TIER = {
 const RATE_LIMIT_RULES = {
   ipGlobal: { limit: 240, windowMs: 60 * 1000 },
   adminLoginIp: { limit: 12, windowMs: 10 * 60 * 1000 },
+  authSignupIp: { limit: 3, windowMs: 30 * 24 * 60 * 60 * 1000 },
+  authLoginIp: { limit: 10, windowMs: 10 * 60 * 1000 },
+  authResendIp: { limit: 6, windowMs: 10 * 60 * 1000 },
   transcriptByUser: { limit: 40, windowMs: 60 * 1000 },
   aiByUser: { limit: 45, windowMs: 60 * 1000 },
   chatByUser: { limit: 80, windowMs: 60 * 1000 },
@@ -80,6 +88,8 @@ const RATE_LIMIT_RULES = {
 const DEFAULT_ALLOWED_ORIGINS = [
   'http://localhost:5173',
   'http://127.0.0.1:5173',
+  'https://transcripta.tech',
+  'https://www.transcripta.tech',
   'https://youtube-transcript-api-lilac.vercel.app'
 ];
 const STATUS_DEFAULT_ERROR_CODE = {
@@ -95,6 +105,9 @@ const ENV_VALIDATION = validateEnvironment();
 const rateLimitStore = {
   ipGlobal: new Map(),
   adminLoginIp: new Map(),
+  authSignupIp: new Map(),
+  authLoginIp: new Map(),
+  authResendIp: new Map(),
   transcriptByUser: new Map(),
   aiByUser: new Map(),
   chatByUser: new Map(),
@@ -108,7 +121,7 @@ const apiKeyRuntimeState = {
 
 function validateEnvironment() {
   const required = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'];
-  const recommended = ['ADMIN_TOKEN_SECRET'];
+  const recommended = ['SUPABASE_ANON_KEY', 'TURNSTILE_SECRET_KEY', 'ADMIN_TOKEN_SECRET'];
   const missingRequired = required.filter((name) => !String(process.env[name] || '').trim());
   const missingRecommended = recommended.filter((name) => !String(process.env[name] || '').trim());
   if (missingRequired.length > 0) {
@@ -177,6 +190,164 @@ function getGroqApiKey() {
     throw new Error('Server not configured: GROQ_API_KEY missing');
   }
   return apiKey;
+}
+
+function getSupabaseAnonKey() {
+  return String(process.env.SUPABASE_ANON_KEY || '').trim();
+}
+
+async function requestSupabaseAuth(path, { method = 'POST', body, accessToken } = {}) {
+  const baseUrl = String(process.env.SUPABASE_URL || '').trim().replace(/\/+$/, '');
+  const anonKey = getSupabaseAnonKey();
+  if (!baseUrl || !anonKey) {
+    throw new Error('Server not configured: SUPABASE_URL / SUPABASE_ANON_KEY missing');
+  }
+  const headers = {
+    apikey: anonKey,
+    'Content-Type': 'application/json'
+  };
+  if (accessToken) {
+    headers.Authorization = `Bearer ${String(accessToken).trim()}`;
+  }
+  const response = await fetchWithTimeout(
+    `${baseUrl}${path}`,
+    {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined
+    },
+    12000,
+    'Supabase auth request'
+  );
+  const payload = await response.json().catch(() => ({}));
+  return {
+    ok: response.ok,
+    status: response.status,
+    data: payload
+  };
+}
+
+function extractSupabaseAuthErrorMessage(payload, fallback = 'Authentication failed') {
+  return String(payload?.msg || payload?.error_description || payload?.error || payload?.message || fallback);
+}
+
+async function validateTurnstileToken(token, remoteIp = '') {
+  const secret = String(process.env.TURNSTILE_SECRET_KEY || '').trim();
+  if (!secret) {
+    return { ok: false, code: 'SERVER_MISCONFIGURED', message: 'Turnstile secret key is not configured' };
+  }
+  const responseToken = String(token || '').trim();
+  if (!responseToken) {
+    return { ok: false, code: 'ANTI_BOT_REQUIRED', message: 'Anti-bot validation is required' };
+  }
+
+  const form = new URLSearchParams();
+  form.set('secret', secret);
+  form.set('response', responseToken);
+  if (remoteIp) form.set('remoteip', String(remoteIp));
+
+  try {
+    const response = await fetchWithTimeout(
+      TURNSTILE_VERIFY_URL,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: form.toString()
+      },
+      10000,
+      'Turnstile verification'
+    );
+    const payload = await response.json().catch(() => ({}));
+    const success = Boolean(payload?.success);
+    if (!success) {
+      return {
+        ok: false,
+        code: 'ANTI_BOT_INVALID',
+        message: 'Anti-bot verification failed',
+        details: {
+          turnstileCodes: Array.isArray(payload?.['error-codes']) ? payload['error-codes'] : []
+        }
+      };
+    }
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      code: 'ANTI_BOT_UNAVAILABLE',
+      message: 'Anti-bot verification service is unavailable',
+      details: { reason: String(error?.message || 'unknown') }
+    };
+  }
+}
+
+function isProtectedUserApiPath(pathname) {
+  const value = String(pathname || '');
+  if (!value.startsWith('/api/')) return false;
+  if (value === '/api/settings/status') return false;
+  if (value.startsWith('/api/admin/')) return false;
+  if (value.startsWith('/api/auth/')) return false;
+  const protectedPrefixes = ['/api/me', '/api/transcript/', '/api/transcripts/', '/api/ai/', '/api/history', '/api/links', '/api/billing', '/api/chat/'];
+  return protectedPrefixes.some((prefix) => value === prefix || value.startsWith(prefix));
+}
+
+function normalizeUsageRow(row) {
+  const monthlyQuota = Math.max(Number(row?.monthly_quota || MONTHLY_FREE_QUOTA), 0);
+  const usedThisMonth = Math.max(Number(row?.used_this_month || 0), 0);
+  const remaining = Math.max(monthlyQuota - usedThisMonth, 0);
+  return {
+    monthlyQuota,
+    usedThisMonth,
+    remaining,
+    lastResetAt: row?.last_reset_at || null,
+    nextResetAt: row?.last_reset_at
+      ? new Date(new Date(row.last_reset_at).getTime() + QUOTA_RESET_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString()
+      : null
+  };
+}
+
+async function ensureUserUsageRow(supabase, userId) {
+  const payload = {
+    user_id: userId,
+    monthly_quota: MONTHLY_FREE_QUOTA
+  };
+  const { error } = await supabase.from('user_usage').upsert([payload], { onConflict: 'user_id' });
+  if (error && !isMissingRelationError(error)) {
+    throw new Error('Failed to initialize user usage');
+  }
+}
+
+async function getUserUsageSummary(supabase, userId) {
+  await ensureUserUsageRow(supabase, userId);
+  const { data, error } = await supabase.rpc('refresh_user_quota_if_due', { p_user_id: userId });
+  if (error) {
+    if (isMissingRelationError(error)) {
+      throw new Error('Quota system migration is missing');
+    }
+    throw new Error('Failed to load user quota usage');
+  }
+  const row = Array.isArray(data) ? data[0] : data;
+  return normalizeUsageRow(row || {});
+}
+
+async function consumeUserMonthlyQuota(supabase, userId) {
+  await ensureUserUsageRow(supabase, userId);
+  const { data, error } = await supabase.rpc('consume_user_quota', { p_user_id: userId });
+  if (error) {
+    if (isMissingRelationError(error)) {
+      throw new Error('Quota system migration is missing');
+    }
+    throw new Error('Failed to consume user quota');
+  }
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row || typeof row !== 'object') {
+    throw new Error('Invalid quota response from database');
+  }
+  return {
+    allowed: Boolean(row.allowed),
+    ...normalizeUsageRow(row)
+  };
 }
 
 async function createGroqChatCompletion({ messages, model = 'llama-3.3-70b-versatile', temperature = 0.4, maxTokens }) {
@@ -293,14 +464,78 @@ function extractVideoId(value) {
 }
 
 async function getAuthedUser(req) {
+  if (Object.prototype.hasOwnProperty.call(req, '__authedUser')) {
+    return req.__authedUser;
+  }
   const supabase = getSupabase();
-  if (!supabase) return null;
-  const authHeader = req.headers?.authorization || '';
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice('Bearer '.length).trim() : '';
-  if (!token) return null;
+  if (!supabase) {
+    req.__authedUser = null;
+    return null;
+  }
+  const token = getAuthTokenFromRequest(req);
+  if (!token) {
+    req.__authedUser = null;
+    return null;
+  }
   const { data, error } = await supabase.auth.getUser(token);
-  if (error || !data?.user) return null;
-  return data.user;
+  req.__authedUser = error || !data?.user ? null : data.user;
+  return req.__authedUser;
+}
+
+function parseCookieHeader(cookieHeader = '') {
+  const raw = String(cookieHeader || '');
+  if (!raw) return {};
+  const out = {};
+  for (const part of raw.split(';')) {
+    const [k, ...rest] = part.split('=');
+    const key = String(k || '').trim();
+    if (!key) continue;
+    const value = rest.join('=').trim();
+    out[key] = decodeURIComponent(value || '');
+  }
+  return out;
+}
+
+function getAuthTokenFromRequest(req) {
+  const authHeader = req.headers?.authorization || '';
+  if (authHeader.startsWith('Bearer ')) {
+    const bearer = authHeader.slice('Bearer '.length).trim();
+    if (bearer) return bearer;
+  }
+  const cookies = parseCookieHeader(req.headers?.cookie || '');
+  return String(cookies.sb_access_token || cookies['sb-access-token'] || '').trim();
+}
+
+function isUserEmailVerified(user) {
+  if (!user || typeof user !== 'object') return false;
+  const confirmedAt = user.email_confirmed_at || user.confirmed_at;
+  return Boolean(confirmedAt);
+}
+
+function normalizeEmail(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function normalizeRedirectUrl(input, req, fallbackPath = OAUTH_REDIRECT_DEFAULT_PATH) {
+  const requested = String(input || '').trim();
+  if (requested) {
+    try {
+      const parsed = new URL(requested);
+      const origin = `${parsed.protocol}//${parsed.host}`;
+      if (isOriginAllowed(origin)) return parsed.toString();
+    } catch {
+      // Ignore malformed redirect input.
+    }
+  }
+
+  const originHeader = String(req.headers?.origin || '').trim();
+  if (originHeader && isOriginAllowed(originHeader)) {
+    return `${originHeader}${fallbackPath}`;
+  }
+
+  const bestDefault = ALLOWED_ORIGINS.find((origin) => /^https?:\/\//i.test(origin));
+  if (bestDefault) return `${bestDefault}${fallbackPath}`;
+  return '';
 }
 
 async function loadUserRow(supabase, userId) {
@@ -3054,13 +3289,45 @@ function outputFormattingInstruction() {
   );
 }
 
-function isLikelyArabicText(value) {
+function scriptRatio(value, regex) {
+  const text = String(value || '').trim();
+  if (!text) return 0;
+  const letters = text.match(/\p{L}/gu) || [];
+  if (letters.length === 0) return 0;
+  const scriptChars = text.match(regex) || [];
+  return scriptChars.length / letters.length;
+}
+
+function isLikelyTextForOutputLang(value, langCode) {
   const text = String(value || '').trim();
   if (!text) return false;
-  const letters = text.match(/\p{L}/gu) || [];
-  if (letters.length === 0) return false;
-  const arabicLetters = text.match(/[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/g) || [];
-  return arabicLetters.length / letters.length >= 0.25;
+  const lang = normalizeOutputLang(langCode);
+
+  const latinRatio = scriptRatio(text, /[A-Za-z\u00C0-\u024F]/g);
+  const arabicRatio = scriptRatio(text, /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/g);
+  const cyrillicRatio = scriptRatio(text, /[\u0400-\u04FF]/g);
+  const devanagariRatio = scriptRatio(text, /[\u0900-\u097F]/g);
+  const hanRatio = scriptRatio(text, /[\u4E00-\u9FFF]/g);
+  const hiraKataRatio = scriptRatio(text, /[\u3040-\u30FF]/g);
+  const hangulRatio = scriptRatio(text, /[\uAC00-\uD7AF]/g);
+
+  if (lang === 'ar' || lang === 'ur') return arabicRatio >= 0.22;
+  if (lang === 'ru') return cyrillicRatio >= 0.22;
+  if (lang === 'hi') return devanagariRatio >= 0.22;
+  if (lang === 'zh') return hanRatio >= 0.22;
+  if (lang === 'ja') return hiraKataRatio >= 0.12 || hanRatio >= 0.18;
+  if (lang === 'ko') return hangulRatio >= 0.22;
+
+  // Latin-script output languages: en/fr/es/de/it/pt/tr/id
+  return (
+    latinRatio >= 0.4 &&
+    arabicRatio < 0.2 &&
+    cyrillicRatio < 0.2 &&
+    devanagariRatio < 0.2 &&
+    hanRatio < 0.2 &&
+    hiraKataRatio < 0.2 &&
+    hangulRatio < 0.2
+  );
 }
 
 async function enforceOutputLanguageIfNeeded({ supabase, text, outputLang, maxTokens = 700 }) {
@@ -3068,8 +3335,7 @@ async function enforceOutputLanguageIfNeeded({ supabase, text, outputLang, maxTo
   if (!content) return '';
 
   const lang = normalizeOutputLang(outputLang);
-  if (lang !== 'ar') return content;
-  if (isLikelyArabicText(content)) return content;
+  if (isLikelyTextForOutputLang(content, lang)) return content;
 
   try {
     const completion = await createMultiProviderChatCompletion({
@@ -3079,7 +3345,7 @@ async function enforceOutputLanguageIfNeeded({ supabase, text, outputLang, maxTo
           role: 'system',
           content:
             `${outputLanguageInstruction(lang)}\n${outputFormattingInstruction()}\n` +
-            'Rewrite the user text in the requested language only while preserving meaning, section order, and bullet structure.'
+            'Rewrite the user text strictly in the requested output language only. Preserve meaning, section order, numbering, and bullet structure.'
         },
         { role: 'user', content }
       ],
@@ -3087,9 +3353,10 @@ async function enforceOutputLanguageIfNeeded({ supabase, text, outputLang, maxTo
       maxTokens: Math.max(180, Math.min(Number(maxTokens || 700) + 200, 1800))
     });
     const translated = String(completion?.choices?.[0]?.message?.content || '').trim();
-    if (translated && isLikelyArabicText(translated)) {
+    if (translated && isLikelyTextForOutputLang(translated, lang)) {
       return translated;
     }
+    if (translated) return translated;
   } catch {
     // Fallback to original content if localization retry fails.
   }
@@ -3421,9 +3688,203 @@ export default async function handler(req, res) {
     });
   }
 
+  if (isProtectedUserApiPath(pathname)) {
+    const user = await getAuthedUser(req);
+    if (!user) {
+      return sendError(res, 401, 'UNAUTHENTICATED', 'Authentication required');
+    }
+    if (!isUserEmailVerified(user)) {
+      return sendError(
+        res,
+        403,
+        EMAIL_NOT_VERIFIED_CODE,
+        'Email is not verified. Please verify your email before accessing protected resources.'
+      );
+    }
+  }
+
   try {
     if (pathname === '/api/settings/status') {
       return res.json({ success: true, managedInBackend: true });
+    }
+
+    if (pathname === '/api/auth/signup' && req.method === 'POST') {
+      if (!enforceRateLimit(res, 'authSignupIp', requestIp, 'Too many registration attempts from this IP')) return;
+
+      const email = normalizeEmail(body.email);
+      const password = String(body.password || '');
+      const turnstileToken = String(body.turnstileToken || body.antiBotToken || '').trim();
+      const emailRedirectTo = normalizeRedirectUrl(body.emailRedirectTo || body.redirectTo, req);
+
+      if (!email || !email.includes('@')) {
+        return sendError(res, 400, 'INVALID_INPUT', 'Valid email is required');
+      }
+      if (password.length < 8) {
+        return sendError(res, 400, 'INVALID_INPUT', 'Password must be at least 8 characters');
+      }
+
+      const antiBot = await validateTurnstileToken(turnstileToken, requestIp);
+      if (!antiBot.ok) {
+        return sendError(res, 400, antiBot.code || 'ANTI_BOT_INVALID', antiBot.message || 'Anti-bot verification failed', antiBot.details);
+      }
+
+      const signupResponse = await requestSupabaseAuth('/auth/v1/signup', {
+        method: 'POST',
+        body: {
+          email,
+          password,
+          options: emailRedirectTo ? { emailRedirectTo } : {}
+        }
+      });
+
+      if (!signupResponse.ok) {
+        const message = extractSupabaseAuthErrorMessage(signupResponse.data, 'Signup failed');
+        const status = signupResponse.status === 429 ? 429 : 400;
+        const code = signupResponse.status === 429 ? 'RATE_LIMITED' : 'AUTH_SIGNUP_FAILED';
+        return sendError(res, status, code, message);
+      }
+
+      const authUser = signupResponse.data?.user || null;
+      const supabase = getSupabase();
+      if (supabase && authUser?.id) {
+        try {
+          await ensureUserAccountRow(supabase, authUser);
+          await ensureUserUsageRow(supabase, authUser.id);
+        } catch {
+          // Non-blocking bootstrap fallback; auth account is already created.
+        }
+      }
+
+      return res.status(201).json({
+        success: true,
+        data: {
+          requiresEmailVerification: true,
+          message: 'Account created. Please verify your email before logging in.',
+          email
+        }
+      });
+    }
+
+    if (pathname === '/api/auth/login' && req.method === 'POST') {
+      if (!enforceRateLimit(res, 'authLoginIp', requestIp, 'Too many login attempts from this IP')) return;
+
+      const email = normalizeEmail(body.email);
+      const password = String(body.password || '');
+      if (!email || !password) {
+        return sendError(res, 400, 'INVALID_INPUT', 'Email and password are required');
+      }
+
+      const loginResponse = await requestSupabaseAuth('/auth/v1/token?grant_type=password', {
+        method: 'POST',
+        body: { email, password }
+      });
+
+      if (!loginResponse.ok) {
+        const message = extractSupabaseAuthErrorMessage(loginResponse.data, 'Invalid email or password');
+        const status = loginResponse.status === 429 ? 429 : 401;
+        const code = loginResponse.status === 429 ? 'RATE_LIMITED' : 'AUTH_INVALID_CREDENTIALS';
+        return sendError(res, status, code, message);
+      }
+
+      const session = loginResponse.data || {};
+      const authUser = session.user || null;
+      if (!isUserEmailVerified(authUser)) {
+        return sendError(
+          res,
+          403,
+          EMAIL_NOT_VERIFIED_CODE,
+          'Email is not verified. Please verify your email before logging in.'
+        );
+      }
+
+      const supabase = getSupabase();
+      if (supabase && authUser?.id) {
+        try {
+          await ensureUserAccountRow(supabase, authUser);
+          await ensureUserUsageRow(supabase, authUser.id);
+        } catch {
+          // Keep login flow resilient even if bootstrap update fails.
+        }
+      }
+
+      const maxAge = Math.max(Number(session.expires_in || 3600), 60);
+      const proto = String(req.headers?.['x-forwarded-proto'] || '').toLowerCase();
+      const secureAttr = proto === 'https' || String(req.headers?.origin || '').startsWith('https://') ? 'Secure; ' : '';
+      if (session.access_token) {
+        res.setHeader(
+          'Set-Cookie',
+          [
+            `sb_access_token=${encodeURIComponent(String(session.access_token))}; Path=/; HttpOnly; ${secureAttr}SameSite=Lax; Max-Age=${maxAge}`,
+            session.refresh_token
+              ? `sb_refresh_token=${encodeURIComponent(String(session.refresh_token))}; Path=/; HttpOnly; ${secureAttr}SameSite=Lax; Max-Age=${maxAge * 2}`
+              : `sb_refresh_token=; Path=/; HttpOnly; ${secureAttr}SameSite=Lax; Max-Age=0`
+          ]
+        );
+      }
+
+      return res.json({
+        success: true,
+        data: {
+          session: {
+            access_token: session.access_token,
+            refresh_token: session.refresh_token,
+            expires_in: session.expires_in,
+            expires_at: session.expires_at,
+            token_type: session.token_type,
+            user: authUser
+          }
+        }
+      });
+    }
+
+    if (pathname === '/api/auth/resend-verification' && req.method === 'POST') {
+      if (!enforceRateLimit(res, 'authResendIp', requestIp, 'Too many verification email requests')) return;
+
+      const email = normalizeEmail(body.email);
+      if (!email || !email.includes('@')) {
+        return sendError(res, 400, 'INVALID_INPUT', 'Valid email is required');
+      }
+
+      const emailRedirectTo = normalizeRedirectUrl(body.emailRedirectTo || body.redirectTo, req);
+      const resendResponse = await requestSupabaseAuth('/auth/v1/resend', {
+        method: 'POST',
+        body: {
+          type: 'signup',
+          email,
+          options: emailRedirectTo ? { emailRedirectTo } : {}
+        }
+      });
+
+      if (!resendResponse.ok && resendResponse.status !== 429) {
+        // Keep response generic to avoid account enumeration.
+        return res.json({
+          success: true,
+          data: {
+            message: 'If this email is registered, a verification message has been sent.'
+          }
+        });
+      }
+
+      if (resendResponse.status === 429) {
+        return sendError(res, 429, 'RATE_LIMITED', 'Too many resend attempts. Please try again later.');
+      }
+
+      return res.json({
+        success: true,
+        data: {
+          message: 'If this email is registered, a verification message has been sent.'
+        }
+      });
+    }
+
+    if (pathname === '/api/auth/logout' && req.method === 'POST') {
+      const proto = String(req.headers?.['x-forwarded-proto'] || '').toLowerCase();
+      const secureAttr = proto === 'https' || String(req.headers?.origin || '').startsWith('https://') ? 'Secure; ' : '';
+      res.setHeader('Set-Cookie', [
+        `sb_access_token=; Path=/; HttpOnly; ${secureAttr}SameSite=Lax; Max-Age=0`,
+        `sb_refresh_token=; Path=/; HttpOnly; ${secureAttr}SameSite=Lax; Max-Age=0`
+      ]);
+      return res.json({ success: true });
     }
 
     if (pathname === '/api/me') {
@@ -3445,6 +3906,7 @@ export default async function handler(req, res) {
       });
       const access = await getUserAccessState(supabase, user.id);
       const usage = await getFreeLinksUsage(supabase, user.id);
+      const monthlyUsage = await getUserUsageSummary(supabase, user.id);
       audit.userId = user.id;
       audit.tier = subscription.tier;
 
@@ -3463,6 +3925,11 @@ export default async function handler(req, res) {
           freePlanLimit: usage.freePlanLimit,
           freeLinksUsed: usage.freeLinksUsed,
           freeLinksRemaining: usage.freeLinksRemaining,
+          monthlyQuota: monthlyUsage.monthlyQuota,
+          usedThisMonth: monthlyUsage.usedThisMonth,
+          monthlyQuotaRemaining: monthlyUsage.remaining,
+          quotaLastResetAt: monthlyUsage.lastResetAt,
+          quotaNextResetAt: monthlyUsage.nextResetAt,
           accessStatus: access.status,
           accessReason: access.reason
         }
@@ -4208,7 +4675,7 @@ export default async function handler(req, res) {
       });
     }
 
-    if (pathname === '/api/transcript/extract') {
+    if ((pathname === '/api/transcript/extract' || pathname === '/api/transcripts/extract') && req.method === 'POST') {
       const supabase = getSupabase();
       if (!supabase) {
         return res.status(500).json({ success: false, error: 'Server not configured: SUPABASE env vars missing' });
@@ -4227,6 +4694,19 @@ export default async function handler(req, res) {
       });
       audit.userId = user.id;
       audit.tier = subscription.tier;
+      const consumeQuotaForExtraction = async () => {
+        if (subscription.tier === 'admin') {
+          return {
+            allowed: true,
+            monthlyQuota: MONTHLY_FREE_QUOTA,
+            usedThisMonth: 0,
+            remaining: MONTHLY_FREE_QUOTA,
+            lastResetAt: new Date().toISOString(),
+            nextResetAt: new Date(Date.now() + QUOTA_RESET_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString()
+          };
+        }
+        return consumeUserMonthlyQuota(supabase, user.id);
+      };
 
       const { url: videoUrl } = body;
       const parsedVideo = parseYouTubeInput(videoUrl);
@@ -4261,6 +4741,21 @@ export default async function handler(req, res) {
             .eq('user_id', user.id);
         }
         console.info(`[cache] transcript user-hit video=${videoId} user=${user.id}`);
+        const quota = await consumeQuotaForExtraction();
+        if (!quota.allowed) {
+          return sendError(
+            res,
+            403,
+            'QUOTA_EXCEEDED',
+            'Monthly transcript quota reached. Please wait for reset or upgrade your plan.',
+            {
+              monthlyQuota: quota.monthlyQuota,
+              usedThisMonth: quota.usedThisMonth,
+              remaining: quota.remaining,
+              nextResetAt: quota.nextResetAt
+            }
+          );
+        }
         return res.json({
           success: true,
           videoId,
@@ -4272,22 +4767,13 @@ export default async function handler(req, res) {
           descriptionLinks: hydratedMeta.descriptionLinks || [],
           descriptionInstructions: hydratedMeta.descriptionInstructions || [],
           creditsLeft: Number(userRow.credits || 0),
-          chargedForNewVideo: false,
+          chargedForNewVideo: true,
+          monthlyQuota: quota.monthlyQuota,
+          usedThisMonth: quota.usedThisMonth,
+          monthlyQuotaRemaining: quota.remaining,
+          quotaLastResetAt: quota.lastResetAt,
+          quotaNextResetAt: quota.nextResetAt,
           cached: true
-        });
-      }
-
-      const alreadyUnlockedForUser = await hasQuotaMarkerForVideo(supabase, user.id, videoId);
-      if (!alreadyUnlockedForUser && subscription.dailyExtractRemaining <= 0) {
-        return sendError(res, 403, 'LIMIT_EXCEEDED', 'Daily extraction limit reached for your subscription tier', {
-          tier: subscription.tier,
-          dailyLimit: subscription.dailyLimit
-        });
-      }
-      if (!alreadyUnlockedForUser && Number(userRow.credits || 0) < CREDIT_COST_PER_SUCCESS) {
-        return sendError(res, 403, 'LIMIT_EXCEEDED', 'Insufficient credits for a new video link', {
-          credits: Number(userRow.credits || 0),
-          required: CREDIT_COST_PER_SUCCESS
         });
       }
 
@@ -4423,15 +4909,24 @@ export default async function handler(req, res) {
       }
       resolvedVideoTitle = sanitizeVideoTitle(resolvedVideoTitle, videoId);
 
+      const quota = await consumeQuotaForExtraction();
+      if (!quota.allowed) {
+        return sendError(
+          res,
+          403,
+          'QUOTA_EXCEEDED',
+          'Monthly transcript quota reached. Please wait for reset or upgrade your plan.',
+          {
+            monthlyQuota: quota.monthlyQuota,
+            usedThisMonth: quota.usedThisMonth,
+            remaining: quota.remaining,
+            nextResetAt: quota.nextResetAt
+          }
+        );
+      }
+
       await saveExtractionRecord(supabase, user.id, videoId, transcript.trim(), method, resolvedVideoTitle, extractMeta);
       setCachedTranscriptInMemory(videoId, transcript.trim(), method);
-
-      let nextCredits = Number(userRow.credits || 0);
-      const chargedForNewVideo = !alreadyUnlockedForUser;
-      if (chargedForNewVideo) {
-        await addQuotaMarkerForVideo(supabase, user.id, videoId);
-        nextCredits = await consumeCredits(supabase, user.id, userRow.credits, CREDIT_COST_PER_SUCCESS);
-      }
 
       return res.json({
         success: true,
@@ -4443,10 +4938,14 @@ export default async function handler(req, res) {
         thumbnailUrl: extractMeta.thumbnailUrl || buildYouTubeThumbnailUrl(videoId),
         descriptionLinks: extractMeta.descriptionLinks || [],
         descriptionInstructions: extractMeta.descriptionInstructions || [],
-        creditsLeft: nextCredits,
-        chargedForNewVideo,
+        creditsLeft: Number(userRow.credits || 0),
+        chargedForNewVideo: true,
         subscriptionTier: subscription.tier,
-        dailyExtractRemaining: chargedForNewVideo ? Math.max(subscription.dailyExtractRemaining - 1, 0) : subscription.dailyExtractRemaining,
+        monthlyQuota: quota.monthlyQuota,
+        usedThisMonth: quota.usedThisMonth,
+        monthlyQuotaRemaining: quota.remaining,
+        quotaLastResetAt: quota.lastResetAt,
+        quotaNextResetAt: quota.nextResetAt,
         cached: fetchedFromCache
       });
     }

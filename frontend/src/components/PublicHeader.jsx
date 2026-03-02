@@ -1,10 +1,10 @@
 import { FaHome, FaMoon, FaSun } from 'react-icons/fa';
-import { LANG, langBadge, nextLang, tr } from '../utils/lang';
+import { LANG, tr } from '../utils/lang';
 
-function PublicHeader({ lang = LANG.ar, currentPath = '/', onToggleLang, onToggleTheme, theme = 'light' }) {
+function PublicHeader({ lang = LANG.ar, currentPath = '/', onLangChange, onToggleTheme, theme = 'light' }) {
   const isArabic = lang === LANG.ar;
   const isDark = theme === 'dark';
-  const nextLanguage = nextLang(lang);
+
 
   const links = [
     { href: '/pricing', label: tr(lang, 'الأسعار', 'Pricing', 'Tarification') },
@@ -78,19 +78,20 @@ function PublicHeader({ lang = LANG.ar, currentPath = '/', onToggleLang, onToggl
           >
             {isDark ? <FaSun /> : <FaMoon />}
           </button>
-
-          <button
-            type="button"
-            onClick={onToggleLang}
-            className={`rounded-xl px-3 py-1.5 border text-sm font-bold transition ${
+          <select
+            value={lang}
+            onChange={(event) => onLangChange?.(event.target.value)}
+            className={`rounded-xl px-3 py-1.5 border text-sm font-bold transition outline-none ${
               isDark
                 ? 'border-slate-700 text-slate-100 hover:bg-slate-800'
                 : 'border-slate-300 text-slate-800 hover:bg-slate-100'
             }`}
-            title={tr(lang, 'تبديل اللغة', 'Switch language', 'Changer la langue')}
+            title={tr(lang, 'Switch language', 'Switch language', 'Changer la langue')}
           >
-            {langBadge(nextLanguage)}
-          </button>
+            <option value={LANG.en}>EN</option>
+            <option value={LANG.ar}>AR</option>
+            <option value={LANG.fr}>FR</option>
+          </select>
         </div>
       </div>
     </header>
@@ -98,3 +99,4 @@ function PublicHeader({ lang = LANG.ar, currentPath = '/', onToggleLang, onToggl
 }
 
 export default PublicHeader;
+

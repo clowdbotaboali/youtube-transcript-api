@@ -29,7 +29,7 @@ import { supabase, SUPABASE_CONFIGURED } from './utils/supabase';
 import defaultApiUrl from './config';
 import { getAuthHeaders } from './utils/authHeaders';
 import { formatApiErrorMessage, parseApiError } from './utils/apiError';
-import { cleanText, LANG, langBadge, nextLang, tr } from './utils/lang';
+import { cleanText, LANG, tr } from './utils/lang';
 import {
   DEFAULT_OUTPUT_LANGUAGE,
   getOutputLanguageLabel,
@@ -69,6 +69,25 @@ const THEME = {
   dark: 'dark'
 };
 const ACCOUNT_SNAPSHOT_KEY_PREFIX = 'account-snapshot:';
+const EDGE_AUTH_COOKIE_NAME = 'sb_access_token';
+
+const clearEdgeAuthCookie = () => {
+  if (!hasWindow) return;
+  const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+  document.cookie = `${EDGE_AUTH_COOKIE_NAME}=; Path=/; Max-Age=0; SameSite=Lax${secure}`;
+};
+
+const syncEdgeAuthCookie = (session) => {
+  if (!hasWindow) return;
+  const token = String(session?.access_token || '').trim();
+  if (!token) {
+    clearEdgeAuthCookie();
+    return;
+  }
+  const maxAge = Math.max(Number(session?.expires_in || 3600), 60);
+  const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+  document.cookie = `${EDGE_AUTH_COOKIE_NAME}=${encodeURIComponent(token)}; Path=/; Max-Age=${maxAge}; SameSite=Lax${secure}`;
+};
 
 const buildFallbackVideoBrief = (titleValue, langCode) => {
   const title = cleanText(titleValue || '').trim();
@@ -101,6 +120,7 @@ const parseInstructionLines = (value) =>
     .slice(0, 12);
 
 const isLikelyArabic = (value) => /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/.test(String(value || ''));
+const isLikelyEnglish = (value) => /[A-Za-z]/.test(String(value || '')) && !isLikelyArabic(value);
 
 const readAccountSnapshot = (userId) => {
   if (!hasWindow || !userId) return null;
@@ -313,6 +333,7 @@ function App() {
     const forceLoggedOut = localStorage.getItem(LOGOUT_MARKER_KEY) === '1';
     if (forceLoggedOut) {
       localStorage.removeItem(LOGOUT_MARKER_KEY);
+      clearEdgeAuthCookie();
       setSession(null);
       setCredits(null);
       setFreeLinksRemaining(FREE_PLAN_REQUESTS);
@@ -339,12 +360,14 @@ function App() {
         if (forceLoggedOut) {
           await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
           setSession(null);
+          clearEdgeAuthCookie();
           setCredits(null);
           setAuthReady(true);
           clearTimeout(authSafetyTimer);
           return;
         }
         setSession(initialSession ?? null);
+        syncEdgeAuthCookie(initialSession ?? null);
         setAuthReady(true);
         clearTimeout(authSafetyTimer);
         if (initialSession?.user) {
@@ -363,6 +386,7 @@ function App() {
       data: { subscription }
     } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
       setSession(nextSession ?? null);
+      syncEdgeAuthCookie(nextSession ?? null);
       if (nextSession?.user) {
         setIsAuthModalOpen(false);
         await refreshAccount();
@@ -445,6 +469,28 @@ function App() {
     }
   }, [user?.id]);
 
+  useEffect(() => {
+    if (!hasWindow || !user?.id) return;
+    if (currentPath !== '/auth/callback') return;
+    const params = new URLSearchParams(window.location.search);
+    const requestedNext = String(params.get('next') || '/dashboard').trim();
+    const nextPath = requestedNext.startsWith('/') ? requestedNext : '/dashboard';
+    window.history.replaceState({}, '', nextPath);
+    setCurrentPath(nextPath);
+    if (nextPath === '/dashboard') {
+      setClientPage(CLIENT_PAGES.dashboard);
+    }
+  }, [currentPath, user?.id]);
+
+  useEffect(() => {
+    if (!hasWindow || user?.id) return;
+    const params = new URLSearchParams(window.location.search);
+    const authFlag = String(params.get('auth') || '').trim().toLowerCase();
+    if (!authFlag) return;
+    setAuthModalMode('login');
+    setIsAuthModalOpen(true);
+  }, [user?.id, currentPath]);
+
   const handleApiUrlChange = (nextApiUrl) => {
     const normalized = normalizeApiUrl(nextApiUrl);
     setApiUrl(normalized || defaultApiUrl);
@@ -459,11 +505,11 @@ function App() {
     });
   };
 
-  const toggleLang = () => {
-    const next = nextLang(lang);
-    setLang(next);
-    if (hasWindow) localStorage.setItem('appLang', next);
-  };
+  const handleLangChange = useCallback((nextLangCode) => {
+    const normalized = [LANG.en, LANG.ar, LANG.fr].includes(nextLangCode) ? nextLangCode : LANG.en;
+    setLang(normalized);
+    if (hasWindow) localStorage.setItem('appLang', normalized);
+  }, []);
 
   const toggleTheme = () => {
     setTheme((prev) => (prev === THEME.dark ? THEME.light : THEME.dark));
@@ -565,13 +611,19 @@ function App() {
       return;
     }
 
-    if (!user?.id || normalizedLang === 'en') {
+    if (!user?.id) {
       setLocalizedDescriptionInstructions(baseInstructions);
       setLocalizedDescriptionLoading(false);
       return;
     }
 
     if (normalizedLang === 'ar' && baseInstructions.every((line) => isLikelyArabic(line))) {
+      setLocalizedDescriptionInstructions(baseInstructions);
+      setLocalizedDescriptionLoading(false);
+      return;
+    }
+
+    if (normalizedLang === 'en' && baseInstructions.every((line) => isLikelyEnglish(line))) {
       setLocalizedDescriptionInstructions(baseInstructions);
       setLocalizedDescriptionLoading(false);
       return;
@@ -761,6 +813,7 @@ function App() {
   const handleLogout = async () => {
     // Force local sign-out immediately in UI and storage.
     clearSupabaseAuthStorage();
+    clearEdgeAuthCookie();
     setSession(null);
     setCredits(null);
     setFreeLinksRemaining(FREE_PLAN_REQUESTS);
@@ -789,6 +842,10 @@ function App() {
         await supabase.auth.signOut({ scope: 'global' }).catch(() => {});
         await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
       }
+      await fetch(`${apiUrl}/api/auth/logout`, {
+        method: 'POST',
+        credentials: 'include'
+      }).catch(() => {});
     } catch {
       // Intentionally ignored.
     }
@@ -827,7 +884,7 @@ function App() {
         <PublicHeader
           lang={lang}
           currentPath={currentPath}
-          onToggleLang={toggleLang}
+          onLangChange={handleLangChange}
           onToggleTheme={toggleTheme}
           theme={theme}
         />
@@ -900,17 +957,20 @@ function App() {
             >
               {theme === THEME.dark ? <FaSun /> : <FaMoon />}
             </button>
-            <button
-              onClick={toggleLang}
-              className={`px-3 py-1.5 rounded-full border text-sm font-semibold transition ${
+            <select
+              value={lang}
+              onChange={(event) => handleLangChange(event.target.value)}
+              className={`px-3 py-1.5 rounded-full border text-sm font-semibold transition outline-none ${
                 theme === THEME.dark
                   ? 'bg-slate-900 border-slate-700 text-slate-100 hover:bg-slate-800'
                   : 'bg-white/90 border-slate-300 text-slate-900 hover:bg-white'
               }`}
-              title={tr(lang, 'ØªØ¨Ø¯ÙŠÙ„ Ø§Ù„Ù„ØºØ©', 'Switch language', 'Changer la langue')}
+              title={tr(lang, 'Switch language', 'Switch language', 'Changer la langue')}
             >
-              {langBadge(nextLang(lang))}
-            </button>
+              <option value={LANG.en}>EN</option>
+              <option value={LANG.ar}>AR</option>
+              <option value={LANG.fr}>FR</option>
+            </select>
           </div>
           <ToastStack items={toasts} onDismiss={dismissToast} />
           {isAuthModalOpen && (
@@ -921,6 +981,7 @@ function App() {
               lang={lang}
               onNotify={notify}
               initialMode={authModalMode}
+              apiUrl={apiUrl}
             />
           )}
         </div>
@@ -953,7 +1014,7 @@ function App() {
           paidPlanPrice={PAID_PLAN_PRICE_USD}
           currentPage={clientPage}
           onPageChange={setClientPage}
-          onToggleLang={toggleLang}
+          onLangChange={handleLangChange}
           onToggleTheme={toggleTheme}
           onOpenSettings={canUseLocalGuide ? () => setShowSettings(true) : undefined}
           onOpenPricing={() => setIsPricingModalOpen(true)}
@@ -1009,6 +1070,7 @@ function App() {
               apiUrl={apiUrl}
               lang={lang}
               outputLang={normalizeOutputLanguage(outputLang)}
+              onOutputLangChange={(next) => setOutputLang(normalizeOutputLanguage(next))}
               accessRestrictionMessage={accountRestrictionMessage}
             />
 
@@ -1053,8 +1115,6 @@ function App() {
                   onProcess={handleProcess}
                   loading={processLoading}
                   lang={lang}
-                  outputLang={outputLang}
-                  onOutputLangChange={(next) => setOutputLang(normalizeOutputLanguage(next))}
                 />
 
                 {aiResult && (
@@ -1178,6 +1238,9 @@ function App() {
 }
 
 export default App;
+
+
+
 
 
 

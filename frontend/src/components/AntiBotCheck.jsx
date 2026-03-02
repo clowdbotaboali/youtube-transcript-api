@@ -1,0 +1,96 @@
+import { useEffect, useRef, useState } from 'react';
+
+const TURNSTILE_SCRIPT_SRC = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+let turnstileScriptPromise = null;
+
+function loadTurnstileScript() {
+  if (typeof window === 'undefined') return Promise.resolve(null);
+  if (window.turnstile) return Promise.resolve(window.turnstile);
+  if (turnstileScriptPromise) return turnstileScriptPromise;
+
+  turnstileScriptPromise = new Promise((resolve, reject) => {
+    const existing = document.querySelector('script[data-turnstile-script="1"]');
+    if (existing) {
+      existing.addEventListener('load', () => resolve(window.turnstile), { once: true });
+      existing.addEventListener('error', () => reject(new Error('Failed to load Turnstile script')), { once: true });
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = TURNSTILE_SCRIPT_SRC;
+    script.async = true;
+    script.defer = true;
+    script.setAttribute('data-turnstile-script', '1');
+    script.onload = () => resolve(window.turnstile);
+    script.onerror = () => reject(new Error('Failed to load Turnstile script'));
+    document.head.appendChild(script);
+  });
+
+  return turnstileScriptPromise;
+}
+
+function AntiBotCheck({ onTokenChange, theme = 'auto' }) {
+  const containerRef = useRef(null);
+  const widgetIdRef = useRef(null);
+  const [widgetError, setWidgetError] = useState('');
+  const siteKey = String(import.meta.env.VITE_TURNSTILE_SITE_KEY || '').trim();
+  const missingSiteKey = !siteKey;
+
+  useEffect(() => {
+    if (missingSiteKey) {
+      if (typeof onTokenChange === 'function') onTokenChange('');
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    loadTurnstileScript()
+      .then((turnstile) => {
+        if (cancelled || !containerRef.current || !turnstile?.render) return;
+        setWidgetError('');
+        widgetIdRef.current = turnstile.render(containerRef.current, {
+          sitekey: siteKey,
+          theme,
+          callback: (token) => {
+            if (typeof onTokenChange === 'function') onTokenChange(String(token || ''));
+          },
+          'expired-callback': () => {
+            if (typeof onTokenChange === 'function') onTokenChange('');
+          },
+          'error-callback': () => {
+            if (typeof onTokenChange === 'function') onTokenChange('');
+            setWidgetError('Failed to verify anti-bot challenge. Please refresh and try again.');
+          }
+        });
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setWidgetError('Could not load anti-bot widget.');
+        if (typeof onTokenChange === 'function') onTokenChange('');
+      });
+
+    return () => {
+      cancelled = true;
+      if (window.turnstile && widgetIdRef.current !== null) {
+        try {
+          window.turnstile.remove(widgetIdRef.current);
+        } catch {
+          // Ignore widget cleanup failures.
+        }
+      }
+    };
+  }, [missingSiteKey, onTokenChange, siteKey, theme]);
+
+  const displayedError = missingSiteKey
+    ? 'Turnstile site key is missing.'
+    : widgetError;
+
+  return (
+    <div className="space-y-2">
+      <div ref={containerRef} className="min-h-[65px]" />
+      {displayedError ? <p className="text-xs text-rose-600">{displayedError}</p> : null}
+    </div>
+  );
+}
+
+export default AntiBotCheck;

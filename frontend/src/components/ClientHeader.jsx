@@ -1,5 +1,5 @@
 import { FaCog, FaGem, FaHistory, FaHome, FaMagic, FaMoon, FaSignOutAlt, FaSun, FaUserCircle } from 'react-icons/fa';
-import { LANG, langBadge, nextLang, tr } from '../utils/lang';
+import { LANG, tr } from '../utils/lang';
 
 const PAGES = {
   dashboard: 'dashboard',
@@ -35,14 +35,14 @@ function ClientHeader({
   paidPlanPrice = 5,
   currentPage,
   onPageChange,
-  onToggleLang,
+  onLangChange,
   onToggleTheme,
   onOpenSettings,
   onOpenPricing,
   onLogout
 }) {
   const isDark = theme === 'dark';
-  const nextLanguage = nextLang(lang);
+
 
   return (
     <header className="rounded-2xl border border-slate-700/80 bg-[linear-gradient(160deg,#0b1224_0%,#111b34_70%,#1a2140_100%)] text-slate-100 p-4 sm:p-5 mb-4 sm:mb-6">
@@ -96,15 +96,16 @@ function ClientHeader({
           >
             {isDark ? <FaSun /> : <FaMoon />}
           </button>
-
-          <button
-            type="button"
-            onClick={onToggleLang}
-            className="rounded-xl px-3 py-2 bg-white/10 hover:bg-white/20 transition font-semibold"
-            title={tr(lang, 'تبديل اللغة', 'Switch language', 'Changer la langue')}
+          <select
+            value={lang}
+            onChange={(event) => onLangChange?.(event.target.value)}
+            className="rounded-xl px-3 py-2 bg-white/10 hover:bg-white/20 transition font-semibold border border-white/20 outline-none"
+            title={tr(lang, 'Switch language', 'Switch language', 'Changer la langue')}
           >
-            {langBadge(nextLanguage)}
-          </button>
+            <option value={LANG.en}>EN</option>
+            <option value={LANG.ar}>AR</option>
+            <option value={LANG.fr}>FR</option>
+          </select>
 
           {typeof onOpenSettings === 'function' && (
             <button
@@ -160,3 +161,5 @@ function ClientHeader({
 
 export { PAGES };
 export default ClientHeader;
+
+

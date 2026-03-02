@@ -25,8 +25,18 @@ function main() {
   const backendEnvExample = loadFile('backend/.env.example');
   const frontendEnvExample = loadFile('frontend/.env.example');
 
-  assertKeys('backend/.env.example', backendEnvExample, ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'ADMIN_TOKEN_SECRET']);
-  assertKeys('frontend/.env.example', frontendEnvExample, ['VITE_SUPABASE_URL', 'VITE_SUPABASE_ANON_KEY']);
+  assertKeys('backend/.env.example', backendEnvExample, [
+    'SUPABASE_URL',
+    'SUPABASE_SERVICE_ROLE_KEY',
+    'SUPABASE_ANON_KEY',
+    'TURNSTILE_SECRET_KEY',
+    'ADMIN_TOKEN_SECRET'
+  ]);
+  assertKeys('frontend/.env.example', frontendEnvExample, [
+    'VITE_SUPABASE_URL',
+    'VITE_SUPABASE_ANON_KEY',
+    'VITE_TURNSTILE_SITE_KEY'
+  ]);
 
   console.log('Environment example files look good.');
 }

@@ -10,21 +10,13 @@ import {
 } from 'react-icons/fa';
 import { MdCampaign, MdSummarize } from 'react-icons/md';
 import { LANG, tr } from '../utils/lang';
-import {
-  DEFAULT_OUTPUT_LANGUAGE,
-  getOutputLanguageLabel,
-  normalizeOutputLanguage,
-  OUTPUT_LANGUAGE_OPTIONS
-} from '../utils/outputLanguage';
+
 
 function ProcessingOptions({
   onProcess,
   loading,
-  lang = LANG.ar,
-  outputLang = DEFAULT_OUTPUT_LANGUAGE,
-  onOutputLangChange
+  lang = LANG.ar
 }) {
-  const selectedOutputLang = normalizeOutputLanguage(outputLang);
 
   const options = [
     {
@@ -147,30 +139,12 @@ function ProcessingOptions({
           {tr(
             lang,
             'اختر نوع المخرجات ثم اللغة التي تريد استخراج الملخصات بها.',
-            'Choose output type, then choose the language of generated summaries.',
-            'Choisissez le type de sortie puis la langue des resultats.'
+            'Choose the output type you want.',
+            'Choisissez le type de sortie souhaite.'
           )}
         </p>
       </div>
 
-      <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-3 sm:p-4">
-        <label htmlFor="output-lang" className="block text-sm font-bold text-slate-800 mb-2">
-          {tr(lang, 'لغة استخراج الملخصات', 'Summary Output Language', 'Langue de sortie des résumés')}
-        </label>
-        <select
-          id="output-lang"
-          value={selectedOutputLang}
-          onChange={(event) => onOutputLangChange?.(event.target.value)}
-          disabled={loading}
-          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:bg-slate-100"
-        >
-          {OUTPUT_LANGUAGE_OPTIONS.map((option) => (
-            <option key={option.code} value={option.code}>
-              {getOutputLanguageLabel(option.code, lang)}
-            </option>
-          ))}
-        </select>
-      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
         {options.map((option) => (
@@ -204,4 +178,5 @@ function ProcessingOptions({
 }
 
 export default ProcessingOptions;
+
 

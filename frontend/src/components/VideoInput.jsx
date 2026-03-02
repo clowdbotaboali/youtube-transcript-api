@@ -3,6 +3,7 @@ import { FaSpinner, FaYoutube } from 'react-icons/fa';
 import { getAuthHeaders } from '../utils/authHeaders';
 import { formatApiErrorMessage } from '../utils/apiError';
 import { LANG, tr } from '../utils/lang';
+import { getOutputLanguageLabel, normalizeOutputLanguage, OUTPUT_LANGUAGE_OPTIONS } from '../utils/outputLanguage';
 
 function VideoInput({
   onTranscriptExtracted,
@@ -13,6 +14,7 @@ function VideoInput({
   apiUrl,
   lang = LANG.ar,
   outputLang = 'ar',
+  onOutputLangChange,
   accessRestrictionMessage = ''
 }) {
   const [url, setUrl] = useState('');
@@ -149,6 +151,8 @@ function VideoInput({
     if (onUrlChange) onUrlChange(e.target.value);
   };
 
+  const selectedOutputLang = normalizeOutputLanguage(outputLang);
+
   return (
     <div className="bg-white rounded-lg shadow-sm p-6 mb-6" dir={lang === LANG.ar ? 'rtl' : 'ltr'}>
       <div className="flex items-center gap-2 mb-4">
@@ -159,15 +163,40 @@ function VideoInput({
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <input
-            type="text"
-            value={url}
-            onChange={handleChange}
-            placeholder={tr(lang, 'أدخل رابط الفيديو هنا...', 'Paste YouTube URL here...', 'Collez le lien video ici...')}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-            disabled={loading || Boolean(accessRestrictionMessage)}
-          />
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_220px] gap-3 items-end">
+          <div>
+            <label htmlFor="youtube-url" className="mb-1 block text-sm font-semibold text-slate-700">
+              {tr(lang, 'رابط يوتيوب', 'YouTube URL', 'URL YouTube')}
+            </label>
+            <input
+              id="youtube-url"
+              type="text"
+              value={url}
+              onChange={handleChange}
+              placeholder={tr(lang, 'أدخل رابط الفيديو هنا...', 'Paste YouTube URL here...', 'Collez le lien video ici...')}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+              disabled={loading || Boolean(accessRestrictionMessage)}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="extract-output-lang" className="mb-1 block text-sm font-semibold text-slate-700">
+              {tr(lang, 'لغة المخرجات', 'Output language', 'Langue de sortie')}
+            </label>
+            <select
+              id="extract-output-lang"
+              value={selectedOutputLang}
+              onChange={(event) => onOutputLangChange?.(event.target.value)}
+              disabled={loading || Boolean(accessRestrictionMessage)}
+              className="w-full px-3 py-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition disabled:bg-gray-100"
+            >
+              {OUTPUT_LANGUAGE_OPTIONS.map((option) => (
+                <option key={option.code} value={option.code}>
+                  {getOutputLanguageLabel(option.code, lang)}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {accessRestrictionMessage ? (
