@@ -120,7 +120,7 @@ function keyRuntimeLabel(runtimeStatus, lang) {
   const status = String(runtimeStatus || 'idle').toLowerCase();
   if (status === 'success') return tr(lang, 'ÙØ¹Ø§Ù„ Ø§Ù„Ø¢Ù†', 'Working');
   if (status === 'failure') return tr(lang, 'ÙØ´Ù„ Ø¢Ø®Ø± Ù…Ø­Ø§ÙˆÙ„Ø©', 'Last check failed');
-  return tr(lang, 'Ù„Ù… ÙŠÙØ³ØªØ®Ø¯Ù… Ø¨Ø¹Ø¯', 'Not used yet');
+  return tr(lang, 'Ù„Ù… ÙŠÙØ³ØªØ®Ø¯Ù… ÙÙŠ Ù‡Ø°Ù‡ Ø§Ù„Ø¬Ù„Ø³Ø©', 'Not used in this runtime');
 }
 
 function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) {
@@ -1241,6 +1241,13 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
                   <p><span className="font-bold">{tr(lang, 'عدد المفاتيح:', 'Keys count:')}</span> {transcriptApiMeta.keysCount}</p>
                   <p><span className="font-bold">{tr(lang, 'المفتاح الفعّال:', 'Active key:')}</span> {cleanText(transcriptApiMeta.activeKeyId) || '-'}</p>
                   <p className="text-xs text-slate-500">{tr(lang, 'آخر تحديث:', 'Last update:')} {transcriptApiMeta.updatedAt ? formatDate(transcriptApiMeta.updatedAt, lang) : '-'}</p>
+                  <p className="text-xs text-slate-500">
+                    {tr(
+                      lang,
+                      'ملاحظة: عند رجوع النتائج من الكاش لن يتم استدعاء المفتاح ولن يتغير مؤشر الاستخدام.',
+                      'Note: cache-hit results do not call provider keys, so usage indicators may stay unchanged.'
+                    )}
+                  </p>
                 </div>
 
                 <form onSubmit={addTranscriptApiKey} className="grid md:grid-cols-[1fr_1.2fr_auto] gap-2">

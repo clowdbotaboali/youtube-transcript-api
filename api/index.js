@@ -1646,6 +1646,20 @@ function getAiProviderKeyCandidates(config, provider) {
   return orderKeyCandidates(keys, activeKeyId);
 }
 
+function getActiveAiProviderKey(config, provider) {
+  const normalizedProvider = normalizeProviderName(provider);
+  const providerConfig = config?.providers?.[normalizedProvider] || {};
+  const keys = normalizeApiKeyEntries(providerConfig.keys || [], {
+    labelPrefix: `${normalizedProvider.toUpperCase()} key`,
+    idPrefix: `ai_${normalizedProvider}`
+  });
+  const activeEntry = resolveActiveKeyEntry(keys, providerConfig.activeKeyId);
+  if (!activeEntry) return null;
+  if (activeEntry.enabled === false) return null;
+  if (!String(activeEntry.apiKey || '').trim()) return null;
+  return activeEntry;
+}
+
 function defaultTranscriptApiConfig() {
   return {
     keys: [],
@@ -2117,9 +2131,9 @@ async function createMultiProviderChatCompletion({ supabase, messages, temperatu
   const config = await loadOrBootstrapAiProviderConfig(supabase);
   const provider = normalizeProviderName(config.selectedProvider);
   const model = String(config.selectedModel || defaultModelForProvider(provider)).trim() || defaultModelForProvider(provider);
-  const candidates = getAiProviderKeyCandidates(config, provider);
-  if (candidates.length === 0) {
-    throw new Error(`AI provider "${provider}" is not configured with an API key`);
+  const activeKeyEntry = getActiveAiProviderKey(config, provider);
+  if (!activeKeyEntry) {
+    throw new Error(`AI provider "${provider}" active API key is missing or disabled`);
   }
 
   const endpointByProvider = {
@@ -2127,59 +2141,53 @@ async function createMultiProviderChatCompletion({ supabase, messages, temperatu
     openrouter: 'https://openrouter.ai/api/v1',
     openai: 'https://api.openai.com/v1'
   };
-  let lastError = null;
+  const selectedKey = String(activeKeyEntry.apiKey || '').trim();
 
-  for (const keyEntry of candidates) {
-    const selectedKey = String(keyEntry.apiKey || '').trim();
-    if (!selectedKey) continue;
-    try {
-      let completion = null;
-      if (provider === 'google') {
-        completion = await requestGoogleCompletion({
-          apiKey: selectedKey,
-          model,
-          messages,
-          temperature,
-          maxTokens
-        });
-      } else if (provider === 'anthropic') {
-        completion = await requestAnthropicCompletion({
-          apiKey: selectedKey,
-          model,
-          messages,
-          temperature,
-          maxTokens
-        });
-      } else {
-        completion = await requestOpenAiCompatibleCompletion({
-          baseUrl: endpointByProvider[provider] || endpointByProvider.groq,
-          apiKey: selectedKey,
-          model,
-          messages,
-          temperature,
-          maxTokens,
-          extraHeaders:
-            provider === 'openrouter'
-              ? {
-                  'HTTP-Referer': 'https://youtube-transcript-api-lilac.vercel.app',
-                  'X-Title': 'Transcript AI'
-                }
-              : {}
-        });
-      }
-
-      recordRuntimeState('ai', provider, keyEntry.id, { success: true });
-      return completion;
-    } catch (error) {
-      lastError = error;
-      recordRuntimeState('ai', provider, keyEntry.id, {
-        success: false,
-        errorMessage: error?.message || 'AI key failed'
+  try {
+    let completion = null;
+    if (provider === 'google') {
+      completion = await requestGoogleCompletion({
+        apiKey: selectedKey,
+        model,
+        messages,
+        temperature,
+        maxTokens
+      });
+    } else if (provider === 'anthropic') {
+      completion = await requestAnthropicCompletion({
+        apiKey: selectedKey,
+        model,
+        messages,
+        temperature,
+        maxTokens
+      });
+    } else {
+      completion = await requestOpenAiCompatibleCompletion({
+        baseUrl: endpointByProvider[provider] || endpointByProvider.groq,
+        apiKey: selectedKey,
+        model,
+        messages,
+        temperature,
+        maxTokens,
+        extraHeaders:
+          provider === 'openrouter'
+            ? {
+                'HTTP-Referer': 'https://youtube-transcript-api-lilac.vercel.app',
+                'X-Title': 'Transcript AI'
+              }
+            : {}
       });
     }
-  }
 
-  throw new Error(lastError?.message || `All API keys failed for provider "${provider}"`);
+    recordRuntimeState('ai', provider, activeKeyEntry.id, { success: true });
+    return completion;
+  } catch (error) {
+    recordRuntimeState('ai', provider, activeKeyEntry.id, {
+      success: false,
+      errorMessage: error?.message || 'AI key failed'
+    });
+    throw new Error(error?.message || `Active API key failed for provider "${provider}"`);
+  }
 }
 
 async function getCachedExtractRecord(supabase, userId, videoId) {
@@ -3836,8 +3844,19 @@ export default async function handler(req, res) {
       let method = 'unknown';
       let extractMeta = parseExtractMeta(null, videoId);
 
+      if (!transcript) {
+        try {
+          transcript = await withTimeout(fetchWithTranscriptApi(parsedVideo.canonicalUrl, supabase), EXTRACTION_TIMEOUT_MS, 'Guest TranscriptAPI pipeline');
+          if (transcript && isUsableTranscript(transcript)) {
+            method = 'transcriptapi';
+          } else {
+            transcript = null;
+          }
+        } catch {}
+      }
+
       const memoryCache = getCachedTranscriptFromMemory(videoId);
-      if (memoryCache?.transcript) {
+      if (!transcript && memoryCache?.transcript) {
         transcript = memoryCache.transcript;
         method = memoryCache.method || 'memory-cache';
       }
@@ -3856,17 +3875,6 @@ export default async function handler(req, res) {
             setCachedTranscriptInMemory(videoId, transcript, method);
           }
         }
-      }
-
-      if (!transcript) {
-        try {
-          transcript = await withTimeout(fetchWithTranscriptApi(parsedVideo.canonicalUrl, supabase), EXTRACTION_TIMEOUT_MS, 'Guest TranscriptAPI pipeline');
-          if (transcript && isUsableTranscript(transcript)) {
-            method = 'transcriptapi';
-          } else {
-            transcript = null;
-          }
-        } catch {}
       }
 
       if (!transcript) {
@@ -5024,8 +5032,19 @@ export default async function handler(req, res) {
       let fetchedFromCache = false;
       let extractMeta = { ...defaultExtractMeta };
 
+      if (!transcript) {
+        try {
+          transcript = await withTimeout(fetchWithTranscriptApi(parsedVideo.canonicalUrl, supabase), EXTRACTION_TIMEOUT_MS, 'TranscriptAPI pipeline');
+          if (transcript && isUsableTranscript(transcript)) {
+            method = 'transcriptapi';
+          } else {
+            transcript = null;
+          }
+        } catch {}
+      }
+
       const memoryCache = getCachedTranscriptFromMemory(videoId);
-      if (memoryCache?.transcript) {
+      if (!transcript && memoryCache?.transcript) {
         transcript = memoryCache.transcript;
         method = memoryCache.method || 'memory-cache';
         fetchedFromCache = true;
@@ -5048,17 +5067,6 @@ export default async function handler(req, res) {
         } else {
           console.info(`[cache] transcript miss video=${videoId}`);
         }
-      }
-
-      if (!transcript) {
-        try {
-          transcript = await withTimeout(fetchWithTranscriptApi(parsedVideo.canonicalUrl, supabase), EXTRACTION_TIMEOUT_MS, 'TranscriptAPI pipeline');
-          if (transcript && isUsableTranscript(transcript)) {
-            method = 'transcriptapi';
-          } else {
-            transcript = null;
-          }
-        } catch {}
       }
 
       if (!transcript) {
