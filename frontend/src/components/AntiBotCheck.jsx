@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { LANG, tr } from '../utils/lang';
 
 const TURNSTILE_SCRIPT_SRC = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
 let turnstileScriptPromise = null;
@@ -29,7 +30,7 @@ function loadTurnstileScript() {
   return turnstileScriptPromise;
 }
 
-function AntiBotCheck({ onTokenChange, theme = 'auto' }) {
+function AntiBotCheck({ onTokenChange, theme = 'auto', lang = LANG.en }) {
   const containerRef = useRef(null);
   const widgetIdRef = useRef(null);
   const [widgetError, setWidgetError] = useState('');
@@ -65,13 +66,27 @@ function AntiBotCheck({ onTokenChange, theme = 'auto' }) {
           },
           'error-callback': () => {
             if (typeof onTokenChange === 'function') onTokenChange('');
-            setWidgetError('Failed to verify anti-bot challenge. Please refresh and try again.');
+            setWidgetError(
+              tr(
+                lang,
+                'فشل تحقق الحماية. حدّث الصفحة وحاول مرة أخرى.',
+                'Failed to verify anti-bot challenge. Please refresh and try again.',
+                'Echec de verification anti-bot. Actualisez la page puis reessayez.'
+              )
+            );
           }
         });
       })
       .catch(() => {
         if (cancelled) return;
-        setWidgetError('Could not load anti-bot widget.');
+        setWidgetError(
+          tr(
+            lang,
+            'تعذر تحميل عنصر الحماية ضد الروبوت.',
+            'Could not load anti-bot widget.',
+            "Impossible de charger le widget anti-bot."
+          )
+        );
         if (typeof onTokenChange === 'function') onTokenChange('');
       });
 
@@ -85,10 +100,15 @@ function AntiBotCheck({ onTokenChange, theme = 'auto' }) {
         }
       }
     };
-  }, [missingSiteKey, onTokenChange, siteKey, theme]);
+  }, [lang, missingSiteKey, onTokenChange, siteKey, theme]);
 
   const displayedError = missingSiteKey
-    ? 'Turnstile site key is missing.'
+    ? tr(
+        lang,
+        'إعداد Turnstile غير مكتمل: أضف VITE_TURNSTILE_SITE_KEY (أو NEXT_PUBLIC_TURNSTILE_SITE_KEY) ثم أعد النشر.',
+        'Turnstile site key is missing. Add VITE_TURNSTILE_SITE_KEY (or NEXT_PUBLIC_TURNSTILE_SITE_KEY) then redeploy.',
+        'La cle de site Turnstile est manquante. Ajoutez VITE_TURNSTILE_SITE_KEY (ou NEXT_PUBLIC_TURNSTILE_SITE_KEY) puis redeployez.'
+      )
     : widgetError;
 
   return (

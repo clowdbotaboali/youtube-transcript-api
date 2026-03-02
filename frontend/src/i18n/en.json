@@ -88,7 +88,7 @@
     },
     "pro": {
       "badge": "PRO",
-      "limit": "100 videos per day",
+      "limit": "Up to 500 videos per day",
       "price": "$5 / 200 credits",
       "features": [
         "Priority processing",

@@ -413,7 +413,7 @@ function AuthModal({ isOpen, onClose, onAuthSuccess, lang = LANG.ar, onNotify, i
                 </div>
               </div>
 
-              {!isLogin ? <AntiBotCheck onTokenChange={setTurnstileToken} /> : null}
+              {!isLogin ? <AntiBotCheck onTokenChange={setTurnstileToken} lang={lang} /> : null}
 
               <button
                 type="submit"
