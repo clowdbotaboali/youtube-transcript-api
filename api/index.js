@@ -100,6 +100,16 @@ const STATUS_DEFAULT_ERROR_CODE = {
   429: 'RATE_LIMITED',
   500: 'INTERNAL_ERROR'
 };
+const SUPABASE_URL_ENV_KEYS = ['SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_URL', 'VITE_SUPABASE_URL'];
+const SUPABASE_SERVICE_KEY_ENV_KEYS = ['SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_SECRET_KEY'];
+const SUPABASE_PUBLIC_KEY_ENV_KEYS = [
+  'SUPABASE_ANON_KEY',
+  'SUPABASE_PUBLISHABLE_KEY',
+  'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+  'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY',
+  'VITE_SUPABASE_ANON_KEY',
+  'VITE_SUPABASE_PUBLISHABLE_KEY'
+];
 const ENV_VALIDATION = validateEnvironment();
 
 const rateLimitStore = {
@@ -120,10 +130,16 @@ const apiKeyRuntimeState = {
 };
 
 function validateEnvironment() {
-  const required = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'];
-  const recommended = ['SUPABASE_ANON_KEY', 'TURNSTILE_SECRET_KEY', 'ADMIN_TOKEN_SECRET'];
-  const missingRequired = required.filter((name) => !String(process.env[name] || '').trim());
-  const missingRecommended = recommended.filter((name) => !String(process.env[name] || '').trim());
+  const missingRequired = [];
+  const missingRecommended = [];
+
+  if (!getSupabaseBaseUrl()) missingRequired.push('SUPABASE_URL');
+  if (!getSupabaseServiceKey()) missingRequired.push('SUPABASE_SERVICE_ROLE_KEY');
+
+  if (!getSupabasePublicKey()) missingRecommended.push('SUPABASE_ANON_KEY');
+  if (!String(process.env.TURNSTILE_SECRET_KEY || '').trim()) missingRecommended.push('TURNSTILE_SECRET_KEY');
+  if (!String(process.env.ADMIN_TOKEN_SECRET || '').trim()) missingRecommended.push('ADMIN_TOKEN_SECRET');
+
   if (missingRequired.length > 0) {
     console.error(`[env] Missing required environment variables: ${missingRequired.join(', ')}`);
   }
@@ -135,6 +151,26 @@ function validateEnvironment() {
     missingRequired,
     missingRecommended
   };
+}
+
+function readEnvFirst(keys = []) {
+  for (const key of keys) {
+    const value = String(process.env[key] || '').trim();
+    if (value) return value;
+  }
+  return '';
+}
+
+function getSupabaseBaseUrl() {
+  return readEnvFirst(SUPABASE_URL_ENV_KEYS).replace(/\/+$/, '');
+}
+
+function getSupabaseServiceKey() {
+  return readEnvFirst(SUPABASE_SERVICE_KEY_ENV_KEYS);
+}
+
+function getSupabasePublicKey() {
+  return readEnvFirst(SUPABASE_PUBLIC_KEY_ENV_KEYS);
 }
 
 function withTimeout(promise, ms, label = 'Operation') {
@@ -166,8 +202,8 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 10000, label = 'F
 
 function getSupabase() {
   if (supabaseClient) return supabaseClient;
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const url = getSupabaseBaseUrl();
+  const key = getSupabaseServiceKey();
   if (!url || !key) return null;
   supabaseClient = createClient(url, key);
   return supabaseClient;
@@ -193,11 +229,11 @@ function getGroqApiKey() {
 }
 
 function getSupabaseAnonKey() {
-  return String(process.env.SUPABASE_ANON_KEY || '').trim();
+  return getSupabasePublicKey();
 }
 
 async function requestSupabaseAuth(path, { method = 'POST', body, accessToken } = {}) {
-  const baseUrl = String(process.env.SUPABASE_URL || '').trim().replace(/\/+$/, '');
+  const baseUrl = getSupabaseBaseUrl();
   const anonKey = getSupabaseAnonKey();
   if (!baseUrl || !anonKey) {
     throw new Error('Server not configured: SUPABASE_URL / SUPABASE_ANON_KEY missing');
@@ -803,8 +839,8 @@ function getPathname(url) {
 }
 
 function getSupabaseEnv() {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const url = getSupabaseBaseUrl();
+  const key = getSupabaseServiceKey();
   if (!url || !key) {
     throw new Error('Server not configured: SUPABASE env vars missing');
   }

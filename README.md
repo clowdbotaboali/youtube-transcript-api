@@ -48,10 +48,11 @@ The platform supports:
 
 ### Backend / Vercel (`api/index.js`)
 Required:
-- `SUPABASE_URL`
-- `SUPABASE_SERVICE_ROLE_KEY`
+- `SUPABASE_URL` (or `NEXT_PUBLIC_SUPABASE_URL` / `VITE_SUPABASE_URL`)
+- `SUPABASE_SERVICE_ROLE_KEY` (or `SUPABASE_SECRET_KEY`)
 
 Recommended:
+- `SUPABASE_ANON_KEY` (or `SUPABASE_PUBLISHABLE_KEY`, plus `NEXT_PUBLIC_*` / `VITE_*` aliases)
 - `ADMIN_TOKEN_SECRET`
 
 Optional:
