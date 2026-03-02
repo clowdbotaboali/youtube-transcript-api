@@ -1,0 +1,130 @@
+{
+  "brand": {
+    "name": "TRANSCRIPT AI",
+    "tagline": "Transcript + Summary + Action Steps from YouTube videos"
+  },
+  "nav": {
+    "pricing": "Pricing",
+    "signIn": "Sign In",
+    "dashboard": "Dashboard",
+    "themeToggle": "Toggle theme",
+    "language": "Language"
+  },
+  "hero": {
+    "kicker": "Structured Video Notes",
+    "headline": "Turn any YouTube video into structured notes in minutes.",
+    "subheadline": "Transcript + Summary + Action Steps in one place for lectures, courses, and long-form content.",
+    "inputLabel": "Paste a YouTube URL",
+    "inputPlaceholder": "https://www.youtube.com/watch?v=...",
+    "primaryCta": "Try 1 Video Free",
+    "secondaryCta": "Get My Transcript",
+    "helper": "Your first extraction works without signup. After the result, create a free account to continue.",
+    "errors": {
+      "empty": "Please paste a YouTube URL first.",
+      "invalid": "This does not look like a valid YouTube URL."
+    },
+    "quickPoints": [
+      "Perfect for lectures, courses, and research videos.",
+      "Get clean notes you can read, reuse, and share.",
+      "Save hours every week with structured output."
+    ]
+  },
+  "guest": {
+    "loading": "Extracting your transcript...",
+    "resultBadge": "First free result",
+    "videoTitle": "Video title",
+    "transcriptPreview": "Transcript preview",
+    "summaryPreview": "Quick summary",
+    "wordCount": "Word count",
+    "signupPrompt": "You have unlocked your first result. Create a free account to keep extracting, summarizing, and generating action steps.",
+    "quotaReached": "Your free guest extraction is already used. Create a free account to continue.",
+    "failed": "Transcript extraction failed. Please try another video.",
+    "createAccount": "Create Free Account",
+    "haveAccount": "I already have an account"
+  },
+  "trust": {
+    "title": "Why choose Transcript AI?",
+    "items": [
+      {
+        "title": "Faster than manual copy-paste",
+        "text": "Skip repetitive note-taking and get structured output in minutes."
+      },
+      {
+        "title": "Clean structured output",
+        "text": "Transcript, summary, and action steps are organized for instant use."
+      },
+      {
+        "title": "Works for lectures and courses",
+        "text": "Designed for educational and long-form video workflows."
+      },
+      {
+        "title": "Saves hours every week",
+        "text": "Convert long watch time into actionable notes fast."
+      }
+    ],
+    "stats": [
+      {
+        "value": "1,000+",
+        "label": "transcripts generated"
+      },
+      {
+        "value": "Students & creators",
+        "label": "using Transcript AI"
+      }
+    ]
+  },
+  "pricing": {
+    "title": "Simple pricing for consistent output",
+    "subtitle": "Start free, then upgrade when you need higher daily capacity.",
+    "free": {
+      "badge": "FREE",
+      "limit": "5 videos per day",
+      "features": [
+        "Transcript",
+        "Summary",
+        "Action steps"
+      ],
+      "button": "Start Free"
+    },
+    "pro": {
+      "badge": "PRO",
+      "limit": "100 videos per day",
+      "price": "$5 / 200 credits",
+      "features": [
+        "Priority processing",
+        "Future features included",
+        "Manual upgrade available"
+      ],
+      "button": "Upgrade to Pro"
+    }
+  },
+  "faq": {
+    "title": "Frequently asked questions",
+    "items": [
+      {
+        "q": "Is this official YouTube?",
+        "a": "No. Transcript AI is an independent productivity tool that processes public YouTube links."
+      },
+      {
+        "q": "Is it free?",
+        "a": "Yes, you can try one video for free as a guest, then continue with a free account plan."
+      },
+      {
+        "q": "How does credit work?",
+        "a": "Each new extracted video consumes credits based on your plan. Paid top-up starts at $5 for 200 credits."
+      },
+      {
+        "q": "Do I need an account?",
+        "a": "Not for your first guest extraction. You need an account to continue usage and save your history."
+      },
+      {
+        "q": "Is my data stored?",
+        "a": "We store only what is needed to run and secure the service. We do not store original video files."
+      }
+    ]
+  },
+  "finalCta": {
+    "headline": "Stop wasting time rewatching videos. Start extracting insights now.",
+    "button": "Create Free Account"
+  }
+}

@@ -1,0 +1,130 @@
+{
+  "brand": {
+    "name": "TRANSCRIPT AI",
+    "tagline": "Transcription + Resume + Etapes d'action depuis YouTube"
+  },
+  "nav": {
+    "pricing": "Tarification",
+    "signIn": "Connexion",
+    "dashboard": "Tableau de bord",
+    "themeToggle": "Basculer le theme",
+    "language": "Langue"
+  },
+  "hero": {
+    "kicker": "Notes video structurees",
+    "headline": "Transformez n'importe quelle video YouTube en notes structurees en quelques minutes.",
+    "subheadline": "Transcription + Resume + Etapes d'action au meme endroit pour les cours, formations et videos longues.",
+    "inputLabel": "Collez une URL YouTube",
+    "inputPlaceholder": "https://www.youtube.com/watch?v=...",
+    "primaryCta": "Essayez 1 video gratuitement",
+    "secondaryCta": "Commencer gratuitement",
+    "helper": "Votre premiere extraction fonctionne sans inscription. Apres le resultat, creez un compte gratuit pour continuer.",
+    "errors": {
+      "empty": "Collez d'abord une URL YouTube.",
+      "invalid": "Ce lien ne ressemble pas a une URL YouTube valide."
+    },
+    "quickPoints": [
+      "Ideal pour les cours, formations et videos educatives longues.",
+      "Sortie propre, lisible et facile a partager.",
+      "Gagnez des heures chaque semaine."
+    ]
+  },
+  "guest": {
+    "loading": "Extraction en cours...",
+    "resultBadge": "Premier resultat gratuit",
+    "videoTitle": "Titre de la video",
+    "transcriptPreview": "Apercu de la transcription",
+    "summaryPreview": "Resume rapide",
+    "wordCount": "Nombre de mots",
+    "signupPrompt": "Votre premier resultat est pret. Creez un compte gratuit pour continuer les extractions, resumes et etapes d'action.",
+    "quotaReached": "Votre extraction gratuite invite est deja utilisee. Creez un compte gratuit pour continuer.",
+    "failed": "Echec de l'extraction. Essayez une autre video.",
+    "createAccount": "Creer un compte gratuit",
+    "haveAccount": "J'ai deja un compte"
+  },
+  "trust": {
+    "title": "Pourquoi choisir Transcript AI ?",
+    "items": [
+      {
+        "title": "Plus rapide que le copier-coller manuel",
+        "text": "Evitez la prise de notes repetitive et obtenez une sortie structuree en quelques minutes."
+      },
+      {
+        "title": "Sortie propre et structuree",
+        "text": "Transcription, resume et etapes d'action organises pour une utilisation immediate."
+      },
+      {
+        "title": "Ideal pour cours et formations",
+        "text": "Concu pour les flux de travail educatifs et les contenus longs."
+      },
+      {
+        "title": "Economise des heures chaque semaine",
+        "text": "Transformez un long temps de visionnage en notes actionnables."
+      }
+    ],
+    "stats": [
+      {
+        "value": "1 000+",
+        "label": "transcriptions generees"
+      },
+      {
+        "value": "Etudiants et createurs",
+        "label": "utilisent Transcript AI"
+      }
+    ]
+  },
+  "pricing": {
+    "title": "Une tarification simple et evolutive",
+    "subtitle": "Commencez gratuitement puis passez au niveau superieur selon votre volume quotidien.",
+    "free": {
+      "badge": "GRATUIT",
+      "limit": "5 videos par jour",
+      "features": [
+        "Transcription",
+        "Resume",
+        "Etapes d'action"
+      ],
+      "button": "Demarrer gratuitement"
+    },
+    "pro": {
+      "badge": "PRO",
+      "limit": "100 videos par jour",
+      "price": "$5 / 200 credits",
+      "features": [
+        "Traitement prioritaire",
+        "Fonctionnalites futures incluses",
+        "Mise a niveau manuelle disponible"
+      ],
+      "button": "Passer a Pro"
+    }
+  },
+  "faq": {
+    "title": "Questions frequentes",
+    "items": [
+      {
+        "q": "Est-ce un service officiel YouTube ?",
+        "a": "Non. Transcript AI est un outil de productivite independant qui traite les liens YouTube publics."
+      },
+      {
+        "q": "Est-ce gratuit ?",
+        "a": "Oui, vous pouvez essayer une video gratuitement en mode invite, puis continuer avec un compte gratuit."
+      },
+      {
+        "q": "Comment fonctionnent les credits ?",
+        "a": "Chaque nouvelle video extraite consomme des credits selon votre plan. La recharge commence a 5 $ pour 200 credits."
+      },
+      {
+        "q": "Ai-je besoin d'un compte ?",
+        "a": "Pas pour la premiere extraction invite. Un compte est requis pour continuer et sauvegarder l'historique."
+      },
+      {
+        "q": "Mes donnees sont-elles stockees ?",
+        "a": "Nous stockons uniquement les donnees necessaires au fonctionnement et a la securite du service. Les fichiers video originaux ne sont pas stockes."
+      }
+    ]
+  },
+  "finalCta": {
+    "headline": "Arretez de revoir les videos. Extrayez les idees maintenant.",
+    "button": "Creer un compte gratuit"
+  }
+}

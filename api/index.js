@@ -44,6 +44,8 @@ const PAYMENT_PROOF_BUCKET = process.env.PAYMENT_PROOF_BUCKET || 'payment-proofs
 const MAX_PAYMENT_PROOF_BYTES = 3 * 1024 * 1024;
 const TRANSCRIPT_GLOBAL_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const TRANSCRIPT_MEMORY_CACHE_MAX_ITEMS = 300;
+const GUEST_EXTRACT_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+const GUEST_EXTRACT_LIMIT_PER_TOKEN = 1;
 const VIDEO_ID_REGEX = /^[A-Za-z0-9_-]{11}$/;
 const PRO_SUBSCRIPTION_DAYS = 30;
 const DEFAULT_OUTPUT_LANG = 'ar';
@@ -80,6 +82,7 @@ const RATE_LIMIT_RULES = {
   authSignupIp: { limit: 3, windowMs: 30 * 24 * 60 * 60 * 1000 },
   authLoginIp: { limit: 10, windowMs: 10 * 60 * 1000 },
   authResendIp: { limit: 6, windowMs: 10 * 60 * 1000 },
+  guestExtractIp: { limit: 6, windowMs: 10 * 60 * 1000 },
   transcriptByUser: { limit: 40, windowMs: 60 * 1000 },
   aiByUser: { limit: 45, windowMs: 60 * 1000 },
   chatByUser: { limit: 80, windowMs: 60 * 1000 },
@@ -118,12 +121,14 @@ const rateLimitStore = {
   authSignupIp: new Map(),
   authLoginIp: new Map(),
   authResendIp: new Map(),
+  guestExtractIp: new Map(),
   transcriptByUser: new Map(),
   aiByUser: new Map(),
   chatByUser: new Map(),
   genericByUser: new Map()
 };
 const transcriptMemoryCache = new Map();
+const guestExtractUsage = new Map();
 const apiKeyRuntimeState = {
   ai: new Map(),
   transcript: new Map()
@@ -3261,6 +3266,63 @@ function setCachedTranscriptInMemory(videoId, transcript, method) {
   }
 }
 
+function normalizeGuestToken(value) {
+  const token = String(value || '').trim();
+  if (!token) return '';
+  if (!/^[A-Za-z0-9_-]{24,120}$/.test(token)) return '';
+  return token;
+}
+
+function pruneGuestExtractUsage(now = Date.now()) {
+  for (const [token, record] of guestExtractUsage.entries()) {
+    if (!record || typeof record !== 'object') {
+      guestExtractUsage.delete(token);
+      continue;
+    }
+    if (Number(record.lastUsedAt || 0) + GUEST_EXTRACT_TOKEN_TTL_MS <= now) {
+      guestExtractUsage.delete(token);
+    }
+  }
+}
+
+function getGuestExtractStatus(rawToken) {
+  const token = normalizeGuestToken(rawToken);
+  if (!token) {
+    return {
+      token: '',
+      allowed: false,
+      used: 0,
+      remaining: 0
+    };
+  }
+
+  const now = Date.now();
+  if (guestExtractUsage.size > 10000) {
+    pruneGuestExtractUsage(now);
+  }
+
+  const record = guestExtractUsage.get(token);
+  const used = Math.max(Number(record?.used || 0), 0);
+  return {
+    token,
+    allowed: used < GUEST_EXTRACT_LIMIT_PER_TOKEN,
+    used,
+    remaining: Math.max(GUEST_EXTRACT_LIMIT_PER_TOKEN - used, 0)
+  };
+}
+
+function markGuestExtractUsed(rawToken) {
+  const token = normalizeGuestToken(rawToken);
+  if (!token) return;
+  const now = Date.now();
+  const current = guestExtractUsage.get(token);
+  const nextUsed = Math.max(Number(current?.used || 0), 0) + 1;
+  guestExtractUsage.set(token, {
+    used: nextUsed,
+    lastUsedAt: now
+  });
+}
+
 function isMissingRelationError(error) {
   if (!error || typeof error !== 'object') return false;
   const code = String(error.code || '').trim();
@@ -3742,6 +3804,150 @@ export default async function handler(req, res) {
   try {
     if (pathname === '/api/settings/status') {
       return res.json({ success: true, managedInBackend: true });
+    }
+
+    if (pathname === '/api/public/transcript/extract' && req.method === 'POST') {
+      if (!enforceRateLimit(res, 'guestExtractIp', requestIp, 'Too many guest extraction attempts from this IP')) return;
+
+      const guestStatus = getGuestExtractStatus(body.guestToken || body.guest_token);
+      if (!guestStatus.token) {
+        return sendError(res, 400, 'INVALID_GUEST_TOKEN', 'Guest token is required');
+      }
+      if (!guestStatus.allowed) {
+        return sendError(res, 403, 'GUEST_LIMIT_REACHED', 'Guest free extraction limit reached. Please create a free account to continue.');
+      }
+
+      const supabase = getSupabase();
+      const { url: videoUrl } = body;
+      const parsedVideo = parseYouTubeInput(videoUrl);
+      if (!parsedVideo.ok) {
+        return sendError(
+          res,
+          400,
+          parsedVideo.code === 'INVALID_VIDEO_ID' ? 'INVALID_VIDEO_ID' : 'INVALID_INPUT',
+          parsedVideo.message
+        );
+      }
+
+      const videoId = parsedVideo.videoId;
+      audit.tier = 'guest';
+      audit.videoId = videoId;
+      let transcript = null;
+      let method = 'unknown';
+      let extractMeta = parseExtractMeta(null, videoId);
+
+      const memoryCache = getCachedTranscriptFromMemory(videoId);
+      if (memoryCache?.transcript) {
+        transcript = memoryCache.transcript;
+        method = memoryCache.method || 'memory-cache';
+      }
+
+      if (!transcript && supabase) {
+        const globalCache = await getRecentGlobalExtractRecord(supabase, videoId, TRANSCRIPT_GLOBAL_CACHE_TTL_MS);
+        if (globalCache?.transcript) {
+          transcript = String(globalCache.transcript || '').trim();
+          const globalMeta = parseExtractMeta(globalCache.ai_result, videoId);
+          method = globalMeta.method || 'global-db-cache';
+          extractMeta = {
+            ...extractMeta,
+            ...globalMeta
+          };
+          if (transcript) {
+            setCachedTranscriptInMemory(videoId, transcript, method);
+          }
+        }
+      }
+
+      if (!transcript) {
+        try {
+          transcript = await withTimeout(fetchWithTranscriptApi(parsedVideo.canonicalUrl, supabase), EXTRACTION_TIMEOUT_MS, 'Guest TranscriptAPI pipeline');
+          if (transcript && isUsableTranscript(transcript)) {
+            method = 'transcriptapi';
+          } else {
+            transcript = null;
+          }
+        } catch {}
+      }
+
+      if (!transcript) {
+        try {
+          transcript = await withTimeout(fetchWithYtdl(videoId), EXTRACTION_TIMEOUT_MS, 'Guest ytdl pipeline');
+          if (transcript && isUsableTranscript(transcript)) {
+            method = 'ytdl-core';
+          } else {
+            transcript = null;
+          }
+        } catch {}
+      }
+
+      if (!transcript) {
+        try {
+          const data = await withTimeout(
+            YoutubeTranscript.fetchTranscript(videoId, { lang: 'ar' }),
+            EXTRACTION_TIMEOUT_MS,
+            'Guest youtube-transcript ar'
+          );
+          if (data?.length) {
+            const candidate = data.map((item) => item.text).join(' ').trim();
+            if (isUsableTranscript(candidate)) {
+              transcript = candidate;
+              method = 'youtube-transcript-ar';
+            }
+          }
+        } catch {}
+      }
+
+      if (!transcript) {
+        try {
+          const data = await withTimeout(
+            YoutubeTranscript.fetchTranscript(videoId, { lang: 'en' }),
+            EXTRACTION_TIMEOUT_MS,
+            'Guest youtube-transcript en'
+          );
+          if (data?.length) {
+            const candidate = data.map((item) => item.text).join(' ').trim();
+            if (isUsableTranscript(candidate)) {
+              transcript = candidate;
+              method = 'youtube-transcript-en';
+            }
+          }
+        } catch {}
+      }
+
+      if (!transcript) {
+        return sendError(
+          res,
+          400,
+          'TRANSCRIPT_UNAVAILABLE',
+          'No transcript is available for this video (captions unavailable or unsupported).'
+        );
+      }
+
+      transcript = String(transcript || '').trim();
+      setCachedTranscriptInMemory(videoId, transcript, method);
+
+      const metadata = await fetchYouTubeVideoMetadata(videoId, extractMeta.videoTitle || videoId);
+      extractMeta = {
+        ...extractMeta,
+        ...metadata,
+        method
+      };
+
+      markGuestExtractUsed(guestStatus.token);
+
+      return res.json({
+        success: true,
+        guest: true,
+        videoId,
+        videoTitle: sanitizeVideoTitle(extractMeta.title || extractMeta.videoTitle || '', videoId),
+        transcript,
+        wordCount: transcript.split(/\s+/).length,
+        method,
+        thumbnailUrl: extractMeta.thumbnailUrl || buildYouTubeThumbnailUrl(videoId),
+        descriptionLinks: Array.isArray(extractMeta.descriptionLinks) ? extractMeta.descriptionLinks.slice(0, 20) : [],
+        descriptionInstructions: Array.isArray(extractMeta.descriptionInstructions) ? extractMeta.descriptionInstructions.slice(0, 10) : [],
+        guestRemaining: Math.max(guestStatus.remaining - 1, 0)
+      });
     }
 
     if (pathname === '/api/auth/signup' && req.method === 'POST') {

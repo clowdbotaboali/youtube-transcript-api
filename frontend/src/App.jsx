@@ -971,6 +971,7 @@ function App() {
           onLangChange={handleLangChange}
           onToggleTheme={toggleTheme}
           theme={theme}
+          isAuthenticated={Boolean(user)}
         />
         <div className="flex-1">{renderStaticRoute()}</div>
         <SiteFooter lang={lang} theme={theme} />
@@ -1034,6 +1035,7 @@ function App() {
             theme={theme}
             onLangChange={handleLangChange}
             onToggleTheme={toggleTheme}
+            apiUrl={apiUrl}
           />
           <ToastStack items={toasts} onDismiss={dismissToast} />
           {isAuthModalOpen && (

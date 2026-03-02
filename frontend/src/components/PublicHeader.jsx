@@ -1,18 +1,18 @@
-import { FaHome, FaMoon, FaSun } from 'react-icons/fa';
+import { FaMoon, FaSun } from 'react-icons/fa';
 import { LANG, tr } from '../utils/lang';
 
-function PublicHeader({ lang = LANG.ar, currentPath = '/', onLangChange, onToggleTheme, theme = 'light' }) {
+function PublicHeader({
+  lang = LANG.ar,
+  currentPath = '/',
+  onLangChange,
+  onToggleTheme,
+  theme = 'light',
+  isAuthenticated = false
+}) {
   const isArabic = lang === LANG.ar;
   const isDark = theme === 'dark';
-
-
-  const links = [
-    { href: '/pricing', label: tr(lang, 'الأسعار', 'Pricing', 'Tarification') },
-    { href: '/privacy-policy', label: tr(lang, 'سياسة الخصوصية', 'Privacy Policy', 'Politique de confidentialite') },
-    { href: '/terms', label: tr(lang, 'الشروط', 'Terms', 'Conditions') },
-    { href: '/refund-policy', label: tr(lang, 'سياسة الاسترجاع', 'Refund Policy', 'Politique de remboursement') },
-    { href: '/contact', label: tr(lang, 'تواصل', 'Contact', 'Contact') }
-  ];
+  const pricingHref = '/#landing-pricing';
+  const accountHref = isAuthenticated ? '/' : '/?auth=login';
 
   return (
     <header
@@ -21,70 +21,53 @@ function PublicHeader({ lang = LANG.ar, currentPath = '/', onLangChange, onToggl
       }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3" dir={isArabic ? 'rtl' : 'ltr'}>
-        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-          <a href="/" className="font-black tracking-wide whitespace-nowrap">TRANSCRIPT AI</a>
-          <span className={`hidden sm:inline text-xs truncate ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-            {tr(
-              lang,
-              'خدمة رقمية لاستخراج النص من الفيديو',
-              'Digital transcript generation service',
-              'Service numerique de generation de transcription'
-            )}
-          </span>
-        </div>
+        <a href="/" className="font-black tracking-wide whitespace-nowrap">
+          TRANSCRIPT AI
+        </a>
 
-        <div className="flex items-center gap-1.5 sm:gap-2">
-          {currentPath !== '/' && (
-            <a
-              href="/"
-              className={`inline-flex items-center gap-2 rounded-xl px-3 py-1.5 text-sm font-bold transition ${
-                isDark ? 'bg-cyan-500 text-slate-950 hover:bg-cyan-400' : 'bg-slate-900 text-white hover:bg-slate-800'
-              }`}
-            >
-              <FaHome />
-              <span>{tr(lang, 'الرئيسية', 'Home', 'Accueil')}</span>
-            </a>
-          )}
+        <div className="flex items-center gap-2">
+          <a
+            href={pricingHref}
+            className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition ${
+              currentPath === '/pricing'
+                ? isDark
+                  ? 'bg-cyan-500/20 text-cyan-200'
+                  : 'bg-cyan-100 text-cyan-800'
+                : isDark
+                  ? 'text-slate-200 hover:bg-slate-800'
+                  : 'text-slate-700 hover:bg-slate-100'
+            }`}
+          >
+            {tr(lang, 'الأسعار', 'Pricing', 'Tarification')}
+          </a>
 
-          <nav className="flex items-center gap-2 max-w-[46vw] overflow-x-auto scrollbar-thin">
-            {links.map((item) => (
-              <a
-                key={item.href}
-                href={item.href}
-                className={`rounded-lg px-2.5 py-1.5 text-sm transition ${
-                  currentPath === item.href
-                    ? isDark
-                      ? 'bg-cyan-500/20 text-cyan-200 font-bold'
-                      : 'bg-cyan-100 text-cyan-800 font-bold'
-                    : isDark
-                      ? 'text-slate-200 hover:bg-slate-800'
-                      : 'text-slate-700 hover:bg-slate-100'
-                }`}
-              >
-                {item.label}
-              </a>
-            ))}
-          </nav>
+          <a
+            href={accountHref}
+            className={`rounded-lg px-3 py-1.5 text-sm font-bold transition ${
+              isDark ? 'border border-slate-700 text-slate-100 hover:bg-slate-800' : 'border border-slate-300 text-slate-800 hover:bg-slate-100'
+            }`}
+          >
+            {isAuthenticated
+              ? tr(lang, 'لوحة العميل', 'Dashboard', 'Tableau de bord')
+              : tr(lang, 'تسجيل دخول', 'Sign in', 'Connexion')}
+          </a>
 
           <button
             type="button"
             onClick={onToggleTheme}
             className={`rounded-xl p-2.5 border transition ${
-              isDark
-                ? 'border-slate-700 text-amber-300 hover:bg-slate-800'
-                : 'border-slate-300 text-slate-800 hover:bg-slate-100'
+              isDark ? 'border-slate-700 text-amber-300 hover:bg-slate-800' : 'border-slate-300 text-slate-800 hover:bg-slate-100'
             }`}
-            title={tr(lang, 'تبديل الوضع الليلي/النهاري', 'Toggle dark/light mode', 'Basculer mode sombre/clair')}
+            title={tr(lang, 'تبديل الوضع', 'Toggle dark/light mode', 'Basculer mode sombre/clair')}
           >
             {isDark ? <FaSun /> : <FaMoon />}
           </button>
+
           <select
             value={lang}
             onChange={(event) => onLangChange?.(event.target.value)}
             className={`rounded-xl px-3 py-1.5 border text-sm font-bold transition outline-none ${
-              isDark
-                ? 'border-slate-700 text-slate-100 hover:bg-slate-800'
-                : 'border-slate-300 text-slate-800 hover:bg-slate-100'
+              isDark ? 'border-slate-700 text-slate-100 hover:bg-slate-800' : 'border-slate-300 text-slate-800 hover:bg-slate-100'
             }`}
             title={tr(lang, 'Switch language', 'Switch language', 'Changer la langue')}
           >
