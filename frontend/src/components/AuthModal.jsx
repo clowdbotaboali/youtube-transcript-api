@@ -16,6 +16,33 @@ function GoogleBrandIcon() {
   );
 }
 
+function pickSupabasePublicKey() {
+  return String(
+    import.meta.env.VITE_SUPABASE_ANON_KEY ||
+      import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+      import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+      import.meta.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+      ''
+  ).trim();
+}
+
+function ensureOAuthApiKey(redirectUrl) {
+  const raw = String(redirectUrl || '').trim();
+  if (!raw) return '';
+  const key = pickSupabasePublicKey();
+  if (!key) return raw;
+  try {
+    const parsed = new URL(raw);
+    if (!/\/auth\/v1\/authorize$/i.test(parsed.pathname)) return raw;
+    if (!parsed.searchParams.get('apikey')) {
+      parsed.searchParams.set('apikey', key);
+    }
+    return parsed.toString();
+  } catch {
+    return raw;
+  }
+}
+
 function AuthModal({ isOpen, onClose, onAuthSuccess, lang = LANG.ar, onNotify, initialMode = 'login', apiUrl }) {
   const [isLogin, setIsLogin] = useState(initialMode !== 'signup');
   const [email, setEmail] = useState('');
@@ -150,7 +177,7 @@ function AuthModal({ isOpen, onClose, onAuthSuccess, lang = LANG.ar, onNotify, i
           )
         );
       }
-      window.location.assign(redirectUrl);
+      window.location.assign(ensureOAuthApiKey(redirectUrl));
     } catch (err) {
       setError(mapAuthError(err));
       setGoogleLoading(false);
