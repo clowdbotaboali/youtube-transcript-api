@@ -29,8 +29,8 @@ const FR_MAP = {
   Users: 'Utilisateurs',
   Payments: 'Paiements',
   'Admin Panel': 'Panneau admin',
-  'Admin Login | Transcript AI': 'Connexion admin | Transcript AI',
-  'Admin Panel | Transcript AI': 'Panneau admin | Transcript AI',
+  'Admin Login | Transcripta AI': 'Connexion admin | Transcripta AI',
+  'Admin Panel | Transcripta AI': 'Panneau admin | Transcripta AI',
   'Admin panel login.': "Connexion au panneau d'administration.",
   'Control panel sign in': 'Connexion au panneau de contrôle',
   Admin: 'Admin',
@@ -196,18 +196,18 @@ const FR_MAP = {
   'Failed to save result.': "Échec de l'enregistrement du résultat.",
   'Signed in successfully.': 'Connexion réussie.',
   'Signed out successfully.': 'Déconnexion réussie.',
-  'Pricing | Transcript AI': 'Tarification | Transcript AI',
-  'Pricing plans for Transcript AI digital transcript generation service.':
-    'Plans tarifaires pour le service numérique Transcript AI.',
-  'Transcript AI is a digital transcript generation service. Payments are for service access only.':
-    "Transcript AI est un service numérique de génération de transcriptions. Les paiements couvrent uniquement l'accès au service.",
+  'Pricing | Transcripta AI': 'Tarification | Transcripta AI',
+  'Pricing plans for Transcripta AI digital transcript generation service.':
+    'Plans tarifaires pour le service numérique Transcripta AI.',
+  'Transcripta AI is a digital transcript generation service. Payments are for service access only.':
+    "Transcripta AI est un service numérique de génération de transcriptions. Les paiements couvrent uniquement l'accès au service.",
   'Service and Compliance Notes': 'Notes de service et conformité',
   'This platform provides digital transcript generation access only. No marketplace functionality is offered. No user-to-user financial transfer is supported. No third-party funds are held by this service. Charges apply solely to transcript generation service access.':
     "Cette plateforme fournit uniquement un accès à la génération numérique de transcriptions. Aucune fonctionnalité de place de marché n'est proposée. Aucun transfert financier entre utilisateurs n'est pris en charge. Aucun fonds tiers n'est détenu par ce service. Les frais s'appliquent uniquement à l'accès au service de transcription.",
-  'Privacy Policy | Transcript AI': 'Politique de confidentialité | Transcript AI',
-  'Terms of Service | Transcript AI': "Conditions d'utilisation | Transcript AI",
-  'Refund Policy | Transcript AI': 'Politique de remboursement | Transcript AI',
-  'Contact | Transcript AI': 'Contact | Transcript AI',
+  'Privacy Policy | Transcripta AI': 'Politique de confidentialité | Transcripta AI',
+  'Terms of Service | Transcripta AI': "Conditions d'utilisation | Transcripta AI",
+  'Refund Policy | Transcripta AI': 'Politique de remboursement | Transcripta AI',
+  'Contact | Transcripta AI': 'Contact | Transcripta AI',
   'Last updated:': 'Dernière mise à jour :'
 };
 

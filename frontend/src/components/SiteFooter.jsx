@@ -6,7 +6,7 @@ function SiteFooter({ lang = LANG.ar, theme = 'light' }) {
     <footer className={`mt-10 border-t ${isDark ? 'border-slate-800 bg-slate-950/90' : 'border-slate-200 bg-white/90'}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <p className={`text-xs sm:text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-          (c) {new Date().getFullYear()} Transcript AI.{' '}
+          (c) {new Date().getFullYear()} Transcripta AI.{' '}
           {tr(
             lang,
             'خدمة رقمية لاستخراج النصوص',

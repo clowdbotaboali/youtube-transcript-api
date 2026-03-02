@@ -6,11 +6,11 @@ function RefundPolicyPage({ lang = LANG.ar, theme = 'light' }) {
   return (
     <>
       <SeoMeta
-        title={tr(lang, 'سياسة الاسترجاع | Transcript AI', 'Refund Policy | Transcript AI')}
+        title={tr(lang, 'سياسة الاسترجاع | Transcripta AI', 'Refund Policy | Transcripta AI')}
         description={tr(
           lang,
-          'سياسة الاسترجاع لخدمة Transcript AI الرقمية.',
-          'Refund policy for Transcript AI digital transcript generation service.'
+          'سياسة الاسترجاع لخدمة Transcripta AI الرقمية.',
+          'Refund policy for Transcripta AI digital transcript generation service.'
         )}
         path="/refund-policy"
       />
@@ -50,7 +50,7 @@ function RefundPolicyPage({ lang = LANG.ar, theme = 'light' }) {
             lang,
             'أرسل طلبك إلى',
             'Send your request to'
-          )} <strong>billing@transcriptai-eg.com</strong> {tr(lang, 'مرفقًا بالبيانات التالية:', 'with:')}</p>
+          )} <strong>hello@transcripta.tech</strong> {tr(lang, 'مرفقًا بالبيانات التالية:', 'with:')}</p>
           <p>{tr(
             lang,
             '- بريد الحساب الإلكتروني\n- مرجع عملية الدفع\n- تاريخ ووقت الخصم\n- وصف مختصر للمشكلة',

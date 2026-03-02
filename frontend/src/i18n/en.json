@@ -1,6 +1,6 @@
 {
   "brand": {
-    "name": "TRANSCRIPT AI",
+    "name": "TRANSCRIPTA AI",
     "tagline": "Transcript + Summary + Action Steps from YouTube videos"
   },
   "nav": {
@@ -63,7 +63,7 @@
     ]
   },
   "trust": {
-    "title": "Why choose Transcript AI?",
+    "title": "Why choose Transcripta AI?",
     "items": [
       {
         "title": "Faster than manual copy-paste",
@@ -160,7 +160,7 @@
     "items": [
       {
         "q": "Is this affiliated with YouTube?",
-        "a": "No. Transcript AI is an independent productivity tool that processes public YouTube links."
+        "a": "No. Transcripta AI is an independent productivity tool that processes public YouTube links."
       },
       {
         "q": "Do I need an account?",

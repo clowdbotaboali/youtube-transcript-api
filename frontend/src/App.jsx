@@ -1069,8 +1069,8 @@ function App() {
     return (
       <div className={`min-h-screen flex flex-col ${theme === THEME.dark ? 'bg-slate-950 text-slate-100' : ''}`} dir={rootDir}>
         <SeoMeta
-          title="Preparing Session | Transcript AI"
-          description="Initializing authenticated session for Transcript AI."
+          title="Preparing Session | Transcripta AI"
+          description="Initializing authenticated session for Transcripta AI."
           path="/"
         />
         <div className="flex-1 bg-slate-950 text-slate-100 flex items-center justify-center">
@@ -1088,8 +1088,8 @@ function App() {
     return (
       <div className={`min-h-screen flex flex-col ${theme === THEME.dark ? 'bg-slate-950 text-slate-100' : ''}`}>
         <SeoMeta
-          title="Transcript AI | YouTube Transcript Generation Service"
-          description="Transcript AI is a digital service that converts YouTube links into text transcripts and provides optional AI text analysis."
+          title="Transcripta AI | YouTube Transcript Generation Service"
+          description="Transcripta AI is a digital service that converts YouTube links into text transcripts and provides optional AI text analysis."
           path="/"
         />
         <div className="flex-1">
@@ -1125,7 +1125,7 @@ function App() {
       dir={rootDir}
     >
       <SeoMeta
-        title="Client Workspace | Transcript AI"
+        title="Client Workspace | Transcripta AI"
         description="Authenticated workspace for transcript extraction, AI text processing, and saved transcript history."
         path="/"
       />
@@ -1384,9 +1384,9 @@ function App() {
                     )}
                   </p>
                   <ul className="text-sm text-amber-800 space-y-1">
-                    <li>{tr(lang, '• ??????? ?????: 5$ = 200 ??????', '• Fast start: $5 = 200 credits')}</li>
-                    <li>{tr(lang, '• ?????? ??????? ?? ??????? ??????', '• Automatic bonus credits on larger amounts')}</li>
-                    <li>{tr(lang, '• ?????? ????? ?? ???? ?????? ??????', '• Dedicated clear checkout page')}</li>
+                    <li>{tr(lang, 'ï¿½ ??????? ?????: 5$ = 200 ??????', 'ï¿½ Fast start: $5 = 200 credits')}</li>
+                    <li>{tr(lang, 'ï¿½ ?????? ??????? ?? ??????? ??????', 'ï¿½ Automatic bonus credits on larger amounts')}</li>
+                    <li>{tr(lang, 'ï¿½ ?????? ????? ?? ???? ?????? ??????', 'ï¿½ Dedicated clear checkout page')}</li>
                   </ul>
                 </div>
                 <div className="flex flex-wrap gap-3">

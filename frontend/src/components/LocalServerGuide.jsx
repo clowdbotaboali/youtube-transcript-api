@@ -22,8 +22,8 @@ const WINDOWS_NGROK_COMMANDS = [
 const ANDROID_COMMANDS = [
   { id: 'a1', command: 'pkg update -y' },
   { id: 'a2', command: 'pkg install -y nodejs git ngrok tmux' },
-  { id: 'a3', command: 'git clone https://github.com/clowdbotaboali/youtube-transcript-api.git' },
-  { id: 'a4', command: 'cd youtube-transcript-api/backend' },
+  { id: 'a3', command: 'git clone https://github.com/clowdbotaboali/transcripta-ai.git' },
+  { id: 'a4', command: 'cd transcripta-ai/backend' },
   { id: 'a5', command: 'npm install' },
   { id: 'a6', command: 'tmux new -s ytapi' },
   { id: 'a7', command: 'npm run dev' },

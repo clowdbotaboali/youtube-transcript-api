@@ -13,7 +13,7 @@ import {
 import { LANG } from '../utils/lang';
 import { tLanding } from '../i18n';
 
-const GUEST_TOKEN_STORAGE_KEY = 'transcriptai_guest_token_v1';
+const GUEST_TOKEN_STORAGE_KEY = 'transcripta_guest_token_v1';
 const GUEST_TRANSCRIPT_PREVIEW_LIMIT = 720;
 
 const isLikelyYoutubeUrl = (value) => {

@@ -81,7 +81,7 @@ function legacyPdfExport({ filename, title, body, metadata }) {
 }
 
 function renderContainer({ title, metadata, body }) {
-  const cleanedTitle = cleanRichText(title || 'Transcript AI Export');
+  const cleanedTitle = cleanRichText(title || 'Transcripta AI Export');
   const cleanedMeta = (metadata || []).map((item) => cleanRichText(item)).filter(Boolean);
   const cleanedBody = cleanRichText(body || '');
   const fullText = [cleanedTitle, ...cleanedMeta, cleanedBody].join('\n');
@@ -176,7 +176,7 @@ function canvasToMultipagePdf(canvas, filename) {
 
 export async function downloadTextAsPdf({
   filename,
-  title = 'Transcript AI Export',
+  title = 'Transcripta AI Export',
   body = '',
   metadata = []
 }) {

@@ -7,12 +7,12 @@ function PricingPage({ lang = LANG.ar, theme = 'light' }) {
   return (
     <>
       <SeoMeta
-        title={tr(lang, 'الأسعار | Transcript AI', 'Pricing | Transcript AI', 'Tarification | Transcript AI')}
+        title={tr(lang, 'الأسعار | Transcripta AI', 'Pricing | Transcripta AI', 'Tarification | Transcripta AI')}
         description={tr(
           lang,
-          'خطط وأسعار خدمة Transcript AI الرقمية.',
-          'Pricing plans for Transcript AI digital transcript generation service.',
-          'Plans tarifaires du service numerique Transcript AI.'
+          'خطط وأسعار خدمة Transcripta AI الرقمية.',
+          'Pricing plans for Transcripta AI digital transcript generation service.',
+          'Plans tarifaires du service numerique Transcripta AI.'
         )}
         path="/pricing"
       />
@@ -31,9 +31,9 @@ function PricingPage({ lang = LANG.ar, theme = 'light' }) {
             <p className={`${isDark ? 'text-slate-300' : 'text-slate-600'} mt-2`}>
               {tr(
                 lang,
-                'Transcript AI خدمة رقمية لاستخراج النصوص. المدفوعات للوصول إلى الخدمة فقط.',
-                'Transcript AI is a digital transcript generation service. Payments are for service access only.',
-                'Transcript AI est un service numerique de generation de transcriptions. Les paiements sont uniquement pour l acces au service.'
+                'Transcripta AI خدمة رقمية لاستخراج النصوص. المدفوعات للوصول إلى الخدمة فقط.',
+                'Transcripta AI is a digital transcript generation service. Payments are for service access only.',
+                'Transcripta AI est un service numerique de generation de transcriptions. Les paiements sont uniquement pour l acces au service.'
               )}
             </p>
           </header>

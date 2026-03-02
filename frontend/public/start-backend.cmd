@@ -3,8 +3,8 @@ setlocal
 
 set "BASE_DIR=%~dp0"
 set "LOCAL_BACKEND=%BASE_DIR%backend"
-set "APP_DIR=%USERPROFILE%\YoutubeTranscript2-local"
-set "REPO_URL=https://github.com/clowdbotaboali/youtube-transcript-api.git"
+set "APP_DIR=%USERPROFILE%\TranscriptaAI-local"
+set "REPO_URL=https://github.com/clowdbotaboali/transcripta-ai.git"
 
 where npm >nul 2>nul
 if errorlevel 1 (

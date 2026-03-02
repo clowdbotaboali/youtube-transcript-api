@@ -6,11 +6,11 @@ function PrivacyPolicyPage({ lang = LANG.ar, theme = 'light' }) {
   return (
     <>
       <SeoMeta
-        title={tr(lang, 'سياسة الخصوصية | Transcript AI', 'Privacy Policy | Transcript AI')}
+        title={tr(lang, 'سياسة الخصوصية | Transcripta AI', 'Privacy Policy | Transcripta AI')}
         description={tr(
           lang,
-          'سياسة الخصوصية لخدمة Transcript AI الرقمية لاستخراج النصوص.',
-          'Privacy Policy for Transcript AI digital transcript generation service.'
+          'سياسة الخصوصية لخدمة Transcripta AI الرقمية لاستخراج النصوص.',
+          'Privacy Policy for Transcripta AI digital transcript generation service.'
         )}
         path="/privacy-policy"
       />
@@ -20,8 +20,8 @@ function PrivacyPolicyPage({ lang = LANG.ar, theme = 'light' }) {
         title={tr(lang, 'سياسة الخصوصية', 'Privacy Policy')}
         subtitle={tr(
           lang,
-          'كيف يجمع Transcript AI المعلومات ويستخدمها ويحميها ضمن خدمة استخراج النصوص الرقمية.',
-          'How Transcript AI collects, uses, and protects information for its digital transcript generation service.'
+          'كيف يجمع Transcripta AI المعلومات ويستخدمها ويحميها ضمن خدمة استخراج النصوص الرقمية.',
+          'How Transcripta AI collects, uses, and protects information for its digital transcript generation service.'
         )}
       >
         <CompliancePageLayout.Section title={tr(lang, '1. المعلومات التي نجمعها', '1. Information We Collect')}>
@@ -89,7 +89,7 @@ function PrivacyPolicyPage({ lang = LANG.ar, theme = 'light' }) {
             lang,
             'للاستفسارات المتعلقة بالخصوصية أو طلبات التصحيح أو الحذف، تواصل عبر:',
             'For privacy inquiries, correction requests, or deletion requests, contact:'
-          )} <strong>compliance@transcriptai-eg.com</strong>.</p>
+          )} <strong>hello@transcripta.tech</strong>.</p>
         </CompliancePageLayout.Section>
       </CompliancePageLayout>
     </>

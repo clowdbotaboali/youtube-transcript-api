@@ -6,11 +6,11 @@ function TermsPage({ lang = LANG.ar, theme = 'light' }) {
   return (
     <>
       <SeoMeta
-        title={tr(lang, 'الشروط والأحكام | Transcript AI', 'Terms of Service | Transcript AI')}
+        title={tr(lang, 'الشروط والأحكام | Transcripta AI', 'Terms of Service | Transcripta AI')}
         description={tr(
           lang,
-          'الشروط والأحكام الخاصة بخدمة Transcript AI الرقمية.',
-          'Terms of Service for Transcript AI digital transcript generation service.'
+          'الشروط والأحكام الخاصة بخدمة Transcripta AI الرقمية.',
+          'Terms of Service for Transcripta AI digital transcript generation service.'
         )}
         path="/terms"
       />
@@ -20,15 +20,15 @@ function TermsPage({ lang = LANG.ar, theme = 'light' }) {
         title={tr(lang, 'الشروط والأحكام', 'Terms of Service')}
         subtitle={tr(
           lang,
-          'تنظم هذه الشروط استخدامك لخدمة Transcript AI وميزات استخراج النصوص الرقمية.',
-          'These terms govern your use of Transcript AI and its digital transcript generation features.'
+          'تنظم هذه الشروط استخدامك لخدمة Transcripta AI وميزات استخراج النصوص الرقمية.',
+          'These terms govern your use of Transcripta AI and its digital transcript generation features.'
         )}
       >
         <CompliancePageLayout.Section title={tr(lang, '1. وصف الخدمة', '1. Service Description')}>
           <p>{tr(
             lang,
-            'تقدم Transcript AI خدمة رقمية لتحويل روابط يوتيوب التي يضيفها المستخدم إلى نص، مع ميزات اختيارية لتحليل النص بالذكاء الاصطناعي.',
-            'Transcript AI provides a digital service that converts user-submitted YouTube video links into text transcripts and offers optional AI-based text analysis features.'
+            'تقدم Transcripta AI خدمة رقمية لتحويل روابط يوتيوب التي يضيفها المستخدم إلى نص، مع ميزات اختيارية لتحليل النص بالذكاء الاصطناعي.',
+            'Transcripta AI provides a digital service that converts user-submitted YouTube video links into text transcripts and offers optional AI-based text analysis features.'
           )}</p>
           <p>{tr(
             lang,
@@ -66,16 +66,16 @@ function TermsPage({ lang = LANG.ar, theme = 'light' }) {
         <CompliancePageLayout.Section title={tr(lang, '4. إخلاء مسؤولية الملكية الفكرية', '4. Intellectual Property Disclaimer')}>
           <p>{tr(
             lang,
-            'المستخدم مسؤول عن كيفية استخدام النصوص الناتجة. Transcript AI لا يمنح حقوق ملكية على محتوى أطراف ثالثة ولا يدّعي ملكية قانونية لمواد الفيديو الخارجية.',
-            'Users are responsible for how they use generated transcripts. Transcript AI does not grant ownership rights to third-party content and does not represent legal ownership of external video materials.'
+            'المستخدم مسؤول عن كيفية استخدام النصوص الناتجة. Transcripta AI لا يمنح حقوق ملكية على محتوى أطراف ثالثة ولا يدّعي ملكية قانونية لمواد الفيديو الخارجية.',
+            'Users are responsible for how they use generated transcripts. Transcripta AI does not grant ownership rights to third-party content and does not represent legal ownership of external video materials.'
           )}</p>
         </CompliancePageLayout.Section>
 
         <CompliancePageLayout.Section title={tr(lang, '5. حدود المسؤولية', '5. Limitation of Liability')}>
           <p>{tr(
             lang,
-            'تُقدم الخدمة بحسب التوافر. وإلى أقصى حد يسمح به القانون، لا تتحمل Transcript AI مسؤولية الأضرار غير المباشرة أو العرضية أو الخاصة أو التبعية الناتجة عن استخدام الخدمة.',
-            'The service is provided on an "as available" basis. To the maximum extent permitted by law, Transcript AI shall not be liable for indirect, incidental, special, or consequential damages arising from service usage.'
+            'تُقدم الخدمة بحسب التوافر. وإلى أقصى حد يسمح به القانون، لا تتحمل Transcripta AI مسؤولية الأضرار غير المباشرة أو العرضية أو الخاصة أو التبعية الناتجة عن استخدام الخدمة.',
+            'The service is provided on an "as available" basis. To the maximum extent permitted by law, Transcripta AI shall not be liable for indirect, incidental, special, or consequential damages arising from service usage.'
           )}</p>
           <p>{tr(
             lang,
@@ -89,7 +89,7 @@ function TermsPage({ lang = LANG.ar, theme = 'light' }) {
             lang,
             'للأسئلة القانونية أو المتعلقة بالخدمة، تواصل عبر:',
             'For legal and service questions, contact:'
-          )} <strong>compliance@transcriptai-eg.com</strong>.</p>
+          )} <strong>hello@transcripta.tech</strong>.</p>
         </CompliancePageLayout.Section>
       </CompliancePageLayout>
     </>

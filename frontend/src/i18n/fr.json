@@ -1,6 +1,6 @@
 {
   "brand": {
-    "name": "TRANSCRIPT AI",
+    "name": "TRANSCRIPTA AI",
     "tagline": "Transcription + Resume + Etapes d'action depuis YouTube"
   },
   "nav": {
@@ -63,7 +63,7 @@
     ]
   },
   "trust": {
-    "title": "Pourquoi choisir Transcript AI ?",
+    "title": "Pourquoi choisir Transcripta AI ?",
     "items": [
       {
         "title": "Plus rapide que le copier-coller manuel",
@@ -160,7 +160,7 @@
     "items": [
       {
         "q": "Est-ce affilie a YouTube ?",
-        "a": "Non. Transcript AI est un outil de productivite independant qui traite les liens YouTube publics."
+        "a": "Non. Transcripta AI est un outil de productivite independant qui traite les liens YouTube publics."
       },
       {
         "q": "Ai-je besoin d'un compte ?",

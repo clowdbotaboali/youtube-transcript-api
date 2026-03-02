@@ -22,7 +22,7 @@ function PublicHeader({
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3" dir={isArabic ? 'rtl' : 'ltr'}>
         <a href="/" className="font-black tracking-wide whitespace-nowrap">
-          TRANSCRIPT AI
+          TRANSCRIPTA AI
         </a>
 
         <div className="flex items-center gap-2">

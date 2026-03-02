@@ -654,7 +654,7 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
     return (
       <>
         <SeoMeta
-          title={tr(lang, 'Ø¯Ø®ÙˆÙ„ Ø§Ù„Ø£Ø¯Ù…Ù† | Transcript AI', 'Admin Login | Transcript AI', 'Connexion Admin | Transcript AI')}
+          title={tr(lang, 'Ø¯Ø®ÙˆÙ„ Ø§Ù„Ø£Ø¯Ù…Ù† | Transcripta AI', 'Admin Login | Transcripta AI', 'Connexion Admin | Transcripta AI')}
           description={tr(lang, 'ØªØ³Ø¬ÙŠÙ„ Ø¯Ø®ÙˆÙ„ Ù„ÙˆØ­Ø© Ø§Ù„Ø£Ø¯Ù…Ù†.', 'Admin panel login.', 'Connexion admin.')}
           path="/admin"
         />
@@ -696,8 +696,8 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
   return (
     <>
       <SeoMeta
-        title={tr(lang, 'Ù„ÙˆØ­Ø© Ø§Ù„Ø£Ø¯Ù…Ù† | Transcript AI', 'Admin Panel | Transcript AI', 'Panneau Admin | Transcript AI')}
-        description={tr(lang, 'Ù„ÙˆØ­Ø© Ø¥Ø¯Ø§Ø±Ø© Transcript AI.', 'Transcript AI administration panel.', 'Panneau administration.')}
+        title={tr(lang, 'Ù„ÙˆØ­Ø© Ø§Ù„Ø£Ø¯Ù…Ù† | Transcripta AI', 'Admin Panel | Transcripta AI', 'Panneau Admin | Transcripta AI')}
+        description={tr(lang, 'Ù„ÙˆØ­Ø© Ø¥Ø¯Ø§Ø±Ø© Transcripta AI.', 'Transcripta AI administration panel.', 'Panneau administration.')}
         path="/admin"
       />
       <main
