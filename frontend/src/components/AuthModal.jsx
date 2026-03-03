@@ -137,7 +137,7 @@ function AuthModal({ isOpen, onClose, onAuthSuccess, lang = LANG.ar, onNotify, i
     setError('');
     try {
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: window.location.origin
+        redirectTo: buildRedirectUrl()
       });
       if (resetError) throw resetError;
       notify('success', tr(lang, 'تم إرسال رابط استعادة كلمة المرور.', 'Password reset email sent.'));

@@ -115,3 +115,32 @@ curl -X POST https://youtube-transcript-api.fly.dev/api/ai/process \
 - لا يوقف الخدمة تلقائياً
 - أسرع من Render
 - يدعم HTTPS تلقائياً
+
+---
+
+## ضبط بريد التأكيد واستعادة كلمة المرور (Supabase Auth)
+
+لو رسائل تأكيد البريد أو نسيان كلمة المرور ما زالت تظهر من `noreply@mail.app.supabase.io`:
+
+1. أضف متغيرات البيئة التالية (Backend أو Vercel Project Env):
+   - `SUPABASE_ACCESS_TOKEN`
+   - `SUPABASE_URL` (أو `SUPABASE_PROJECT_REF`)
+   - `AUTH_SITE_URL` (مثال: `https://transcripta.tech`)
+   - `AUTH_EMAIL_FROM_NAME` (مثال: `Transcripta Support`)
+   - `AUTH_EMAIL_FROM_ADDRESS` (مثال: `support@your-domain.com`)
+2. إذا أردت أن يظهر الإيميل فعليًا من `hello@` أو `support@`، يجب إضافة SMTP مخصص:
+   - `SMTP_HOST`
+   - `SMTP_PORT`
+   - `SMTP_USER`
+   - `SMTP_PASS`
+3. شغّل السكربت:
+
+```bash
+npm run auth:email:configure
+```
+
+وللمعاينة فقط بدون تطبيق:
+
+```bash
+npm run auth:email:dry-run
+```

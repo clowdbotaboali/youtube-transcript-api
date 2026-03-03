@@ -60,6 +60,12 @@ Optional:
 - `ADMIN_EMAIL`
 - `ADMIN_PASSWORD`
 - `PAYMENT_PROOF_BUCKET`
+- `SUPABASE_ACCESS_TOKEN` (for one-time auth email template/sender setup script)
+- `SUPABASE_PROJECT_REF` (optional if `SUPABASE_URL` is set)
+- `AUTH_SITE_URL` (production URL used in auth emails, e.g. `https://transcripta.tech`)
+- `AUTH_EMAIL_FROM_NAME`
+- `AUTH_EMAIL_FROM_ADDRESS`
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` (required for custom sender address)
 
 ### Frontend (`frontend`)
 - `VITE_SUPABASE_URL`
@@ -223,3 +229,27 @@ Workflow file:
    - Billing proof upload and admin review
    - Admin usage dashboard
 5. Confirm legal/footer/pricing pages on production routes.
+
+## Supabase Auth Email Branding
+
+To replace default Supabase emails (confirmation + password recovery) with branded templates:
+
+1. Set backend env variables:
+   - `SUPABASE_ACCESS_TOKEN`
+   - `SUPABASE_URL` (or `SUPABASE_PROJECT_REF`)
+   - `AUTH_SITE_URL`
+   - `AUTH_EMAIL_FROM_NAME`
+   - `AUTH_EMAIL_FROM_ADDRESS`
+2. If you need sender email to appear as `hello@...` or `support@...`, also set custom SMTP:
+   - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`
+3. Run:
+
+```bash
+npm run auth:email:configure
+```
+
+You can preview before applying with:
+
+```bash
+npm run auth:email:dry-run
+```
