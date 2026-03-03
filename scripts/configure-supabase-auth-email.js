@@ -121,7 +121,7 @@ function buildTemplate({
             </tr>
             <tr>
               <td style="padding:16px 24px;background:#f8fbff;border-top:1px solid #e2e8f0;font-size:12px;color:#64748b;">
-                Transcripta AI • {{ .Email }}
+                Transcripta AI • transcripta.tech
               </td>
             </tr>
           </table>
