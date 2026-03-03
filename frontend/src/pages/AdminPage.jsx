@@ -864,12 +864,12 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
                   <thead className="bg-slate-50">
                     <tr className={lang === LANG.ar ? 'text-right' : 'text-left'}>
                       <th className="p-3">{tr(lang, 'Ø§Ù„Ø¨Ø±ÙŠØ¯', 'Email')}</th>
-                      <th className="p-3">{tr(lang, 'Ø§Ù„Ø±ØµÙŠØ¯', 'Credits')}</th>
+                      <th className="p-3">{tr(lang, 'رصيد الفيديوهات', 'Video Balance', 'Solde videos')}</th>
                       <th className="p-3">{tr(lang, 'الخطة / الحصة', 'Plan / Quota', 'Plan / Quota')}</th>
                       <th className="p-3">{tr(lang, 'Ø§Ù„Ø­Ø§Ù„Ø©', 'Status')}</th>
                       <th className="p-3">{tr(lang, 'Ù…Ø¯ÙÙˆØ¹Ø§Øª Ù…Ù‚Ø¨ÙˆÙ„Ø©', 'Approved Payments')}</th>
                       <th className="p-3">{tr(lang, 'Ù…Ø¯ÙÙˆØ¹Ø§Øª Ù…Ø¹Ù„Ù‚Ø©', 'Pending Payments')}</th>
-                      <th className="p-3">{tr(lang, 'Ø§Ù„ÙƒØ±ÙŠØ¯ÙŠØª Ø§Ù„Ù…Ø¯ÙÙˆØ¹', 'Paid Credits')}</th>
+                      <th className="p-3">{tr(lang, 'الفيديوهات المدفوعة', 'Paid Videos', 'Videos payees')}</th>
                       <th className="p-3">{tr(lang, 'ØªØ§Ø±ÙŠØ® Ø§Ù„Ø¥Ù†Ø´Ø§Ø¡', 'Created')}</th>
                       <th className="p-3">{tr(lang, 'Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª', 'Actions')}</th>
                     </tr>
@@ -963,7 +963,7 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
                       <th className="p-3">{tr(lang, 'Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…', 'User')}</th>
                       <th className="p-3">{tr(lang, 'Ø§Ù„ÙˆØ³ÙŠÙ„Ø©', 'Method')}</th>
                       <th className="p-3">{tr(lang, 'Ø§Ù„Ù…Ø¨Ù„Øº', 'Amount')}</th>
-                      <th className="p-3">{tr(lang, 'Ø§Ù„ÙƒØ±ÙŠØ¯ÙŠØª', 'Credits')}</th>
+                      <th className="p-3">{tr(lang, 'الفيديوهات', 'Videos', 'Videos')}</th>
                       <th className="p-3">{tr(lang, 'Ø§Ù„Ø­Ø§Ù„Ø©', 'Status')}</th>
                       <th className="p-3">{tr(lang, 'Ø§Ù„Ù…Ø±Ø¬Ø¹', 'Reference')}</th>
                       <th className="p-3">{tr(lang, 'ØµÙˆØ±Ø© Ø§Ù„ØªØ­ÙˆÙŠÙ„', 'Proof')}</th>

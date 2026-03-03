@@ -8,6 +8,8 @@ let groqClient = null;
 let supabaseClient = null;
 const FREE_PLAN_CREDITS = 0;
 const CREDIT_COST_PER_SUCCESS = 1;
+const TOPUP_PACK_PRICE_CENTS = 1900;
+const TOPUP_PACK_VIDEOS = 200;
 const MONTHLY_FREE_QUOTA = 5;
 const QUOTA_RESET_WINDOW_DAYS = 30;
 const USER_AGENT =
@@ -714,7 +716,7 @@ async function consumeCredits(supabase, userId, currentCredits, cost = CREDIT_CO
   const current = Math.max(Number(currentCredits || 0), 0);
   if (amount <= 0) return current;
   if (current < amount) {
-    throw new Error('Insufficient credits');
+    throw new Error('Insufficient video balance');
   }
 
   const nextCredits = current - amount;
@@ -744,7 +746,7 @@ async function consumeCredits(supabase, userId, currentCredits, cost = CREDIT_CO
 
   const freshCredits = Math.max(Number(freshRow.credits || 0), 0);
   if (freshCredits < amount) {
-    throw new Error('Insufficient credits');
+    throw new Error('Insufficient video balance');
   }
 
   const freshNextCredits = freshCredits - amount;
@@ -3197,25 +3199,20 @@ async function getAdminUsageSummary(supabase, { days = 7 } = {}) {
 
 function calculateTopupQuote(amountCents) {
   const amount = Number(amountCents || 0);
-  if (!Number.isInteger(amount) || amount < 500 || amount % 500 !== 0) {
-    throw new Error('Amount must be a multiple of $5 (500 cents)');
+  if (!Number.isInteger(amount) || amount < TOPUP_PACK_PRICE_CENTS || amount % TOPUP_PACK_PRICE_CENTS !== 0) {
+    throw new Error(`Amount must be a multiple of $19 (${TOPUP_PACK_PRICE_CENTS} cents)`);
   }
-  const packs = amount / 500;
-  const baseCredits = packs * 200;
-
-  let bonusRate = 0;
-  if (packs >= 20) bonusRate = 0.25;
-  else if (packs >= 10) bonusRate = 0.18;
-  else if (packs >= 4) bonusRate = 0.1;
-  else if (packs >= 2) bonusRate = 0.05;
-
-  const credits = Math.round(baseCredits * (1 + bonusRate));
+  const packs = amount / TOPUP_PACK_PRICE_CENTS;
+  const videos = packs * TOPUP_PACK_VIDEOS;
+  const credits = videos;
   return {
     amountCents: amount,
     packs,
-    baseCredits,
-    bonusRate,
-    credits
+    unitPriceCents: TOPUP_PACK_PRICE_CENTS,
+    videos,
+    credits,
+    baseCredits: videos,
+    bonusRate: 0
   };
 }
 
@@ -5549,7 +5546,7 @@ export default async function handler(req, res) {
               res,
               403,
               'QUOTA_EXCEEDED',
-              'Monthly transcript quota reached and no credits are available. Please wait for reset or top up your balance.',
+              'Monthly free video quota reached and no paid video balance is available. Please wait for reset or top up your balance.',
               {
                 creditsLeft,
                 requiredCredits: CREDIT_COST_PER_SUCCESS,
@@ -5566,7 +5563,7 @@ export default async function handler(req, res) {
             res,
             403,
             'LIMIT_EXCEEDED',
-            'Insufficient credits. Please top up to continue.',
+            'Insufficient video balance. Please top up to continue.',
             {
               creditsLeft,
               requiredCredits: CREDIT_COST_PER_SUCCESS,
@@ -5978,6 +5975,8 @@ export default async function handler(req, res) {
       const paymentNotes = stringifyPaymentNotes({
         quote: {
           packs: quote.packs,
+          videos: quote.videos,
+          unitPriceCents: quote.unitPriceCents,
           baseCredits: quote.baseCredits,
           bonusRate: quote.bonusRate,
           credits: quote.credits,
@@ -6024,9 +6023,12 @@ export default async function handler(req, res) {
         billing: billingConfig,
         quote: {
           packs: quote.packs,
+          videos: quote.videos,
+          unitPriceCents: quote.unitPriceCents,
           baseCredits: quote.baseCredits,
           bonusRate: quote.bonusRate,
-          credits: quote.credits
+          credits: quote.credits,
+          amountCents: quote.amountCents
         }
       });
     }
@@ -6143,8 +6145,8 @@ export default async function handler(req, res) {
     if (lowerMessage.includes('rate limit')) {
       return sendError(res, 429, 'RATE_LIMITED', 'Rate limit exceeded. Please retry later.');
     }
-    if (lowerMessage.includes('insufficient credits')) {
-      return sendError(res, 403, 'LIMIT_EXCEEDED', 'Insufficient credits. Please top up to continue.');
+    if (lowerMessage.includes('insufficient credits') || lowerMessage.includes('insufficient video balance')) {
+      return sendError(res, 403, 'LIMIT_EXCEEDED', 'Insufficient video balance. Please top up to continue.');
     }
     if (lowerMessage.includes('request too large') || lowerMessage.includes('input is too large')) {
       return sendError(res, 400, 'INVALID_INPUT', 'Input is too large for current limits.');

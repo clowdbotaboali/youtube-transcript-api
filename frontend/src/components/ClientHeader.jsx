@@ -66,7 +66,7 @@ function ClientHeader({
   freePlanRequests = 5,
   requestCost = 1,
   paidPlanCredits = 200,
-  paidPlanPrice = 5,
+  paidPlanPrice = 19,
   currentPage,
   onPageChange,
   onLangChange,
@@ -129,7 +129,7 @@ function ClientHeader({
                 className="inline-flex items-center gap-2 rounded-xl px-3 py-2 bg-emerald-500/20 text-emerald-100 hover:bg-emerald-500/30 transition border border-emerald-300/20 disabled:opacity-70"
               >
                 <FaSyncAlt className={refreshBusy ? 'animate-spin' : ''} />
-                <span>{tr(lang, 'تحديث النقاط', 'Refresh points', 'Actualiser points')}</span>
+                <span>{tr(lang, 'تحديث الرصيد', 'Refresh balance', 'Actualiser le solde')}</span>
               </button>
             </div>
 
@@ -179,14 +179,14 @@ function ClientHeader({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2.5">
           <MetricCard
-            label={tr(lang, 'الرصيد', 'Credits', 'Credits')}
+            label={tr(lang, 'رصيد الفيديوهات', 'Video Balance', 'Solde videos')}
             value={
               <span className="inline-flex items-center gap-2">
                 <FaGem className="text-amber-300" />
                 <span>{credits ?? '...'}</span>
               </span>
             }
-            subtext={tr(lang, 'الرصيد الحالي المتاح للاستخدام', 'Current available credit balance', 'Solde actuel disponible')}
+            subtext={tr(lang, 'الرصيد الحالي المتاح للاستخدام', 'Current available video balance', 'Solde videos disponible')}
             tone="border-amber-300/40 bg-amber-500/15 text-amber-100"
             icon={<FaGem className="text-amber-200" />}
           />
@@ -202,7 +202,7 @@ function ClientHeader({
 
           <MetricCard
             label={tr(lang, 'تكلفة الرابط', 'Per-link cost', 'Cout par lien')}
-            value={`${requestCost} ${tr(lang, 'نقطة', 'credit', 'credit')}`}
+            value={`${requestCost} ${tr(lang, 'فيديو', 'video', 'video')}`}
             subtext={tr(lang, 'يُخصم فقط عند رابط فيديو جديد', 'Charged only for new video links', 'Facture uniquement pour nouveaux liens video')}
             tone="border-cyan-300/30 bg-cyan-500/15 text-cyan-100"
             icon={<FaBolt className="text-cyan-200" />}
@@ -210,8 +210,8 @@ function ClientHeader({
 
           <MetricCard
             label={tr(lang, 'الشحن المدفوع', 'Paid top-up', 'Recharge payante')}
-            value={`$${paidPlanPrice} = ${paidPlanCredits}`}
-            subtext={tr(lang, 'خصومات تلقائية للشحنات الأكبر', 'Automatic bonus credits on larger top-ups', 'Bonus automatiques sur montants eleves')}
+            value={`$${paidPlanPrice} = ${paidPlanCredits} ${tr(lang, 'فيديو', 'videos', 'videos')}`}
+            subtext={tr(lang, 'الباقة القياسية الواضحة', 'Clear standard pack', 'Pack standard clair')}
             tone="border-violet-300/30 bg-violet-500/15 text-violet-100"
             icon={<FaGem className="text-violet-200" />}
           />

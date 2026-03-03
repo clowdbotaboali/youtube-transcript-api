@@ -1,7 +1,7 @@
-{
+﻿{
   "brand": {
     "name": "TRANSCRIPTA AI",
-    "tagline": "Transcript + Summary + Action Steps from YouTube videos"
+    "tagline": "Knowledge Extraction & Execution Engine for long videos"
   },
   "nav": {
     "pricing": "Pricing",
@@ -11,25 +11,46 @@
     "language": "Language"
   },
   "hero": {
-    "kicker": "Structured Video Notes",
-    "headline": "Turn any YouTube video into structured notes in minutes.",
-    "subheadline": "Transcript + Summary + Action Steps in one place for lectures, courses, and long-form content.",
+    "kicker": "Knowledge Extraction & Execution Engine",
+    "headline": "Turn every long video into an execution-ready output.",
+    "subheadline": "Extract the core ideas from courses and long-form videos, then convert them into clear steps and implementation prompts.",
     "inputLabel": "Paste a YouTube URL",
     "inputPlaceholder": "https://www.youtube.com/watch?v=...",
-    "primaryCta": "Try 1 Video Free",
-    "secondaryCta": "Get My Transcript",
-    "trustLine": "No credit card required • 5 free videos daily",
-    "helper": "Your first extraction works without signup. After the result, create a free account to continue.",
-    "loadingHint": "Fetching transcript and preparing your preview...",
+    "primaryCta": "Try on your video now",
+    "secondaryCta": "Start Free",
+    "trustLine": "No credit card required • 5 free videos monthly",
+    "helper": "Your first extraction works without signup. Create a free account after preview to continue.",
+    "loadingHint": "Extracting transcript and building your execution preview...",
     "errors": {
       "empty": "Please paste a YouTube URL first.",
       "invalid": "This does not look like a valid YouTube URL."
     },
     "quickPoints": [
-      "Perfect for lectures, courses, and research videos.",
-      "Get clean notes you can read, reuse, and share.",
-      "Save hours every week with structured output."
+      "Designed for long lectures, courses, and deep educational content.",
+      "From passive watching to actionable implementation in minutes.",
+      "Built for learners, founders, and operators who execute fast."
     ]
+  },
+  "transformation": {
+    "title": "Real transformation example",
+    "badge": "Before / After",
+    "subtitle": "Example from a long educational video workflow.",
+    "beforeTitle": "Before Transcripta",
+    "afterTitle": "After Transcripta",
+    "beforePoints": [
+      "90-minute lesson with scattered notes and no clear plan.",
+      "Key ideas are mixed with filler and repeated explanations.",
+      "Hard to delegate implementation to a developer or team."
+    ],
+    "afterPoints": [
+      "Concise structured summary of the lesson flow.",
+      "Execution plan with milestones, assumptions, and risks.",
+      "Copy-ready prompt for human developer and AI coding assistant."
+    ],
+    "beforeOutputLabel": "Before output (raw notes)",
+    "afterOutputLabel": "After output (execution-ready)",
+    "beforeOutput": "Video note dump:\\n- Build auth first maybe\\n- Add billing someday\\n- API keys? not sure where\\n- Rewatch minute 37 and 52\\n- TODO: ask dev later",
+    "afterOutput": "Execution brief:\\n1) Add JWT auth middleware for /api endpoints\\n2) Add billing pack model: $19 = 200 videos\\n3) Create admin key-pool page with status labels\\n4) Acceptance: user with 0 video balance cannot process new links\\n5) Deliver in one PR with tests + rollout notes"
   },
   "guest": {
     "loading": "Extracting your transcript...",
@@ -38,99 +59,117 @@
     "transcriptPreview": "Transcript preview",
     "summaryPreview": "Quick summary",
     "wordCount": "Word count",
-    "signupPrompt": "You have unlocked your first result. Create a free account to keep extracting, summarizing, and generating action steps.",
+    "signupPrompt": "Your first result is unlocked. Create a free account to continue extracting and generating execution-ready outputs.",
     "quotaReached": "Your free guest extraction is already used. Create a free account to continue.",
     "failed": "Transcript extraction failed. Please try another video.",
     "createAccount": "Create Free Account",
     "haveAccount": "I already have an account"
   },
   "whatYouGet": {
-    "title": "What you get immediately",
-    "subtitle": "Start with output you can use right away, not raw noise.",
+    "title": "Outcome-focused output",
+    "subtitle": "You get decisions and execution clarity, not raw text.",
     "items": [
       {
-        "title": "Full transcript",
-        "text": "A clean text version of the video for search, review, and referencing."
+        "title": "Cognitive compression",
+        "text": "Condense long videos into the core ideas that actually matter."
       },
       {
-        "title": "Quick summary",
-        "text": "Key ideas condensed so you understand the message fast."
+        "title": "Execution acceleration",
+        "text": "Convert extracted knowledge into ordered implementation steps."
       },
       {
-        "title": "Action steps",
-        "text": "Structured next steps you can actually execute."
+        "title": "Faster recall",
+        "text": "Structured notes make review and retrieval much faster."
+      },
+      {
+        "title": "Delegation-ready output",
+        "text": "Hand off clear prompts and deliverables to developers or teams."
       }
     ]
   },
   "trust": {
-    "title": "Why choose Transcripta AI?",
+    "title": "Why teams use Transcripta",
     "items": [
       {
-        "title": "Faster than manual copy-paste",
-        "text": "Skip repetitive note-taking and get structured output in minutes."
+        "title": "Less watching, more execution",
+        "text": "Stop replaying long videos to extract actionable decisions."
       },
       {
-        "title": "Clean structured output",
-        "text": "Transcript, summary, and action steps are organized for instant use."
+        "title": "Structured output by default",
+        "text": "Summaries, execution plans, and implementation prompts are ready to use."
       },
       {
-        "title": "Works for lectures and courses",
-        "text": "Designed for educational and long-form video workflows."
+        "title": "Built for serious learners",
+        "text": "Optimized for deep educational content, not short clips."
       },
       {
-        "title": "Saves hours every week",
-        "text": "Convert long watch time into actionable notes fast."
+        "title": "Consistent weekly time savings",
+        "text": "Turn hours of consumption into focused implementation time."
+      }
+    ]
+  },
+  "whoFor": {
+    "title": "Who this is for",
+    "subtitle": "Made for people who turn learning into shipped outcomes.",
+    "items": [
+      {
+        "title": "Course learners",
+        "text": "Compress modules into actionable notes and revision flows."
+      },
+      {
+        "title": "Self-educators",
+        "text": "Convert long-form learning into practical next steps quickly."
+      },
+      {
+        "title": "Entrepreneurs & operators",
+        "text": "Translate educational content into implementation plans for your project."
       }
     ]
   },
   "socialProof": {
-    "title": "Trusted by students and creators",
+    "title": "Built for long-form learning workflows",
     "stats": [
       {
         "id": "videos_processed",
         "value": "1,000+",
-        "label": "videos processed"
+        "label": "long videos processed"
       },
       {
         "id": "lecture_usage",
-        "value": "Used in lectures & online courses",
-        "label": "education-focused workflows"
+        "value": "Used across course workflows",
+        "label": "education-focused use cases"
       },
       {
         "id": "growth",
-        "value": "Growing daily",
-        "label": "new usage activity every day"
+        "value": "Growing every day",
+        "label": "new learner activity daily"
       }
     ],
     "testimonials": [
       {
-        "quote": "I summarize 90-minute lectures in minutes and review faster before exams.",
+        "quote": "I no longer rewatch 90-minute lectures to extract what to do next.",
         "role": "Medical Student"
       },
       {
-        "quote": "The action steps save me from rewatching full videos to extract tasks.",
+        "quote": "The implementation prompt saves hours when handing tasks to devs.",
         "role": "Course Creator"
       },
       {
-        "quote": "We turn long explainers into structured internal notes for the team.",
+        "quote": "We turn long explainers into execution checklists for the team.",
         "role": "Startup Team Lead"
       }
     ]
   },
   "pricing": {
-    "title": "Simple pricing for consistent output",
-    "subtitle": "Start free, then upgrade when you need higher daily capacity.",
+    "title": "Simple pricing by videos",
+    "subtitle": "Clear video-based units. No unit confusion.",
     "free": {
       "badge": "FREE",
-      "limit": "5 videos per day",
+      "limit": "5 videos per month",
       "features": [
         "Full transcript extraction",
-        "Multiple summary modes: quick, detailed, and key insights",
-        "Clean transcript rewrite + proper study notes",
-        "Action plan you can execute immediately",
-        "Resources extraction (tools, links, references)",
-        "Study kit: learning objectives + quick quiz",
-        "Content kit for creators (hooks + short scripts)",
+        "Structured summaries and key insights",
+        "Execution plan and implementation prompt",
         "AI chat on the same extracted video"
       ],
       "button": "Start Free"
@@ -138,21 +177,17 @@
     "pro": {
       "badge": "PRO",
       "popularBadge": "Most Popular",
-      "limit": "Up to 500 videos per day (based on credits)",
-      "price": "$5 / 200 credits",
-      "valueSummary": "For power users, creators, and teams",
+      "limit": "200 full videos per pack",
+      "price": "$19 / 200 videos",
+      "valueSummary": "For serious learners and execution-focused teams",
       "features": [
         "Everything in Free included",
-        "All summary and analysis modes unlocked",
-        "Advanced AI chat for every extracted video",
-        "Save chat sessions and return anytime",
-        "Priority processing and faster turnaround",
-        "Multilingual output support",
-        "Future features included automatically",
-        "Track your payment requests and billing status"
+        "Video-based balance (1 new video = 1 video)",
+        "Execution-ready output for each video",
+        "Payment request tracking and billing status"
       ],
-      "button": "Upgrade to Pro",
-      "promo": "Limited-time promotional pricing"
+      "button": "Buy 200-video pack",
+      "promo": "Outcome-focused pricing"
     }
   },
   "faq": {
@@ -160,28 +195,28 @@
     "items": [
       {
         "q": "Is this affiliated with YouTube?",
-        "a": "No. Transcripta AI is an independent productivity tool that processes public YouTube links."
+        "a": "No. Transcripta AI is an independent productivity service for public YouTube links."
       },
       {
         "q": "Do I need an account?",
-        "a": "Not for your first guest extraction. You need an account to continue usage and save your history."
+        "a": "Not for your first guest extraction. You need an account to continue and save history."
       },
       {
-        "q": "How do credits work?",
-        "a": "Each new extracted video consumes credits based on your plan. Paid top-up starts at $5 for 200 credits."
+        "q": "How does video balance work?",
+        "a": "Each new extracted video consumes one video from your balance."
       },
       {
         "q": "Is my data stored?",
-        "a": "We store only what is needed to run and secure the service. We do not store original video files."
+        "a": "We store only what is required to run and secure the service. Original video files are not stored."
       },
       {
-        "q": "Can I cancel anytime?",
-        "a": "Yes. There is no forced long-term contract. You can stop using paid top-up whenever you want."
+        "q": "Can I stop anytime?",
+        "a": "Yes. No forced long-term contract."
       }
     ]
   },
   "finalCta": {
-    "headline": "Stop rewatching long videos. Extract insights instantly.",
+    "headline": "Stop consuming long videos passively. Execute faster.",
     "button": "Create Free Account"
   }
 }

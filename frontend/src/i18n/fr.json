@@ -1,7 +1,7 @@
-{
+﻿{
   "brand": {
     "name": "TRANSCRIPTA AI",
-    "tagline": "Transcription + Resume + Etapes d'action depuis YouTube"
+    "tagline": "Moteur d'extraction de connaissance et d'execution pour videos longues"
   },
   "nav": {
     "pricing": "Tarification",
@@ -11,25 +11,46 @@
     "language": "Langue"
   },
   "hero": {
-    "kicker": "Notes video structurees",
-    "headline": "Transformez n'importe quelle video YouTube en notes structurees en quelques minutes.",
-    "subheadline": "Transcription + Resume + Etapes d'action au meme endroit pour les cours, formations et videos longues.",
+    "kicker": "Knowledge Extraction & Execution Engine",
+    "headline": "Transformez chaque video longue en sortie prete a executer.",
+    "subheadline": "Extrayez les idees essentielles des cours et videos longues, puis convertissez-les en etapes claires et prompts d'implementation.",
     "inputLabel": "Collez une URL YouTube",
     "inputPlaceholder": "https://www.youtube.com/watch?v=...",
-    "primaryCta": "Essayez 1 video gratuitement",
+    "primaryCta": "Tester sur votre video",
     "secondaryCta": "Commencer gratuitement",
-    "trustLine": "Aucune carte requise • 5 videos gratuites par jour",
-    "helper": "Votre premiere extraction fonctionne sans inscription. Apres le resultat, creez un compte gratuit pour continuer.",
-    "loadingHint": "Recuperation de la transcription et preparation de l'apercu...",
+    "trustLine": "Sans carte bancaire • 5 videos gratuites par mois",
+    "helper": "La premiere extraction fonctionne sans inscription. Creez un compte gratuit apres l'apercu pour continuer.",
+    "loadingHint": "Extraction de la transcription et preparation de l'apercu d'execution...",
     "errors": {
       "empty": "Collez d'abord une URL YouTube.",
       "invalid": "Ce lien ne ressemble pas a une URL YouTube valide."
     },
     "quickPoints": [
-      "Ideal pour les cours, formations et videos educatives longues.",
-      "Sortie propre, lisible et facile a partager.",
-      "Gagnez des heures chaque semaine."
+      "Concu pour cours longs, formations et contenu educatif profond.",
+      "Passez du visionnage passif a l'execution en quelques minutes.",
+      "Fait pour apprenants, entrepreneurs et equipes orientees action."
     ]
+  },
+  "transformation": {
+    "title": "Exemple reel de transformation",
+    "badge": "Avant / Apres",
+    "subtitle": "Exemple concret issu d'un flux de video educative longue.",
+    "beforeTitle": "Avant Transcripta",
+    "afterTitle": "Apres Transcripta",
+    "beforePoints": [
+      "Cours de 90 minutes avec notes eparses et sans plan clair.",
+      "Les idees cles sont melangees au bruit et aux repetitions.",
+      "Difficile de deleguer l'implementation a un developpeur ou une equipe."
+    ],
+    "afterPoints": [
+      "Resume structure du flux pedagogique reel.",
+      "Plan d'execution avec jalons, hypotheses et risques.",
+      "Prompt pret a copier pour developpeur humain et assistant IA."
+    ],
+    "beforeOutputLabel": "Avant (notes brutes)",
+    "afterOutputLabel": "Apres (pret a executer)",
+    "beforeOutput": "Notes video:\\n- Auth peut-etre dabord\\n- Facturation plus tard\\n- Cles API? pas clair\\n- Revoir minute 37 et 52\\n- Demander au dev plus tard",
+    "afterOutput": "Brief dexecution:\\n1) Ajouter middleware JWT sur les endpoints /api\\n2) Modele de packs: 19 $ = 200 videos\\n3) Page admin pool de cles avec statuts explicites\\n4) Critere: un utilisateur a 0 solde video ne traite pas de nouveau lien\\n5) Livraison en une PR avec tests et notes de deploiement"
   },
   "guest": {
     "loading": "Extraction en cours...",
@@ -38,121 +59,135 @@
     "transcriptPreview": "Apercu de la transcription",
     "summaryPreview": "Resume rapide",
     "wordCount": "Nombre de mots",
-    "signupPrompt": "Votre premier resultat est pret. Creez un compte gratuit pour continuer les extractions, resumes et etapes d'action.",
-    "quotaReached": "Votre extraction gratuite invite est deja utilisee. Creez un compte gratuit pour continuer.",
+    "signupPrompt": "Votre premier resultat est debloque. Creez un compte gratuit pour continuer et produire des sorties pretes a executer.",
+    "quotaReached": "Votre extraction invite gratuite est deja utilisee. Creez un compte gratuit pour continuer.",
     "failed": "Echec de l'extraction. Essayez une autre video.",
     "createAccount": "Creer un compte gratuit",
     "haveAccount": "J'ai deja un compte"
   },
   "whatYouGet": {
-    "title": "Ce que vous obtenez immediatement",
-    "subtitle": "Une sortie exploitable tout de suite, pas un texte brut confus.",
+    "title": "Sortie orientee resultat",
+    "subtitle": "Vous obtenez clarte de decision et execution, pas seulement du texte brut.",
     "items": [
       {
-        "title": "Transcription complete",
-        "text": "Une version texte claire de la video pour recherche, revision et reference."
+        "title": "Compression cognitive",
+        "text": "Condensez les longues videos en idees essentielles vraiment utiles."
       },
       {
-        "title": "Resume rapide",
-        "text": "Les idees essentielles condensees pour comprendre plus vite."
+        "title": "Acceleration d'execution",
+        "text": "Transformez la connaissance extraite en etapes d'implementation ordonnees."
       },
       {
-        "title": "Etapes d'action",
-        "text": "Des actions structurees que vous pouvez appliquer directement."
+        "title": "Rappel plus rapide",
+        "text": "Des notes structurees pour reviser et decider sans friction."
+      },
+      {
+        "title": "Sortie prete a deleguer",
+        "text": "Donnez des livrables clairs a un developpeur ou a votre equipe."
       }
     ]
   },
   "trust": {
-    "title": "Pourquoi choisir Transcripta AI ?",
+    "title": "Pourquoi les equipes utilisent Transcripta",
     "items": [
       {
-        "title": "Plus rapide que le copier-coller manuel",
-        "text": "Evitez la prise de notes repetitive et obtenez une sortie structuree en quelques minutes."
+        "title": "Moins de visionnage, plus d'execution",
+        "text": "Arretez de revoir des videos longues pour trouver les actions utiles."
       },
       {
-        "title": "Sortie propre et structuree",
-        "text": "Transcription, resume et etapes d'action organises pour une utilisation immediate."
+        "title": "Sortie structuree par defaut",
+        "text": "Resume, plan d'execution et prompt d'implementation prets a l'emploi."
       },
       {
-        "title": "Ideal pour cours et formations",
-        "text": "Concu pour les flux de travail educatifs et les contenus longs."
+        "title": "Concu pour l'apprentissage profond",
+        "text": "Optimise pour contenu educatif long, pas pour clips courts."
       },
       {
-        "title": "Economise des heures chaque semaine",
-        "text": "Transformez un long temps de visionnage en notes actionnables."
+        "title": "Gain de temps hebdomadaire",
+        "text": "Transformez des heures de consommation en temps d'implementation."
+      }
+    ]
+  },
+  "whoFor": {
+    "title": "Pour qui ?",
+    "subtitle": "Pour ceux qui transforment l'apprentissage en resultats concrets.",
+    "items": [
+      {
+        "title": "Apprenants de cours",
+        "text": "Compressez les modules en notes actionnables et revision rapide."
+      },
+      {
+        "title": "Auto-apprenants",
+        "text": "Transformez les videos longues en prochaines etapes pratiques."
+      },
+      {
+        "title": "Entrepreneurs et equipes",
+        "text": "Convertissez le contenu educatif en plan d'implementation projet."
       }
     ]
   },
   "socialProof": {
-    "title": "Adopte par des etudiants et createurs",
+    "title": "Construit pour les workflows d'apprentissage long",
     "stats": [
       {
         "id": "videos_processed",
         "value": "1 000+",
-        "label": "videos traitees"
+        "label": "videos longues traitees"
       },
       {
         "id": "lecture_usage",
-        "value": "Utilise en cours et formations en ligne",
-        "label": "flux de travail centres education"
+        "value": "Utilise dans des parcours de cours",
+        "label": "cas d'usage education"
       },
       {
         "id": "growth",
         "value": "En croissance chaque jour",
-        "label": "nouvelle activite quotidienne"
+        "label": "nouvelle activite apprenant quotidienne"
       }
     ],
     "testimonials": [
       {
-        "quote": "Je resume des cours de 90 minutes en quelques minutes avant les examens.",
+        "quote": "Je ne revois plus des cours de 90 minutes pour savoir quoi executer.",
         "role": "Etudiante en medecine"
       },
       {
-        "quote": "Les etapes d'action m'evitent de revoir toute la video pour trouver les taches.",
+        "quote": "Le prompt d'implementation economise des heures pour deleguer aux devs.",
         "role": "Createur de formation"
       },
       {
-        "quote": "Notre equipe transforme les longues videos en notes internes structurees.",
-        "role": "Lead equipe startup"
+        "quote": "On transforme les longues explications en checklists d'execution d'equipe.",
+        "role": "Lead startup"
       }
     ]
   },
   "pricing": {
-    "title": "Une tarification simple et evolutive",
-    "subtitle": "Commencez gratuitement puis passez au niveau superieur selon votre volume quotidien.",
+    "title": "Tarification simple par videos",
+    "subtitle": "Unites video claires. Aucun flou sur le calcul.",
     "free": {
       "badge": "GRATUIT",
-      "limit": "5 videos par jour",
+      "limit": "5 videos par mois",
       "features": [
         "Extraction complete de la transcription",
-        "Plusieurs modes de resume : rapide, detaille, et idees cles",
-        "Transcription nettoyee + notes structurees",
-        "Plan d'action immediat et applicable",
-        "Extraction des ressources (outils, liens, references)",
-        "Pack etude : objectifs d'apprentissage + quiz rapide",
-        "Pack createur (hooks + scripts courts)",
-        "Chat IA sur la meme video extraite"
+        "Resume structure et idees cles",
+        "Plan d'execution + prompt d'implementation",
+        "Chat IA sur la meme video"
       ],
       "button": "Demarrer gratuitement"
     },
     "pro": {
       "badge": "PRO",
-      "popularBadge": "Le plus populaire",
-      "limit": "Jusqu'a 500 videos par jour (selon credits)",
-      "price": "$5 / 200 credits",
-      "valueSummary": "Pour utilisateurs intensifs, createurs et equipes",
+      "popularBadge": "Le plus choisi",
+      "limit": "200 videos completes par pack",
+      "price": "$19 / 200 videos",
+      "valueSummary": "Pour apprenants serieux et equipes orientees execution",
       "features": [
-        "Toutes les fonctionnalites Free incluses",
-        "Tous les modes de resume et d'analyse debloques",
-        "Chat IA avance pour chaque video extraite",
-        "Sauvegarde des sessions de chat et reprise a tout moment",
-        "Traitement prioritaire et plus rapide",
-        "Support multilingue des sorties",
-        "Fonctionnalites futures incluses automatiquement",
-        "Suivi des demandes de recharge et statut de paiement"
+        "Tout le plan Free inclus",
+        "Solde base videos (1 nouvelle video = 1 video)",
+        "Sorties pretes a executer pour chaque video",
+        "Suivi des demandes de paiement et statut"
       ],
-      "button": "Passer a Pro",
-      "promo": "Tarif promotionnel pour une duree limitee"
+      "button": "Acheter pack 200 videos",
+      "promo": "Tarification orientee resultat"
     }
   },
   "faq": {
@@ -160,28 +195,28 @@
     "items": [
       {
         "q": "Est-ce affilie a YouTube ?",
-        "a": "Non. Transcripta AI est un outil de productivite independant qui traite les liens YouTube publics."
+        "a": "Non. Transcripta AI est un service de productivite independant pour liens YouTube publics."
       },
       {
         "q": "Ai-je besoin d'un compte ?",
         "a": "Pas pour la premiere extraction invite. Un compte est requis pour continuer et sauvegarder l'historique."
       },
       {
-        "q": "Comment fonctionnent les credits ?",
-        "a": "Chaque nouvelle video extraite consomme des credits selon votre plan. La recharge commence a 5 $ pour 200 credits."
+        "q": "Comment fonctionne le solde videos ?",
+        "a": "Chaque nouvelle video extraite consomme une video de votre solde."
       },
       {
         "q": "Mes donnees sont-elles stockees ?",
-        "a": "Nous stockons uniquement les donnees necessaires au fonctionnement et a la securite du service. Les fichiers video originaux ne sont pas stockes."
+        "a": "Nous stockons uniquement ce qui est necessaire au service et a la securite. Les fichiers video originaux ne sont pas stockes."
       },
       {
         "q": "Puis-je arreter a tout moment ?",
-        "a": "Oui. Aucun engagement long terme impose. Vous pouvez arreter les recharges quand vous voulez."
+        "a": "Oui. Aucun engagement long terme impose."
       }
     ]
   },
   "finalCta": {
-    "headline": "Arretez de revoir les videos longues. Extrayez les idees instantanement.",
+    "headline": "Arretez la consommation passive des videos longues. Executez plus vite.",
     "button": "Creer un compte gratuit"
   }
 }

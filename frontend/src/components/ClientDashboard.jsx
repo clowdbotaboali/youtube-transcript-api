@@ -55,7 +55,8 @@ function ClientDashboard({
           {tr(
             lang,
             'الخطة المجانية: 5 روابط فيديو فقط. بعد استخراج الفيديو يمكنك التلخيص والدردشة عليه بدون خصم إضافي.',
-            'Free plan: 5 video links only. After extraction, summary and chat on that same video do not consume extra credits.'
+            'Free plan: 5 video links only. After extraction, summary and chat on that same video do not consume extra balance.',
+            'Plan gratuit: 5 liens video uniquement. Resume et chat sur la meme video sans consommation supplementaire.'
           )}
         </p>
         <div className="flex flex-wrap gap-3">
@@ -65,7 +66,7 @@ function ClientDashboard({
             tone={isDark ? 'bg-cyan-950 text-cyan-200 border-cyan-800' : 'bg-cyan-50 text-cyan-800 border-cyan-200'}
           />
           <InfoChip
-            label={tr(lang, 'الرصيد الحالي', 'Current credits')}
+            label={tr(lang, 'الرصيد الحالي', 'Current video balance', 'Solde video actuel')}
             value={credits ?? '...'}
             tone={isDark ? 'bg-amber-950 text-amber-200 border-amber-800' : 'bg-amber-50 text-amber-800 border-amber-200'}
           />
@@ -76,7 +77,7 @@ function ClientDashboard({
           />
           <InfoChip
             label={tr(lang, 'الشحن المدفوع', 'Paid top-up')}
-            value={tr(lang, 'يبدأ من 200 نقطة / $5', 'starts at 200 credits / $5')}
+            value={tr(lang, '$19 = 200 فيديو', '$19 = 200 videos', '$19 = 200 videos')}
             tone={isDark ? 'bg-orange-950 text-orange-200 border-orange-800' : 'bg-orange-50 text-orange-800 border-orange-200'}
           />
         </div>
@@ -103,9 +104,9 @@ function ClientDashboard({
         />
         <ActionCard
           theme={theme}
-          title={tr(lang, 'إدارة الرصيد', 'Manage Credits')}
-          text={tr(lang, 'الشحن يبدأ من 5$ = 200 كريديت، ويمكن زيادة المبلغ بمضاعفات 5$ مع خصومات تلقائية.', 'Top-up starts at $5 = 200 credits, with automatic bonus credits on larger amounts.')}
-          cta={tr(lang, 'شحن الرصيد', 'Top up credits')}
+          title={tr(lang, 'إدارة الرصيد', 'Manage Video Balance', 'Gerer le solde videos')}
+          text={tr(lang, 'الباقة المدفوعة واضحة: $19 لكل 200 فيديو كامل المعالجة.', 'Paid pricing is clear: $19 for every 200 fully processed videos.', 'Tarification claire: 19 $ pour chaque pack de 200 videos traitees.')}
+          cta={tr(lang, 'شحن الرصيد', 'Top up videos', 'Recharger des videos')}
           onClick={onOpenTopup}
           tone={isDark ? 'from-amber-950 to-orange-950 border-amber-900' : 'from-amber-100 to-orange-100 border-amber-200'}
           icon={<FaBolt />}

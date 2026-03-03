@@ -67,12 +67,16 @@ export function formatApiErrorMessage({
   }
 
   if (code === 'LIMIT_EXCEEDED') {
-    if (typeof details.required === 'number') {
+    if (
+      typeof details.required === 'number' ||
+      typeof details.requiredCredits === 'number' ||
+      typeof details.requiredVideos === 'number'
+    ) {
       return localize(
         lang,
-        'الرصيد غير كافٍ لاستخراج فيديو جديد. اشحن رصيدك ثم حاول مرة أخرى.',
-        'Insufficient credits for a new video link. Top up and try again.',
-        "Credits insuffisants pour un nouveau lien video. Rechargez puis reessayez."
+        'رصيد الفيديوهات غير كافٍ لاستخراج فيديو جديد. اشحن رصيدك ثم حاول مرة أخرى.',
+        'Insufficient video balance for a new video link. Top up and try again.',
+        "Solde videos insuffisant pour un nouveau lien video. Rechargez puis reessayez."
       );
     }
     if (typeof details.dailyLimit === 'number') {
@@ -94,9 +98,9 @@ export function formatApiErrorMessage({
   if (code === 'QUOTA_EXCEEDED') {
     return localize(
       lang,
-      'تم استهلاك الروابط الشهرية المجانية ولا يوجد رصيد كافٍ حالياً. انتظر التجديد الشهري أو اشحن رصيدك للمتابعة.',
-      'Monthly free links are exhausted and no credits are available. Wait for reset or top up your balance.',
-      'Le quota mensuel gratuit est epuise et aucun credit nest disponible. Attendez la reinitialisation ou rechargez votre solde.'
+      'تم استهلاك الحصة الشهرية المجانية ولا يوجد رصيد فيديوهات مدفوع حاليًا. انتظر التجديد الشهري أو اشحن رصيدك للمتابعة.',
+      'Monthly free video quota is exhausted and no paid video balance is available. Wait for reset or top up your balance.',
+      'Le quota video mensuel gratuit est epuise et aucun solde video payant nest disponible. Attendez la reinitialisation ou rechargez votre solde.'
     );
   }
 
@@ -156,20 +160,23 @@ export function formatApiErrorMessage({
 
   const raw = cleanText(parsed.message || '');
   const rawLower = raw.toLowerCase();
-  if (rawLower.includes('monthly transcript quota reached') && rawLower.includes('no credits')) {
+  if (
+    (rawLower.includes('monthly transcript quota reached') && rawLower.includes('no credits')) ||
+    (rawLower.includes('monthly free video quota reached') && rawLower.includes('no paid video balance'))
+  ) {
     return localize(
       lang,
-      'تم استهلاك الروابط الشهرية المجانية ولا يوجد رصيد كافٍ حالياً. انتظر التجديد الشهري أو اشحن رصيدك للمتابعة.',
-      'Monthly free links are exhausted and no credits are available. Wait for reset or top up your balance.',
-      'Le quota mensuel gratuit est epuise et aucun credit nest disponible. Attendez la reinitialisation ou rechargez votre solde.'
+      'تم استهلاك الحصة الشهرية المجانية ولا يوجد رصيد فيديوهات مدفوع حاليًا. انتظر التجديد الشهري أو اشحن رصيدك للمتابعة.',
+      'Monthly free video quota is exhausted and no paid video balance is available. Wait for reset or top up your balance.',
+      'Le quota video mensuel gratuit est epuise et aucun solde video payant nest disponible. Attendez la reinitialisation ou rechargez votre solde.'
     );
   }
-  if (rawLower.includes('insufficient credits')) {
+  if (rawLower.includes('insufficient credits') || rawLower.includes('insufficient video balance')) {
     return localize(
       lang,
-      'الرصيد غير كافٍ لاستخراج رابط جديد. اشحن رصيدك ثم حاول مرة أخرى.',
-      'Insufficient credits for a new video link. Top up and try again.',
-      'Credits insuffisants pour un nouveau lien video. Rechargez puis reessayez.'
+      'رصيد الفيديوهات غير كافٍ لاستخراج رابط جديد. اشحن رصيدك ثم حاول مرة أخرى.',
+      'Insufficient video balance for a new video link. Top up and try again.',
+      'Solde videos insuffisant pour un nouveau lien video. Rechargez puis reessayez.'
     );
   }
   if (raw) return raw;

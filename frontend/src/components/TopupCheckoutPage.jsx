@@ -134,7 +134,7 @@ function TopupCheckoutPage({
     }
 
     if (!quote?.valid) {
-      notify('error', tr(lang, 'الرجاء اختيار مبلغ شحن صحيح أولاً.', 'Please select a valid top-up amount first.', 'Veuillez d abord choisir un montant valide.'));
+      notify('error', tr(lang, 'الرجاء اختيار باقة فيديو صحيحة أولاً.', 'Please select a valid video pack first.', 'Veuillez d abord choisir un pack videos valide.'));
       return;
     }
 
@@ -177,9 +177,9 @@ function TopupCheckoutPage({
           'success',
           tr(
             lang,
-            `تم إرسال طلب الشحن بنجاح (${data.quote?.credits ?? quote.credits} كريديت).`,
-            `Top-up request submitted (${data.quote?.credits ?? quote.credits} credits).`,
-            `Demande envoyee (${data.quote?.credits ?? quote.credits} credits).`
+            `تم إرسال طلب الشحن بنجاح (${data.quote?.videos ?? quote.videos} فيديو).`,
+            `Top-up request submitted (${data.quote?.videos ?? quote.videos} videos).`,
+            `Demande envoyee (${data.quote?.videos ?? quote.videos} videos).`
           )
         );
         resetFormAfterSubmit();
@@ -215,14 +215,14 @@ function TopupCheckoutPage({
     return (
       <section className={`rounded-2xl border p-5 ${isDark ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'}`}>
         <p className="font-semibold text-red-500 mb-3">
-          {tr(lang, 'لا يوجد مبلغ شحن صالح. اختر المبلغ أولاً.', 'No valid top-up amount selected.', 'Aucun montant valide selectionne.')}
+          {tr(lang, 'لا توجد باقة فيديو صالحة. اختر الباقة أولاً.', 'No valid video pack selected.', 'Aucun pack videos valide selectionne.')}
         </p>
         <button
           type="button"
           onClick={onBack}
           className="rounded-xl px-4 py-2 bg-slate-900 text-white font-bold hover:bg-slate-800 transition"
         >
-          {tr(lang, 'الرجوع لاختيار المبلغ', 'Back to amount selection', 'Retour au choix du montant')}
+          {tr(lang, 'الرجوع لاختيار الباقة', 'Back to pack selection', 'Retour au choix du pack')}
         </button>
       </section>
     );
@@ -237,7 +237,7 @@ function TopupCheckoutPage({
               {tr(lang, 'تفاصيل الدفع ورفع الإثبات', 'Payment details & proof upload', 'Details de paiement et preuve')}
             </h2>
             <p className={`text-sm ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-              {tr(lang, 'هذه الصفحة خاصة بإتمام طلب الشحن بعد اختيار المبلغ.', 'This page is for finalizing your selected top-up amount.', 'Cette page sert a finaliser votre montant selectionne.')}
+              {tr(lang, 'هذه الصفحة لإتمام طلب الدفع بعد اختيار باقة الفيديو.', 'This page finalizes your selected video pack.', 'Cette page finalise votre pack videos selectionne.')}
             </p>
           </div>
           <button
@@ -246,16 +246,15 @@ function TopupCheckoutPage({
             className="inline-flex items-center gap-2 rounded-xl px-4 py-2 border border-slate-300 bg-white text-slate-900 font-semibold hover:bg-slate-50 transition"
           >
             <FaArrowRight className={lang === LANG.ar ? '' : 'rotate-180'} />
-            <span>{tr(lang, 'تغيير المبلغ', 'Change amount', 'Changer le montant')}</span>
+            <span>{tr(lang, 'تغيير الباقة', 'Change pack', 'Changer le pack')}</span>
           </button>
         </div>
 
         <div className={`rounded-xl border p-4 ${isDark ? 'border-amber-800 bg-amber-950/35 text-amber-100' : 'border-amber-200 bg-amber-50 text-slate-800'}`}>
           <p className="font-bold text-base mb-1">
-            {tr(lang, 'الإجمالي:', 'Total:', 'Total:')} {quote.credits} {tr(lang, 'كريديت', 'credits', 'credits')}
+            {tr(lang, 'الإجمالي:', 'Total:', 'Total:')} {quote.videos} {tr(lang, 'فيديو', 'videos', 'videos')}
           </p>
-          <p>{tr(lang, 'الأساسي:', 'Base:', 'Base:')} {quote.baseCredits} {tr(lang, 'كريديت', 'credits', 'credits')}</p>
-          <p>{tr(lang, 'المكافأة:', 'Bonus:', 'Bonus:')} {quote.bonusCredits} {tr(lang, 'كريديت', 'credits', 'credits')} ({Math.round(quote.bonusRate * 100)}%)</p>
+          <p>{tr(lang, 'عدد الباقات:', 'Packs:', 'Packs:')} {quote.packs}</p>
           <p>{tr(lang, 'السعر:', 'Price:', 'Prix:')} ${quote.amountUsd}</p>
         </div>
       </div>
@@ -368,7 +367,7 @@ function TopupCheckoutPage({
             {myRequests.slice(0, 10).map((item) => (
               <div key={item.id} className={`rounded-lg border p-3 ${isDark ? 'border-slate-700 bg-slate-900/70' : 'border-slate-200 bg-slate-50'}`}>
                 <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                  <span className="font-semibold">${(Number(item.amount_cents || 0) / 100).toFixed(2)} / {item.credits_added} {tr(lang, 'كريديت', 'credits', 'credits')}</span>
+                  <span className="font-semibold">${(Number(item.amount_cents || 0) / 100).toFixed(2)} / {item.credits_added} {tr(lang, 'فيديو', 'videos', 'videos')}</span>
                   <span
                     className={`text-xs rounded-full px-2 py-1 ${
                       item.status === 'approved'

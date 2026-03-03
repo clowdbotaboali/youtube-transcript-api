@@ -9,9 +9,9 @@ function SiteFooter({ lang = LANG.ar, theme = 'light' }) {
           (c) {new Date().getFullYear()} Transcripta AI.{' '}
           {tr(
             lang,
-            'خدمة رقمية لاستخراج النصوص',
-            'Digital transcript generation service',
-            'Service numerique de generation de transcriptions'
+            'محرك استخراج المعرفة والتنفيذ من الفيديوهات الطويلة',
+            'Knowledge extraction and execution engine for long videos',
+            'Moteur dextraction de connaissance et dexecution pour longues videos'
           )}
         </p>
         <nav className="flex flex-wrap gap-3 text-xs sm:text-sm">

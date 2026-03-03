@@ -64,7 +64,7 @@ const LOGOUT_MARKER_KEY = 'forceLoggedOut';
 const FREE_PLAN_REQUESTS = 5;
 const CREDIT_COST_PER_SUCCESS = 1;
 const PAID_PLAN_CREDITS = 200;
-const PAID_PLAN_PRICE_USD = 5;
+const PAID_PLAN_PRICE_USD = 19;
 const THEME = {
   light: 'light',
   dark: 'dark'
@@ -1108,11 +1108,11 @@ function App() {
   if (!user) {
     return (
       <div className={`min-h-screen flex flex-col ${theme === THEME.dark ? 'bg-slate-950 text-slate-100' : ''}`}>
-        <SeoMeta
-          title="Transcripta AI | YouTube Transcript Generation Service"
-          description="Transcripta AI is a digital service that converts YouTube links into text transcripts and provides optional AI text analysis."
-          path="/"
-        />
+      <SeoMeta
+        title="Transcripta AI | Knowledge Extraction & Execution Engine"
+        description="Transform long YouTube videos into structured knowledge, execution plans, and implementation-ready outputs."
+        path="/"
+      />
         <div className="flex-1">
           <LandingPage
             onStart={handleLandingStart}
@@ -1147,7 +1147,7 @@ function App() {
     >
       <SeoMeta
         title="Client Workspace | Transcripta AI"
-        description="Authenticated workspace for transcript extraction, AI text processing, and saved transcript history."
+        description="Authenticated workspace for knowledge extraction, AI processing, and execution-ready outputs from long videos."
         path="/"
       />
       <ToastStack items={toasts} onDismiss={dismissToast} />
@@ -1191,8 +1191,8 @@ function App() {
         {clientPage === CLIENT_PAGES.workspace && (
           <section className="space-y-4 sm:space-y-6">
             <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6">
-              <h2 className="text-xl sm:text-2xl font-black text-slate-900 mb-1">{tr(lang, '\u0645\u0633\u0627\u062d\u0629 \u0627\u0633\u062a\u062e\u0631\u0627\u062c \u0627\u0644\u0633\u0643\u0631\u064a\u0628\u062a', 'Transcript Extraction Workspace')}</h2>
-              <p className="text-sm text-slate-600">{tr(lang, '\u0636\u0639 \u0627\u0644\u0631\u0627\u0628\u0637\u060c \u0627\u0633\u062a\u062e\u0631\u062c \u0627\u0644\u0646\u0635\u060c \u062b\u0645 \u0627\u0628\u062f\u0623 \u0627\u0644\u0645\u0639\u0627\u0644\u062c\u0629 \u0623\u0648 \u0627\u0644\u062f\u0631\u062f\u0634\u0629.', 'Paste a URL, extract transcript, then process or chat.')}</p>
+              <h2 className="text-xl sm:text-2xl font-black text-slate-900 mb-1">{tr(lang, '\u0645\u0633\u0627\u062d\u0629 \u0627\u0633\u062a\u062e\u0631\u0627\u062c \u0627\u0644\u0645\u0639\u0631\u0641\u0629', 'Knowledge Extraction Workspace', 'Espace extraction de connaissance')}</h2>
+              <p className="text-sm text-slate-600">{tr(lang, '\u0636\u0639 \u0627\u0644\u0631\u0627\u0628\u0637\u060c \u0627\u0633\u062a\u062e\u0631\u062c \u0627\u0644\u0646\u0635\u060c \u062b\u0645 \u062d\u0648\u0651\u0644 \u0627\u0644\u0645\u062d\u062a\u0648\u0649 \u0625\u0644\u0649 \u062e\u0637\u0648\u0627\u062a \u062a\u0646\u0641\u064a\u0630 \u0623\u0648 \u0627\u0633\u0623\u0644 \u0627\u0644\u0645\u0633\u0627\u0639\u062f \u0627\u0644\u0630\u0643\u064a.', 'Paste a URL, extract knowledge, then generate execution-ready output or chat.', 'Collez un lien, extrayez la connaissance, puis generez une sortie executable ou utilisez le chat.')}</p>
             </div>
             {accountRestrictionMessage ? (
               <div className="rounded-xl border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm font-medium">
@@ -1328,10 +1328,10 @@ function App() {
                 <h2 className="text-xl font-black text-slate-900 mb-3">{tr(lang, '\u062a\u0641\u0627\u0635\u064a\u0644 \u0627\u0644\u062d\u0633\u0627\u0628', 'Account details')}</h2>
                 <div className="space-y-3 text-sm">
                   <p><span className="font-bold">{tr(lang, '\u0627\u0644\u0628\u0631\u064a\u062f:', 'Email:')}</span> {user?.email || '-'}</p>
-                  <p><span className="font-bold">{tr(lang, '\u0627\u0644\u0631\u0635\u064a\u062f:', 'Credits:')}</span> {credits ?? '...'}</p>
+                  <p><span className="font-bold">{tr(lang, '\u0631\u0635\u064a\u062f \u0627\u0644\u0641\u064a\u062f\u064a\u0648\u0647\u0627\u062a:', 'Video balance:')}</span> {credits ?? '...'}</p>
                   <p><span className="font-bold">{tr(lang, '\u0627\u0644\u062e\u0637\u0629 \u0627\u0644\u0645\u062c\u0627\u0646\u064a\u0629:', 'Free plan:')}</span> {freePlanLimit} {tr(lang, '\u0631\u0648\u0627\u0628\u0637 \u0641\u0642\u0637', 'links only')}</p>
                   <p><span className="font-bold">{tr(lang, '\u0627\u0644\u0631\u0648\u0627\u0628\u0637 \u0627\u0644\u0645\u062c\u0627\u0646\u064a\u0629 \u0627\u0644\u0645\u062a\u0628\u0642\u064a\u0629:', 'Free links remaining:')}</span> {tr(lang, `${freeLinksRemaining} من ${freePlanLimit}`, `${freeLinksRemaining} of ${freePlanLimit}`, `${freeLinksRemaining} sur ${freePlanLimit}`)}</p>
-                  <p><span className="font-bold">{tr(lang, '\u062a\u0643\u0644\u0641\u0629 \u0627\u0644\u0631\u0627\u0628\u0637:', 'Link cost:')}</span> {CREDIT_COST_PER_SUCCESS} {tr(lang, '\u0643\u0631\u064a\u062f\u064a\u062a \u0644\u0643\u0644 \u0631\u0627\u0628\u0637 \u0641\u064a\u062f\u064a\u0648 \u062c\u062f\u064a\u062f', 'credit per new video link')}</p>
+                  <p><span className="font-bold">{tr(lang, '\u062a\u0643\u0644\u0641\u0629 \u0627\u0644\u0631\u0627\u0628\u0637:', 'Link cost:')}</span> {CREDIT_COST_PER_SUCCESS} {tr(lang, '\u0641\u064a\u062f\u064a\u0648 \u0645\u0646 \u0627\u0644\u0631\u0635\u064a\u062f \u0644\u0643\u0644 \u0631\u0627\u0628\u0637 \u062c\u062f\u064a\u062f', 'video from balance per new video link')}</p>
                   <p><span className="font-bold">{tr(lang, '\u0627\u0644\u062c\u0644\u0633\u0629:', 'Session:')}</span> {tr(lang, '\u0646\u0634\u0637\u0629', 'Active')}</p>
                   {accountAccess.status !== 'active' ? (
                     <p>
@@ -1346,19 +1346,19 @@ function App() {
                 <h3 className="text-lg font-black text-slate-900 mb-3">{tr(lang, '\u0627\u0644\u062e\u0637\u0637 \u0648\u0627\u0644\u0634\u062d\u0646', 'Plans & top-up')}</h3>
                 <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 mb-3">
                   <p className="font-black text-emerald-900 mb-2">{tr(lang, '\u0627\u0644\u062e\u0637\u0629 \u0627\u0644\u0645\u062c\u0627\u0646\u064a\u0629', 'Free plan')}</p>
-                  <p className="text-sm text-emerald-800">{tr(lang, '\u062a\u0634\u0645\u0644 5 \u0631\u0648\u0627\u0628\u0637 \u0641\u064a\u062f\u064a\u0648 \u0628\u062f\u0627\u064a\u0629\u060c \u0648\u0627\u0644\u062a\u0644\u062e\u064a\u0635 \u0648\u0627\u0644\u0634\u0627\u062a \u0644\u0646\u0641\u0633 \u0627\u0644\u0641\u064a\u062f\u064a\u0648 \u0628\u062f\u0648\u0646 \u062e\u0635\u0645 \u0625\u0636\u0627\u0641\u064a\u060c', '5 video links included, and same-video summary/chat do not consume extra credits.')}</p>
+                  <p className="text-sm text-emerald-800">{tr(lang, '\u062a\u0634\u0645\u0644 5 \u0641\u064a\u062f\u064a\u0648\u0647\u0627\u062a \u0634\u0647\u0631\u064a\u064b\u0627\u060c \u0648\u0627\u0644\u062a\u0644\u062e\u064a\u0635 \u0648\u0627\u0644\u0634\u0627\u062a \u0644\u0646\u0641\u0633 \u0627\u0644\u0641\u064a\u062f\u064a\u0648 \u0628\u062f\u0648\u0646 \u062e\u0635\u0645 \u0625\u0636\u0627\u0641\u064a\u060c', '5 videos monthly, and same-video summary/chat do not consume extra balance.')}</p>
                 </div>
                 <div className="rounded-xl border border-orange-200 bg-orange-50 p-4">
                   <p className="font-black text-orange-900 mb-2">{tr(lang, '\u0627\u0644\u0634\u062d\u0646 \u0627\u0644\u0645\u062f\u0641\u0648\u0639', 'Paid top-up')}</p>
                   <p className="text-sm text-orange-800 mb-3">
-                    {tr(lang, '\u064a\u0628\u062f\u0623 \u0645\u0646 5$ = 200 \u0643\u0631\u064a\u062f\u064a\u062a\u060c \u0648\u062a\u0641\u0627\u0635\u064a\u0644 \u0627\u0644\u062f\u0641\u0639 \u0627\u0644\u0643\u0627\u0645\u0644\u0629 \u062a\u0638\u0647\u0631 \u0641\u064a \u0635\u0641\u062d\u0629 \u0645\u062e\u0635\u0635\u0629 \u0628\u0639\u062f \u0627\u062e\u062a\u064a\u0627\u0631 \u0627\u0644\u0645\u0628\u0644\u063a\u060c', 'Starts at $5 = 200 credits. Full payment details open on a dedicated page after choosing the amount.')}
+                    {tr(lang, '\u0628\u0627\u0642\u0629 \u0627\u0644\u062f\u0641\u0639 \u0627\u0644\u0631\u0626\u064a\u0633\u064a\u0629: $19 = 200 \u0641\u064a\u062f\u064a\u0648. \u062a\u0641\u0627\u0635\u064a\u0644 \u0627\u0644\u062f\u0641\u0639 \u062a\u0638\u0647\u0631 \u0641\u064a \u0635\u0641\u062d\u0629 \u0645\u062e\u0635\u0635\u0629 \u0628\u0639\u062f \u0627\u062e\u062a\u064a\u0627\u0631 \u0627\u0644\u0628\u0627\u0642\u0629\u060c', 'Main paid pack: $19 = 200 videos. Full payment details open on a dedicated page after selecting the pack.')}
                   </p>
                   <button
                     type="button"
                     onClick={openTopupPicker}
                     className="rounded-xl px-4 py-2 bg-orange-400 text-slate-950 font-extrabold hover:bg-orange-300 transition"
                   >
-                    {tr(lang, '\u0627\u062e\u062a\u0631 \u0645\u0628\u0644\u063a \u0627\u0644\u0634\u062d\u0646', 'Choose top-up amount')}
+                    {tr(lang, '\u0627\u062e\u062a\u0631 \u0628\u0627\u0642\u0629 \u0627\u0644\u0641\u064a\u062f\u064a\u0648\u0647\u0627\u062a', 'Choose video pack')}
                   </button>
                 </div>
               </article>
@@ -1402,11 +1402,11 @@ function App() {
                 <h3 className="text-lg font-black text-slate-900 mb-3">{tr(lang, '\u0637\u0648\u0631 \u0646\u062a\u0627\u0626\u062c\u0643 \u0628\u0627\u0644\u0634\u062d\u0646', 'Upgrade your results with top-up')}</h3>
                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 mb-4">
                   <p className="text-sm text-amber-900 mb-2">
-                    {tr(lang, '\u0645\u0639 \u0643\u0631\u064a\u062f\u064a\u062a \u0623\u0643\u062b\u0631\u060c \u062a\u0633\u062a\u0637\u064a\u0639 \u0645\u0639\u0627\u0644\u062c\u0629 \u0641\u064a\u062f\u064a\u0648\u0647\u0627\u062a \u0623\u0643\u062b\u0631 \u0628\u062f\u0648\u0646 \u0627\u0646\u0642\u0637\u0627\u0639 \u0648\u0628\u0646\u0627\u0621 \u0645\u0643\u062a\u0628\u0629 \u0623\u0642\u0648\u0649 \u0644\u0644\u062a\u0644\u062e\u064a\u0635 \u0644\u0644\u062f\u0631\u0627\u0633\u0629 \u0623\u0648 \u0627\u0644\u0641\u0631\u0642\u060c', 'With more credits, you can process more videos without interruption and build a stronger summary library for study or teams.')}
+                    {tr(lang, '\u0645\u0639 \u0631\u0635\u064a\u062f \u0641\u064a\u062f\u064a\u0648\u0647\u0627\u062a \u0623\u0643\u062b\u0631\u060c \u062a\u0633\u062a\u0637\u064a\u0639 \u0645\u0639\u0627\u0644\u062c\u0629 \u0641\u064a\u062f\u064a\u0648\u0647\u0627\u062a \u0623\u0643\u062b\u0631 \u0628\u062f\u0648\u0646 \u0627\u0646\u0642\u0637\u0627\u0639 \u0648\u0628\u0646\u0627\u0621 \u0645\u0643\u062a\u0628\u0629 \u062a\u0646\u0641\u064a\u0630 \u0623\u0642\u0648\u0649\u060c', 'With more video balance, you can process more videos without interruption and build a stronger execution library.')}
                   </p>
                   <ul className="text-sm text-amber-800 space-y-1">
-                    <li>{tr(lang, '\u2022 \u0628\u062f\u0627\u064a\u0629 \u0633\u0631\u064a\u0639\u0629: 5$ = 200 \u0643\u0631\u064a\u062f\u064a\u062a', '\u2022 Fast start: $5 = 200 credits')}</li>
-                    <li>{tr(lang, '\u2022 \u062e\u0635\u0648\u0645\u0627\u062a \u062a\u0644\u0642\u0627\u0626\u064a\u0629 \u0645\u0639 \u0627\u0644\u0634\u062d\u0646\u0627\u062a \u0627\u0644\u0623\u0643\u0628\u0631', '\u2022 Automatic bonus credits on larger amounts')}</li>
+                    <li>{tr(lang, '\u2022 \u0628\u0627\u0642\u0629 \u0648\u0627\u0636\u062d\u0629: $19 = 200 \u0641\u064a\u062f\u064a\u0648', '\u2022 Clear pack: $19 = 200 videos')}</li>
+                    <li>{tr(lang, '\u2022 \u062a\u0633\u0639\u064a\u0631 \u0645\u0628\u0646\u064a \u0639\u0644\u0649 \u0627\u0644\u0641\u064a\u062f\u064a\u0648\u0647\u0627\u062a \u0628\u062f\u0648\u0646 \u062a\u0639\u0642\u064a\u062f \u0648\u062d\u062f\u0627\u062a', '\u2022 Video-based pricing with clear units')}</li>
                     <li>{tr(lang, '\u2022 \u0635\u0641\u062d\u0629 \u062f\u0641\u0639 \u0648\u0627\u0636\u062d\u0629 \u0648\u0645\u0646\u0638\u0645\u0629', '\u2022 Dedicated clear checkout page')}</li>
                   </ul>
                 </div>
@@ -1447,7 +1447,7 @@ function App() {
                     <div key={item.id} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
                       <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
                         <span className="font-semibold text-slate-900">
-                          ${(Number(item.amount_cents || 0) / 100).toFixed(2)} / {item.credits_added} {tr(lang, '\u0643\u0631\u064a\u062f\u064a\u062a', 'credits', 'credits')}
+                          ${(Number(item.amount_cents || 0) / 100).toFixed(2)} / {item.credits_added} {tr(lang, '\u0641\u064a\u062f\u064a\u0648', 'videos', 'videos')}
                         </span>
                         <span className={`text-xs rounded-full px-2 py-1 ${paymentRequestStatusClass(item.status)}`}>
                           {paymentRequestStatusLabel(item.status, lang)}

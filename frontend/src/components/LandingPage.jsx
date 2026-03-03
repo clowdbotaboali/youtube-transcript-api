@@ -73,7 +73,12 @@ function LandingPage({
 
   const heroQuickPoints = asArray(t('hero.quickPoints'));
   const whatYouGetItems = asArray(t('whatYouGet.items'));
+  const transformationBeforePoints = asArray(t('transformation.beforePoints'));
+  const transformationAfterPoints = asArray(t('transformation.afterPoints'));
+  const transformationBeforeOutput = String(t('transformation.beforeOutput') || '').trim();
+  const transformationAfterOutput = String(t('transformation.afterOutput') || '').trim();
   const trustItems = asArray(t('trust.items'));
+  const whoForItems = asArray(t('whoFor.items'));
   const socialStats = asArray(t('socialProof.stats'));
   const testimonials = asArray(t('socialProof.testimonials'));
   const pricingFreeFeatures = asArray(t('pricing.free.features'));
@@ -312,6 +317,61 @@ function LandingPage({
           </div>
         </section>
 
+        <section className="mb-10 reveal-up delay-1">
+          <div className={`rounded-2xl border p-5 sm:p-6 ${isDark ? 'border-indigo-700/60 bg-indigo-950/20' : 'border-indigo-200 bg-indigo-50/70'}`}>
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+              <h2 className={`text-xl sm:text-2xl font-black ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
+                {t('transformation.title')}
+              </h2>
+              <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${isDark ? 'bg-indigo-500/20 text-indigo-100' : 'bg-indigo-100 text-indigo-700'}`}>
+                {t('transformation.badge')}
+              </span>
+            </div>
+            <p className={`text-sm mb-4 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>{t('transformation.subtitle')}</p>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <article className={`rounded-xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/70' : 'border-slate-200 bg-white'}`}>
+                <h3 className={`text-sm font-black mb-2 ${isDark ? 'text-rose-200' : 'text-rose-700'}`}>{t('transformation.beforeTitle')}</h3>
+                <ul className={`space-y-2 text-sm ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                  {transformationBeforePoints.map((item, idx) => (
+                    <li key={`before-${idx}`} className="flex items-start gap-2">
+                      <span className="mt-1 h-1.5 w-1.5 rounded-full bg-rose-500 shrink-0" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </article>
+
+              <article className={`rounded-xl border p-4 ${isDark ? 'border-emerald-700 bg-emerald-950/25' : 'border-emerald-200 bg-white'}`}>
+                <h3 className={`text-sm font-black mb-2 ${isDark ? 'text-emerald-200' : 'text-emerald-700'}`}>{t('transformation.afterTitle')}</h3>
+                <ul className={`space-y-2 text-sm ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
+                  {transformationAfterPoints.map((item, idx) => (
+                    <li key={`after-${idx}`} className="flex items-start gap-2">
+                      <FaCheckCircle className="mt-0.5 text-emerald-500 shrink-0" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </article>
+            </div>
+
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              <article className={`rounded-xl border p-4 ${isDark ? 'border-rose-400/40 bg-rose-950/10' : 'border-rose-200 bg-white'}`}>
+                <p className={`text-xs font-bold mb-2 ${isDark ? 'text-rose-200' : 'text-rose-700'}`}>{t('transformation.beforeOutputLabel')}</p>
+                <pre className={`text-xs sm:text-sm leading-relaxed whitespace-pre-wrap ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
+                  {transformationBeforeOutput}
+                </pre>
+              </article>
+              <article className={`rounded-xl border p-4 ${isDark ? 'border-emerald-400/40 bg-emerald-950/15' : 'border-emerald-200 bg-white'}`}>
+                <p className={`text-xs font-bold mb-2 ${isDark ? 'text-emerald-200' : 'text-emerald-700'}`}>{t('transformation.afterOutputLabel')}</p>
+                <pre className={`text-xs sm:text-sm leading-relaxed whitespace-pre-wrap ${isDark ? 'text-slate-100' : 'text-slate-700'}`}>
+                  {transformationAfterOutput}
+                </pre>
+              </article>
+            </div>
+          </div>
+        </section>
+
         {guestResult ? (
           <section className="mb-10 reveal-up delay-1">
             <div className={`rounded-2xl border p-5 sm:p-6 ${isDark ? 'border-cyan-700/70 bg-cyan-950/20' : 'border-cyan-200 bg-cyan-50/85'}`}>
@@ -430,6 +490,22 @@ function LandingPage({
                 </article>
               ))}
             </div>
+          </div>
+        </section>
+
+        <section className="mb-10">
+          <h2 className={`text-2xl sm:text-3xl font-black mb-2 ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>{t('whoFor.title')}</h2>
+          <p className={`mb-5 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{t('whoFor.subtitle')}</p>
+          <div className="grid gap-4 md:grid-cols-3">
+            {whoForItems.map((item, idx) => (
+              <article
+                key={`who-for-${idx}`}
+                className={`lp-card rounded-2xl border p-5 ${isDark ? 'border-slate-700/90 bg-slate-900/70' : 'border-slate-200 bg-white/90'}`}
+              >
+                <h3 className={`font-black mb-2 ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>{item?.title || ''}</h3>
+                <p className={`text-sm leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{item?.text || ''}</p>
+              </article>
+            ))}
           </div>
         </section>
 
