@@ -72,13 +72,13 @@ function PricingPage({ lang = LANG.ar, theme = 'light' }) {
               <p className={`${isDark ? 'text-slate-300' : 'text-slate-600'} mb-4`}>
                 {tr(
                   lang,
-                  'باقة واضحة: $19 مقابل 200 فيديو كامل المعالجة.',
-                  'Clear pack: $19 for 200 fully processed videos.',
-                  'Pack clair: 19 $ pour 200 videos completement traitees.'
+                  'الباقة الأساسية: $19 مقابل 200 فيديو كامل المعالجة، مع بونص 10% عند شراء 2x أو 3x أو 5x.',
+                  'Core pack: $19 for 200 fully processed videos, with a 10% bonus on 2x, 3x, and 5x purchases.',
+                  'Pack principal: 19 $ pour 200 videos completement traitees, avec bonus 10 % sur 2x, 3x et 5x.'
                 )}
               </p>
               <ul className={`text-sm space-y-2 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                <li>{tr(lang, '- لا يوجد نظام بونص أو تعقيد إضافي', '- No bonus tiers or hidden complexity', '- Aucun palier bonus ni complexite cachee')}</li>
+                <li>{tr(lang, '- بونص 10% تلقائي عند اختيار 2x أو 3x أو 5x', '- Automatic 10% bonus on 2x, 3x, and 5x', '- Bonus automatique de 10 % sur 2x, 3x et 5x')}</li>
                 <li>{tr(lang, '- يمكن شراء أكثر من باقة حسب الحاجة', '- Buy multiple packs when needed', '- Achetez plusieurs packs selon le besoin')}</li>
                 <li>{tr(lang, '- تتبّع حالة طلب الدفع من لوحة العميل', '- Track payment request status inside dashboard', '- Suivi des demandes de paiement dans le tableau client')}</li>
                 <li>{tr(lang, '- الدفع عبر InstaPay أو Vodafone Cash', '- Payments via InstaPay or Vodafone Cash', '- Paiement via InstaPay ou Vodafone Cash')}</li>

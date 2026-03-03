@@ -10,6 +10,8 @@ const FREE_PLAN_CREDITS = 0;
 const CREDIT_COST_PER_SUCCESS = 1;
 const TOPUP_PACK_PRICE_CENTS = 1900;
 const TOPUP_PACK_VIDEOS = 200;
+const TOPUP_BONUS_PACKS = new Set([2, 3, 5]);
+const TOPUP_BONUS_RATE = 0.1;
 const MONTHLY_FREE_QUOTA = 5;
 const QUOTA_RESET_WINDOW_DAYS = 30;
 const USER_AGENT =
@@ -3203,7 +3205,10 @@ function calculateTopupQuote(amountCents) {
     throw new Error(`Amount must be a multiple of $19 (${TOPUP_PACK_PRICE_CENTS} cents)`);
   }
   const packs = amount / TOPUP_PACK_PRICE_CENTS;
-  const videos = packs * TOPUP_PACK_VIDEOS;
+  const baseVideos = packs * TOPUP_PACK_VIDEOS;
+  const bonusRate = TOPUP_BONUS_PACKS.has(packs) ? TOPUP_BONUS_RATE : 0;
+  const bonusVideos = Math.round(baseVideos * bonusRate);
+  const videos = baseVideos + bonusVideos;
   const credits = videos;
   return {
     amountCents: amount,
@@ -3211,8 +3216,9 @@ function calculateTopupQuote(amountCents) {
     unitPriceCents: TOPUP_PACK_PRICE_CENTS,
     videos,
     credits,
-    baseCredits: videos,
-    bonusRate: 0
+    baseCredits: baseVideos,
+    bonusRate,
+    bonusCredits: bonusVideos
   };
 }
 
@@ -5979,6 +5985,7 @@ export default async function handler(req, res) {
           unitPriceCents: quote.unitPriceCents,
           baseCredits: quote.baseCredits,
           bonusRate: quote.bonusRate,
+          bonusCredits: quote.bonusCredits,
           credits: quote.credits,
           amountCents: quote.amountCents
         },
@@ -6027,6 +6034,7 @@ export default async function handler(req, res) {
           unitPriceCents: quote.unitPriceCents,
           baseCredits: quote.baseCredits,
           bonusRate: quote.bonusRate,
+          bonusCredits: quote.bonusCredits,
           credits: quote.credits,
           amountCents: quote.amountCents
         }

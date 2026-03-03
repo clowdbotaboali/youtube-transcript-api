@@ -5,6 +5,8 @@ import { cleanText, LANG, tr } from '../utils/lang';
 const PRICE_PER_PACK_USD = 19;
 const VIDEOS_PER_PACK = 200;
 const QUICK_PACKS = [1, 2, 3, 5];
+const BONUS_PACKS = new Set([2, 3, 5]);
+const BONUS_RATE = 0.1;
 
 function calculateQuote(packCount) {
   const packs = Number(packCount || 0);
@@ -13,17 +15,22 @@ function calculateQuote(packCount) {
   }
 
   const amountUsd = packs * PRICE_PER_PACK_USD;
-  const videos = packs * VIDEOS_PER_PACK;
+  const baseVideos = packs * VIDEOS_PER_PACK;
+  const bonusRate = BONUS_PACKS.has(packs) ? BONUS_RATE : 0;
+  const bonusVideos = Math.round(baseVideos * bonusRate);
+  const videos = baseVideos + bonusVideos;
   return {
     valid: true,
     packs,
     amountUsd,
     amountCents: amountUsd * 100,
     videos,
+    baseVideos,
+    bonusVideos,
     credits: videos,
-    baseCredits: videos,
-    bonusRate: 0,
-    bonusCredits: 0
+    baseCredits: baseVideos,
+    bonusRate,
+    bonusCredits: bonusVideos
   };
 }
 
@@ -168,6 +175,10 @@ function PricingModal({
                 ))}
               </div>
 
+              <p className={`text-xs mb-3 ${isDark ? 'text-emerald-200' : 'text-emerald-700'}`}>
+                {tr(lang, 'بونص 10% تلقائي للباقات: 2x و3x و5x', '10% bonus on packs: 2x, 3x, and 5x', 'Bonus 10 % sur les packs : 2x, 3x et 5x')}
+              </p>
+
               {!quote.valid ? (
                 <p className="text-sm text-red-500">
                   {tr(lang, 'العدد غير صالح. اختر 1 أو أكثر.', 'Invalid count. Choose 1 or more.', 'Nombre invalide. Choisissez 1 ou plus.')}
@@ -177,6 +188,12 @@ function PricingModal({
                   <p className="font-bold text-base mb-1">
                     {tr(lang, 'الإجمالي:', 'Total:', 'Total:')} {quote.videos} {tr(lang, 'فيديو', 'videos', 'videos')}
                   </p>
+                  <p>{tr(lang, 'الأساسي:', 'Base:', 'Base:')} {quote.baseVideos} {tr(lang, 'فيديو', 'videos', 'videos')}</p>
+                  {quote.bonusVideos > 0 ? (
+                    <p>
+                      {tr(lang, 'البونص:', 'Bonus:', 'Bonus:')} +{quote.bonusVideos} {tr(lang, 'فيديو', 'videos', 'videos')} ({Math.round(quote.bonusRate * 100)}%)
+                    </p>
+                  ) : null}
                   <p>{tr(lang, 'السعر لكل باقة:', 'Price per pack:', 'Prix par pack:')} ${PRICE_PER_PACK_USD}</p>
                   <p>{tr(lang, 'عدد الباقات:', 'Packs:', 'Packs:')} {quote.packs}</p>
                   <p>{tr(lang, 'السعر الكلي:', 'Total price:', 'Prix total:')} ${quote.amountUsd}</p>

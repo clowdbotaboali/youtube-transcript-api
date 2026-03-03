@@ -210,6 +210,9 @@ function TopupCheckoutPage({
   const methodName = cleanText(
     lang === LANG.ar ? selectedMethodData.ar : lang === LANG.fr ? selectedMethodData.fr : selectedMethodData.en
   );
+  const baseVideos = Math.max(Number(quote?.baseVideos ?? quote?.baseCredits ?? quote?.videos ?? 0), 0);
+  const bonusVideos = Math.max(Number(quote?.bonusVideos ?? quote?.bonusCredits ?? 0), 0);
+  const bonusPercent = Number(quote?.bonusRate || 0) > 0 ? Math.round(Number(quote.bonusRate) * 100) : 0;
 
   if (!quote?.valid) {
     return (
@@ -254,6 +257,13 @@ function TopupCheckoutPage({
           <p className="font-bold text-base mb-1">
             {tr(lang, 'الإجمالي:', 'Total:', 'Total:')} {quote.videos} {tr(lang, 'فيديو', 'videos', 'videos')}
           </p>
+          <p>{tr(lang, 'الأساسي:', 'Base:', 'Base:')} {baseVideos} {tr(lang, 'فيديو', 'videos', 'videos')}</p>
+          {bonusVideos > 0 ? (
+            <p>
+              {tr(lang, 'البونص:', 'Bonus:', 'Bonus:')} +{bonusVideos} {tr(lang, 'فيديو', 'videos', 'videos')}
+              {bonusPercent > 0 ? ` (${bonusPercent}%)` : ''}
+            </p>
+          ) : null}
           <p>{tr(lang, 'عدد الباقات:', 'Packs:', 'Packs:')} {quote.packs}</p>
           <p>{tr(lang, 'السعر:', 'Price:', 'Prix:')} ${quote.amountUsd}</p>
         </div>

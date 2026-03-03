@@ -101,7 +101,9 @@ function ClientHeader({
           <div className="space-y-3">
             <div className="inline-flex items-center gap-2 rounded-full border border-cyan-300/30 bg-cyan-400/10 px-3 py-1">
               <span className="h-1.5 w-1.5 rounded-full bg-cyan-300" />
-              <span className="text-[11px] tracking-[0.2em] uppercase text-cyan-200">Client Zone</span>
+              <span className="text-[11px] tracking-[0.2em] uppercase text-cyan-200">
+                {tr(lang, 'منطقة العميل', 'Client Zone', 'Espace Client')}
+              </span>
             </div>
             <div>
               <h1 className="text-2xl sm:text-3xl font-black leading-tight">{tr(lang, 'لوحة العميل', 'Client Dashboard', 'Espace Client')}</h1>
@@ -211,7 +213,7 @@ function ClientHeader({
           <MetricCard
             label={tr(lang, 'الشحن المدفوع', 'Paid top-up', 'Recharge payante')}
             value={`$${paidPlanPrice} = ${paidPlanCredits} ${tr(lang, 'فيديو', 'videos', 'videos')}`}
-            subtext={tr(lang, 'الباقة القياسية الواضحة', 'Clear standard pack', 'Pack standard clair')}
+            subtext={tr(lang, 'بونص 10% للباقات 2x و3x و5x', '10% bonus on 2x, 3x, and 5x packs', 'Bonus 10 % sur les packs 2x, 3x et 5x')}
             tone="border-violet-300/30 bg-violet-500/15 text-violet-100"
             icon={<FaGem className="text-violet-200" />}
           />

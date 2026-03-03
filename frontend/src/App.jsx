@@ -1351,7 +1351,7 @@ function App() {
                 <div className="rounded-xl border border-orange-200 bg-orange-50 p-4">
                   <p className="font-black text-orange-900 mb-2">{tr(lang, '\u0627\u0644\u0634\u062d\u0646 \u0627\u0644\u0645\u062f\u0641\u0648\u0639', 'Paid top-up')}</p>
                   <p className="text-sm text-orange-800 mb-3">
-                    {tr(lang, '\u0628\u0627\u0642\u0629 \u0627\u0644\u062f\u0641\u0639 \u0627\u0644\u0631\u0626\u064a\u0633\u064a\u0629: $19 = 200 \u0641\u064a\u062f\u064a\u0648. \u062a\u0641\u0627\u0635\u064a\u0644 \u0627\u0644\u062f\u0641\u0639 \u062a\u0638\u0647\u0631 \u0641\u064a \u0635\u0641\u062d\u0629 \u0645\u062e\u0635\u0635\u0629 \u0628\u0639\u062f \u0627\u062e\u062a\u064a\u0627\u0631 \u0627\u0644\u0628\u0627\u0642\u0629\u060c', 'Main paid pack: $19 = 200 videos. Full payment details open on a dedicated page after selecting the pack.')}
+                    {tr(lang, 'باقة الدفع الرئيسية: $19 = 200 فيديو، مع بونص 10% لباقات 2x و3x و5x. تفاصيل الدفع تظهر في صفحة مخصصة بعد اختيار الباقة.', 'Main paid pack: $19 = 200 videos, with a 10% bonus on 2x, 3x, and 5x packs. Full payment details open on a dedicated page after selecting the pack.')}
                   </p>
                   <button
                     type="button"
@@ -1406,6 +1406,7 @@ function App() {
                   </p>
                   <ul className="text-sm text-amber-800 space-y-1">
                     <li>{tr(lang, '\u2022 \u0628\u0627\u0642\u0629 \u0648\u0627\u0636\u062d\u0629: $19 = 200 \u0641\u064a\u062f\u064a\u0648', '\u2022 Clear pack: $19 = 200 videos')}</li>
+                    <li>{tr(lang, '\u2022 \u0628\u0648\u0646\u0635 10% \u0644\u0628\u0627\u0642\u0627\u062a 2x \u0648 3x \u0648 5x', '\u2022 10% bonus on 2x, 3x, and 5x packs')}</li>
                     <li>{tr(lang, '\u2022 \u062a\u0633\u0639\u064a\u0631 \u0645\u0628\u0646\u064a \u0639\u0644\u0649 \u0627\u0644\u0641\u064a\u062f\u064a\u0648\u0647\u0627\u062a \u0628\u062f\u0648\u0646 \u062a\u0639\u0642\u064a\u062f \u0648\u062d\u062f\u0627\u062a', '\u2022 Video-based pricing with clear units')}</li>
                     <li>{tr(lang, '\u2022 \u0635\u0641\u062d\u0629 \u062f\u0641\u0639 \u0648\u0627\u0636\u062d\u0629 \u0648\u0645\u0646\u0638\u0645\u0629', '\u2022 Dedicated clear checkout page')}</li>
                   </ul>
