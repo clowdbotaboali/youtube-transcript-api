@@ -283,7 +283,7 @@ function App() {
       },
       status: 403,
       lang,
-      fallbackAr: 'الحساب غير متاح حاليًا. تواصل مع الدعم.',
+      fallbackAr: '\u0627\u0644\u062d\u0633\u0627\u0628 \u063a\u064a\u0631 \u0645\u062a\u0627\u062d \u062d\u0627\u0644\u064a\u064b\u0627. \u062a\u0648\u0627\u0635\u0644 \u0645\u0639 \u0627\u0644\u062f\u0639\u0645.',
       fallbackEn: 'This account is currently restricted. Contact support.',
       fallbackFr: 'Ce compte est actuellement restreint. Contactez le support.'
     });
@@ -857,7 +857,7 @@ function App() {
         );
       }
     } catch {
-      notify('error', tr(lang, 'فشل الاتصال بالخادم', 'Connection failed'));
+      notify('error', tr(lang, '\u0641\u0634\u0644 \u0627\u0644\u0627\u062a\u0635\u0627\u0644 \u0628\u0627\u0644\u062e\u0627\u062f\u0645', 'Connection failed'));
     } finally {
       setProcessLoading(false);
     }
@@ -878,11 +878,11 @@ function App() {
       const data = await response.json().catch(() => ({}));
       const success = !!(response.ok && data.success);
       if (!success) {
-        notify('error', tr(lang, 'ØªØ¹Ø°Ø± Ø­ÙØ¸ Ø§Ù„Ù†ØªÙŠØ¬Ø©.', 'Failed to save result.'));
+        notify('error', tr(lang, '\u062a\u0639\u0630\u0631 \u062d\u0641\u0638 \u0627\u0644\u0646\u062a\u064a\u062c\u0629.', 'Failed to save result.'));
       }
       return success;
     } catch {
-      notify('error', tr(lang, 'ÙØ´Ù„ Ø§Ù„Ø§ØªØµØ§Ù„ Ø¨Ø§Ù„Ø®Ø§Ø¯Ù…', 'Connection failed'));
+      notify('error', tr(lang, '\u0641\u0634\u0644 \u0627\u0644\u0627\u062a\u0635\u0627\u0644 \u0628\u0627\u0644\u062e\u0627\u062f\u0645', 'Connection failed'));
       return false;
     }
   };
@@ -895,7 +895,7 @@ function App() {
       setClientPage(hasPendingUrl ? CLIENT_PAGES.workspace : CLIENT_PAGES.dashboard);
       setAuthModalMode('login');
       await refreshAccount();
-      notify('success', tr(lang, 'ØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„ Ø¨Ù†Ø¬Ø§Ø­.', 'Signed in successfully.'));
+      notify('success', tr(lang, '\u062a\u0645 \u062a\u0633\u062c\u064a\u0644 \u0627\u0644\u062f\u062e\u0648\u0644 \u0628\u0646\u062c\u0627\u062d.', 'Signed in successfully.'));
     }
   };
 
@@ -998,7 +998,7 @@ function App() {
       // Intentionally ignored.
     }
 
-    notify('success', tr(lang, 'ØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø®Ø±ÙˆØ¬ Ø¨Ù†Ø¬Ø§Ø­.', 'Signed out successfully.'));
+    notify('success', tr(lang, '\u062a\u0645 \u062a\u0633\u062c\u064a\u0644 \u0627\u0644\u062e\u0631\u0648\u062c \u0628\u0646\u062c\u0627\u062d.', 'Signed out successfully.'));
 
     // Hard refresh to guarantee no in-memory auth state survives.
     if (hasWindow) {
@@ -1049,14 +1049,10 @@ function App() {
         <div className="flex-1 bg-slate-950 text-slate-100 flex items-center justify-center px-4" dir={rootDir}>
           <div className="max-w-lg w-full rounded-xl border border-slate-700 bg-slate-900/70 p-6 text-center">
             <h1 className="text-xl font-bold mb-3">
-              {tr(lang, 'Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø§Ù„Ù…ØµØ§Ø¯Ù‚Ø© ØºÙŠØ± Ù…ÙƒØªÙ…Ù„Ø©', 'Authentication configuration is missing')}
+              {tr(lang, '\u0625\u0639\u062f\u0627\u062f\u0627\u062a \u0627\u0644\u0645\u0635\u0627\u062f\u0642\u0629 \u063a\u064a\u0631 \u0645\u0643\u062a\u0645\u0644\u0629', 'Authentication configuration is missing')}
             </h1>
             <p className="text-slate-300 text-sm">
-              {tr(
-                lang,
-                'Ø£Ø¶Ù Ù…ØªØºÙŠØ±Ø§Øª VITE_SUPABASE_URL Ùˆ VITE_SUPABASE_ANON_KEY ÙÙŠ Ø¨ÙŠØ¦Ø© Vercel Ø«Ù… Ø£Ø¹Ø¯ Ø§Ù„Ù†Ø´Ø±.',
-                'Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in Vercel environment variables, then redeploy.'
-              )}
+              {tr(lang, '\u0623\u0636\u0641 \u0645\u062a\u063a\u064a\u0631\u0627\u062a VITE_SUPABASE_URL \u0648 VITE_SUPABASE_ANON_KEY \u0641\u064a \u0628\u064a\u0626\u0629 Vercel \u062b\u0645 \u0623\u0639\u062f \u0627\u0644\u0646\u0634\u0631.', 'Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in Vercel environment variables, then redeploy.')}
             </p>
           </div>
         </div>
@@ -1076,7 +1072,7 @@ function App() {
         <div className="flex-1 bg-slate-950 text-slate-100 flex items-center justify-center">
           <div className="flex items-center gap-2 text-sm">
             <FaSpinner className="animate-spin" />
-            <span>{tr(lang, 'Ø¬Ø§Ø±ÙŠ ØªØ¬Ù‡ÙŠØ² Ø§Ù„Ø¬Ù„Ø³Ø©...', 'Preparing session...')}</span>
+            <span>{tr(lang, '\u062c\u0627\u0631\u064d \u062a\u062c\u0647\u064a\u0632 \u0627\u0644\u062c\u0644\u0633\u0629...', 'Preparing session...')}</span>
           </div>
         </div>
         <SiteFooter lang={lang} theme={theme} />
@@ -1166,8 +1162,8 @@ function App() {
         {clientPage === CLIENT_PAGES.workspace && (
           <section className="space-y-4 sm:space-y-6">
             <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6">
-              <h2 className="text-xl sm:text-2xl font-black text-slate-900 mb-1">{tr(lang, 'Ù…Ø³Ø§Ø­Ø© Ø§Ø³ØªØ®Ø±Ø§Ø¬ Ø§Ù„Ø³ÙƒØ±ÙŠØ¨Øª', 'Transcript Extraction Workspace')}</h2>
-              <p className="text-sm text-slate-600">{tr(lang, 'Ø¶Ø¹ Ø§Ù„Ø±Ø§Ø¨Ø·ØŒ Ø§Ø³ØªØ®Ø±Ø¬ Ø§Ù„Ù†ØµØŒ Ø«Ù… Ø§Ø¨Ø¯Ø£ Ø§Ù„Ù…Ø¹Ø§Ù„Ø¬Ø© Ø£Ùˆ Ø§Ù„Ø¯Ø±Ø¯Ø´Ø©.', 'Paste a URL, extract transcript, then process or chat.')}</p>
+              <h2 className="text-xl sm:text-2xl font-black text-slate-900 mb-1">{tr(lang, '\u0645\u0633\u0627\u062d\u0629 \u0627\u0633\u062a\u062e\u0631\u0627\u062c \u0627\u0644\u0633\u0643\u0631\u064a\u0628\u062a', 'Transcript Extraction Workspace')}</h2>
+              <p className="text-sm text-slate-600">{tr(lang, '\u0636\u0639 \u0627\u0644\u0631\u0627\u0628\u0637\u060c \u0627\u0633\u062a\u062e\u0631\u062c \u0627\u0644\u0646\u0635\u060c \u062b\u0645 \u0627\u0628\u062f\u0623 \u0627\u0644\u0645\u0639\u0627\u0644\u062c\u0629 \u0623\u0648 \u0627\u0644\u062f\u0631\u062f\u0634\u0629.', 'Paste a URL, extract transcript, then process or chat.')}</p>
             </div>
             {accountRestrictionMessage ? (
               <div className="rounded-xl border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm font-medium">
@@ -1181,8 +1177,8 @@ function App() {
                   onClick={toggleLocalGuide}
                   className="inline-flex items-center gap-2 text-xs sm:text-sm px-3 py-1.5 rounded-full border border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100 transition"
                 >
-                  <span>{showLocalGuide ? tr(lang, 'Ø¥Ø®ÙØ§Ø¡', 'Hide') : tr(lang, 'Ø¥Ø¸Ù‡Ø§Ø±', 'Show')}</span>
-                  <span>{tr(lang, 'Ø¯Ù„ÙŠÙ„ Ø§Ù„Ø®Ø§Ø¯Ù… Ø§Ù„Ù…Ø­Ù„ÙŠ', 'Local backend guide')}</span>
+                  <span>{showLocalGuide ? tr(lang, '\u0625\u062e\u0641\u0627\u0621', 'Hide') : tr(lang, '\u0625\u0638\u0647\u0627\u0631', 'Show')}</span>
+                  <span>{tr(lang, '\u062f\u0644\u064a\u0644 \u0627\u0644\u062e\u0627\u062f\u0645 \u0627\u0644\u0645\u062d\u0644\u064a', 'Local backend guide')}</span>
                 </button>
               </div>
             )}
@@ -1267,8 +1263,8 @@ function App() {
         {clientPage === CLIENT_PAGES.history && (
           <section className="space-y-4 sm:space-y-6">
             <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6">
-              <h2 className="text-xl sm:text-2xl font-black text-slate-900 mb-1">{tr(lang, 'Ø§Ù„Ø³Ø¬Ù„ ÙˆØ§Ù„Ø±ÙˆØ§Ø¨Ø·', 'History & Saved Links')}</h2>
-              <p className="text-sm text-slate-600">{tr(lang, 'Ø±Ø§Ø¬Ø¹ Ù†ØªØ§Ø¦Ø¬Ùƒ Ø§Ù„Ø³Ø§Ø¨Ù‚Ø© ÙˆØ§Ø®ØªØ± Ø£ÙŠ Ø±Ø§Ø¨Ø· Ù…Ø­ÙÙˆØ¸ Ù„Ù„Ø¹ÙˆØ¯Ø© Ø¥Ù„Ù‰ Ù…Ø³Ø§Ø­Ø© Ø§Ù„Ø§Ø³ØªØ®Ø±Ø§Ø¬.', 'Review saved runs and open any saved link back in the extraction workspace.')}</p>
+              <h2 className="text-xl sm:text-2xl font-black text-slate-900 mb-1">{tr(lang, '\u0627\u0644\u0633\u062c\u0644 \u0648\u0627\u0644\u0631\u0648\u0627\u0628\u0637', 'History & Saved Links')}</h2>
+              <p className="text-sm text-slate-600">{tr(lang, '\u0631\u0627\u062c\u0639 \u0646\u062a\u0627\u0626\u062c\u0643 \u0627\u0644\u0633\u0627\u0628\u0642\u0629 \u0648\u0627\u062e\u062a\u0631 \u0623\u064a \u0631\u0627\u0628\u0637 \u0645\u062d\u0641\u0648\u0638 \u0644\u0644\u0639\u0648\u062f\u0629 \u0625\u0644\u0649 \u0645\u0633\u0627\u062d\u0629 \u0627\u0644\u0627\u0633\u062a\u062e\u0631\u0627\u062c.', 'Review saved runs and open any saved link back in the extraction workspace.')}</p>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <SavedHistory apiUrl={apiUrl} user={user} lang={lang} onNotify={notify} />
@@ -1300,17 +1296,17 @@ function App() {
           <section className="space-y-4 sm:space-y-5">
             <div className="grid gap-4 sm:gap-5 md:grid-cols-2">
               <article className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
-                <h2 className="text-xl font-black text-slate-900 mb-3">{tr(lang, '?????? ??????', 'Account details')}</h2>
+                <h2 className="text-xl font-black text-slate-900 mb-3">{tr(lang, '\u062a\u0641\u0627\u0635\u064a\u0644 \u0627\u0644\u062d\u0633\u0627\u0628', 'Account details')}</h2>
                 <div className="space-y-3 text-sm">
-                  <p><span className="font-bold">{tr(lang, '??????:', 'Email:')}</span> {user?.email || '-'}</p>
-                  <p><span className="font-bold">{tr(lang, '??????:', 'Credits:')}</span> {credits ?? '...'}</p>
-                  <p><span className="font-bold">{tr(lang, '????? ????????:', 'Free plan:')}</span> {FREE_PLAN_REQUESTS} {tr(lang, '????? ???', 'links only')}</p>
-                  <p><span className="font-bold">{tr(lang, '??????? ?? ????????:', 'Free links remaining:')}</span> {freeLinksRemaining} / {FREE_PLAN_REQUESTS}</p>
-                  <p><span className="font-bold">{tr(lang, '????? ??????:', 'Link cost:')}</span> {CREDIT_COST_PER_SUCCESS} {tr(lang, '???? ??? ???? ????? ????', 'credit per new video link')}</p>
-                  <p><span className="font-bold">{tr(lang, '??????:', 'Session:')}</span> {tr(lang, '????', 'Active')}</p>
+                  <p><span className="font-bold">{tr(lang, '\u0627\u0644\u0628\u0631\u064a\u062f:', 'Email:')}</span> {user?.email || '-'}</p>
+                  <p><span className="font-bold">{tr(lang, '\u0627\u0644\u0631\u0635\u064a\u062f:', 'Credits:')}</span> {credits ?? '...'}</p>
+                  <p><span className="font-bold">{tr(lang, '\u0627\u0644\u062e\u0637\u0629 \u0627\u0644\u0645\u062c\u0627\u0646\u064a\u0629:', 'Free plan:')}</span> {FREE_PLAN_REQUESTS} {tr(lang, '\u0631\u0648\u0627\u0628\u0637 \u0641\u0642\u0637', 'links only')}</p>
+                  <p><span className="font-bold">{tr(lang, '\u0627\u0644\u0631\u0648\u0627\u0628\u0637 \u0627\u0644\u0645\u062c\u0627\u0646\u064a\u0629 \u0627\u0644\u0645\u062a\u0628\u0642\u064a\u0629:', 'Free links remaining:')}</span> {freeLinksRemaining} / {FREE_PLAN_REQUESTS}</p>
+                  <p><span className="font-bold">{tr(lang, '\u062a\u0643\u0644\u0641\u0629 \u0627\u0644\u0631\u0627\u0628\u0637:', 'Link cost:')}</span> {CREDIT_COST_PER_SUCCESS} {tr(lang, '\u0643\u0631\u064a\u062f\u064a\u062a \u0644\u0643\u0644 \u0631\u0627\u0628\u0637 \u0641\u064a\u062f\u064a\u0648 \u062c\u062f\u064a\u062f', 'credit per new video link')}</p>
+                  <p><span className="font-bold">{tr(lang, '\u0627\u0644\u062c\u0644\u0633\u0629:', 'Session:')}</span> {tr(lang, '\u0646\u0634\u0637\u0629', 'Active')}</p>
                   {accountAccess.status !== 'active' ? (
                     <p>
-                      <span className="font-bold">{tr(lang, '???? ??????:', 'Access status:')}</span>{' '}
+                      <span className="font-bold">{tr(lang, '\u062d\u0627\u0644\u0629 \u0627\u0644\u0648\u0635\u0648\u0644:', 'Access status:')}</span>{' '}
                       {accountAccess.status} {accountAccess.reason ? `(${accountAccess.reason})` : ''}
                     </p>
                   ) : null}
@@ -1318,22 +1314,22 @@ function App() {
               </article>
 
               <article className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
-                <h3 className="text-lg font-black text-slate-900 mb-3">{tr(lang, '????? ??????', 'Plans & top-up')}</h3>
+                <h3 className="text-lg font-black text-slate-900 mb-3">{tr(lang, '\u0627\u0644\u062e\u0637\u0637 \u0648\u0627\u0644\u0634\u062d\u0646', 'Plans & top-up')}</h3>
                 <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 mb-3">
-                  <p className="font-black text-emerald-900 mb-2">{tr(lang, '????? ????????', 'Free plan')}</p>
-                  <p className="text-sm text-emerald-800">{tr(lang, '5 ????? ????? ??????? ???? ??????? ???? ???? ?? ????? ???? ???? ??? ?????.', '5 video links included, and same-video summary/chat do not consume extra credits.')}</p>
+                  <p className="font-black text-emerald-900 mb-2">{tr(lang, '\u0627\u0644\u062e\u0637\u0629 \u0627\u0644\u0645\u062c\u0627\u0646\u064a\u0629', 'Free plan')}</p>
+                  <p className="text-sm text-emerald-800">{tr(lang, '\u062a\u0634\u0645\u0644 5 \u0631\u0648\u0627\u0628\u0637 \u0641\u064a\u062f\u064a\u0648 \u0628\u062f\u0627\u064a\u0629\u060c \u0648\u0627\u0644\u062a\u0644\u062e\u064a\u0635 \u0648\u0627\u0644\u0634\u0627\u062a \u0644\u0646\u0641\u0633 \u0627\u0644\u0641\u064a\u062f\u064a\u0648 \u0628\u062f\u0648\u0646 \u062e\u0635\u0645 \u0625\u0636\u0627\u0641\u064a\u060c', '5 video links included, and same-video summary/chat do not consume extra credits.')}</p>
                 </div>
                 <div className="rounded-xl border border-orange-200 bg-orange-50 p-4">
-                  <p className="font-black text-orange-900 mb-2">{tr(lang, '????? ???????', 'Paid top-up')}</p>
+                  <p className="font-black text-orange-900 mb-2">{tr(lang, '\u0627\u0644\u0634\u062d\u0646 \u0627\u0644\u0645\u062f\u0641\u0648\u0639', 'Paid top-up')}</p>
                   <p className="text-sm text-orange-800 mb-3">
-                    {tr(lang, '???? ?? 5$ = 200 ??????. ???????? ??????? ???? ?? ???? ?????? ??? ?????? ??????.', 'Starts at $5 = 200 credits. Full payment details open on a dedicated page after choosing the amount.')}
+                    {tr(lang, '\u064a\u0628\u062f\u0623 \u0645\u0646 5\$ = 200 \u0643\u0631\u064a\u062f\u064a\u062a\u060c \u0648\u062a\u0641\u0627\u0635\u064a\u0644 \u0627\u0644\u062f\u0641\u0639 \u0627\u0644\u0643\u0627\u0645\u0644\u0629 \u062a\u0638\u0647\u0631 \u0641\u064a \u0635\u0641\u062d\u0629 \u0645\u062e\u0635\u0635\u0629 \u0628\u0639\u062f \u0627\u062e\u062a\u064a\u0627\u0631 \u0627\u0644\u0645\u0628\u0644\u063a\u060c', 'Starts at $5 = 200 credits. Full payment details open on a dedicated page after choosing the amount.')}
                   </p>
                   <button
                     type="button"
                     onClick={openTopupPicker}
                     className="rounded-xl px-4 py-2 bg-orange-400 text-slate-950 font-extrabold hover:bg-orange-300 transition"
                   >
-                    {tr(lang, '?????? ???? ?????', 'Choose top-up amount')}
+                    {tr(lang, '\u0627\u062e\u062a\u0631 \u0645\u0628\u0644\u063a \u0627\u0644\u0634\u062d\u0646', 'Choose top-up amount')}
                   </button>
                 </div>
               </article>
@@ -1341,26 +1337,26 @@ function App() {
 
             <div className="grid gap-4 sm:gap-5 md:grid-cols-2">
               <article className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
-                <h3 className="text-lg font-black text-slate-900 mb-3">{tr(lang, '???? ??????', 'Account security')}</h3>
+                <h3 className="text-lg font-black text-slate-900 mb-3">{tr(lang, '\u0623\u0645\u0627\u0646 \u0627\u0644\u062d\u0633\u0627\u0628', 'Account security')}</h3>
                 <form onSubmit={handlePasswordChange} className="space-y-3">
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1">{tr(lang, '???? ?????? ???????', 'New password')}</label>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">{tr(lang, '\u0643\u0644\u0645\u0629 \u0645\u0631\u0648\u0631 \u062c\u062f\u064a\u062f\u0629', 'New password')}</label>
                     <input
                       type="password"
                       value={passwordForm.newPassword}
                       onChange={(event) => setPasswordForm((prev) => ({ ...prev, newPassword: event.target.value }))}
                       className="w-full rounded-xl border border-slate-300 px-3 py-2 outline-none focus:ring-2 focus:ring-cyan-500"
-                      placeholder={tr(lang, '8 ???? ??? ?????', 'At least 8 characters')}
+                      placeholder={tr(lang, '\u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644 8 \u0623\u062d\u0631\u0641', 'At least 8 characters')}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1">{tr(lang, '????? ???? ??????', 'Confirm password')}</label>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">{tr(lang, '\u062a\u0623\u0643\u064a\u062f \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631', 'Confirm password')}</label>
                     <input
                       type="password"
                       value={passwordForm.confirmPassword}
                       onChange={(event) => setPasswordForm((prev) => ({ ...prev, confirmPassword: event.target.value }))}
                       className="w-full rounded-xl border border-slate-300 px-3 py-2 outline-none focus:ring-2 focus:ring-cyan-500"
-                      placeholder={tr(lang, '??? ????? ???? ??????', 'Re-enter password')}
+                      placeholder={tr(lang, '\u0623\u0639\u062f \u0625\u062f\u062e\u0627\u0644 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631', 'Re-enter password')}
                     />
                   </div>
                   <button
@@ -1368,25 +1364,21 @@ function App() {
                     disabled={passwordSubmitting}
                     className="rounded-xl px-4 py-2 bg-slate-900 text-white font-bold hover:bg-slate-800 transition disabled:opacity-60"
                   >
-                    {passwordSubmitting ? tr(lang, '???? ???????...', 'Updating...') : tr(lang, '????? ???? ??????', 'Update password')}
+                    {passwordSubmitting ? tr(lang, '\u062c\u0627\u0631\u064d \u0627\u0644\u062a\u062d\u062f\u064a\u062b\u2026', 'Updating...') : tr(lang, '\u062a\u062d\u062f\u064a\u062b \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631', 'Update password')}
                   </button>
                 </form>
               </article>
 
               <article className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
-                <h3 className="text-lg font-black text-slate-900 mb-3">{tr(lang, '????? ??????? ??????', 'Upgrade your results with top-up')}</h3>
+                <h3 className="text-lg font-black text-slate-900 mb-3">{tr(lang, '\u0637\u0648\u0631 \u0646\u062a\u0627\u0626\u062c\u0643 \u0628\u0627\u0644\u0634\u062d\u0646', 'Upgrade your results with top-up')}</h3>
                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 mb-4">
                   <p className="text-sm text-amber-900 mb-2">
-                    {tr(
-                      lang,
-                      '???? ???? ??????? ???? ????? ???????? ???? ???? ???? ????? ????? ?????? ???? ?????? ?? ??????.',
-                      'With more credits, you can process more videos without interruption and build a stronger summary library for study or teams.'
-                    )}
+                    {tr(lang, '\u0645\u0639 \u0643\u0631\u064a\u062f\u064a\u062a \u0623\u0643\u062b\u0631\u060c \u062a\u0633\u062a\u0637\u064a\u0639 \u0645\u0639\u0627\u0644\u062c\u0629 \u0641\u064a\u062f\u064a\u0648\u0647\u0627\u062a \u0623\u0643\u062b\u0631 \u0628\u062f\u0648\u0646 \u0627\u0646\u0642\u0637\u0627\u0639 \u0648\u0628\u0646\u0627\u0621 \u0645\u0643\u062a\u0628\u0629 \u0623\u0642\u0648\u0649 \u0644\u0644\u062a\u0644\u062e\u064a\u0635 \u0644\u0644\u062f\u0631\u0627\u0633\u0629 \u0623\u0648 \u0627\u0644\u0641\u0631\u0642\u060c', 'With more credits, you can process more videos without interruption and build a stronger summary library for study or teams.')}
                   </p>
                   <ul className="text-sm text-amber-800 space-y-1">
-                    <li>{tr(lang, '� ??????? ?????: 5$ = 200 ??????', '� Fast start: $5 = 200 credits')}</li>
-                    <li>{tr(lang, '� ?????? ??????? ?? ??????? ??????', '� Automatic bonus credits on larger amounts')}</li>
-                    <li>{tr(lang, '� ?????? ????? ?? ???? ?????? ??????', '� Dedicated clear checkout page')}</li>
+                    <li>{tr(lang, '\u2022 \u0628\u062f\u0627\u064a\u0629 \u0633\u0631\u064a\u0639\u0629: 5$ = 200 \u0643\u0631\u064a\u062f\u064a\u062a', '\u2022 Fast start: $5 = 200 credits')}</li>
+                    <li>{tr(lang, '\u2022 \u062e\u0635\u0648\u0645\u0627\u062a \u062a\u0644\u0642\u0627\u0626\u064a\u0629 \u0645\u0639 \u0627\u0644\u0634\u062d\u0646\u0627\u062a \u0627\u0644\u0623\u0643\u0628\u0631', '\u2022 Automatic bonus credits on larger amounts')}</li>
+                    <li>{tr(lang, '\u2022 \u0635\u0641\u062d\u0629 \u062f\u0641\u0639 \u0648\u0627\u0636\u062d\u0629 \u0648\u0645\u0646\u0638\u0645\u0629', '\u2022 Dedicated clear checkout page')}</li>
                   </ul>
                 </div>
                 <div className="flex flex-wrap gap-3">
@@ -1396,7 +1388,7 @@ function App() {
                       onClick={() => setShowSettings(true)}
                       className="rounded-xl px-4 py-2 bg-slate-900 text-white font-bold hover:bg-slate-800 transition"
                     >
-                      {tr(lang, '??? ?????????', 'Open settings')}
+                      {tr(lang, '\u0641\u062a\u062d \u0627\u0644\u0625\u0639\u062f\u0627\u062f\u0627\u062a', 'Open settings')}
                     </button>
                   )}
                   <button
@@ -1404,7 +1396,7 @@ function App() {
                     onClick={handleLogout}
                     className="rounded-xl px-4 py-2 bg-red-500 text-white font-bold hover:bg-red-600 transition"
                   >
-                    {tr(lang, '????? ????', 'Sign out')}
+                    {tr(lang, '\u062a\u0633\u062c\u064a\u0644 \u062e\u0631\u0648\u062c', 'Sign out')}
                   </button>
                 </div>
               </article>
@@ -1412,13 +1404,13 @@ function App() {
 
             <article className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
               <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-                <h3 className="text-lg font-black text-slate-900">{tr(lang, '?????? ???????', 'My recent requests', 'Mes demandes recentes')}</h3>
-                {recentTopupLoading ? <span className="text-xs text-slate-500">{tr(lang, '???? ???????...', 'Refreshing...', 'Actualisation...')}</span> : null}
+                <h3 className="text-lg font-black text-slate-900">{tr(lang, '\u0637\u0644\u0628\u0627\u062a\u064a \u0627\u0644\u0623\u062e\u064a\u0631\u0629', 'My recent requests', 'Mes demandes recentes')}</h3>
+                {recentTopupLoading ? <span className="text-xs text-slate-500">{tr(lang, '\u062c\u0627\u0631\u064d \u0627\u0644\u062a\u062d\u062f\u064a\u062b\u2026', 'Refreshing...', 'Actualisation...')}</span> : null}
               </div>
 
               {recentTopupRequests.length === 0 ? (
                 <p className="text-sm text-slate-600">
-                  {tr(lang, '?? ???? ????? ??? ???.', 'No top-up requests yet.', 'Aucune demande de recharge pour le moment.')}
+                  {tr(lang, '\u0644\u0627 \u062a\u0648\u062c\u062f \u0637\u0644\u0628\u0627\u062a \u0634\u062d\u0646 \u0628\u0639\u062f\u060c', 'No top-up requests yet.', 'Aucune demande de recharge pour le moment.')}
                 </p>
               ) : (
                 <div className="max-h-72 overflow-auto space-y-2 pr-1">
@@ -1426,7 +1418,7 @@ function App() {
                     <div key={item.id} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
                       <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
                         <span className="font-semibold text-slate-900">
-                          ${(Number(item.amount_cents || 0) / 100).toFixed(2)} / {item.credits_added} {tr(lang, '??????', 'credits', 'credits')}
+                          ${(Number(item.amount_cents || 0) / 100).toFixed(2)} / {item.credits_added} {tr(lang, '\u0643\u0631\u064a\u062f\u064a\u062a', 'credits', 'credits')}
                         </span>
                         <span className={`text-xs rounded-full px-2 py-1 ${paymentRequestStatusClass(item.status)}`}>
                           {paymentRequestStatusLabel(item.status, lang)}
