@@ -67,6 +67,12 @@ function ClientHeader({
   onLogout
 }) {
   const isDark = theme === 'dark';
+  const freePlanText = tr(
+    lang,
+    `${freeLinksRemaining} من ${freePlanRequests}`,
+    `${freeLinksRemaining} of ${freePlanRequests}`,
+    `${freeLinksRemaining} sur ${freePlanRequests}`
+  );
 
   return (
     <header className="relative z-10 rounded-3xl border border-slate-700/80 bg-[linear-gradient(160deg,#071229_0%,#0f1d3a_60%,#18274b_100%)] text-slate-100 p-4 sm:p-5 mb-4 sm:mb-6 overflow-hidden">
@@ -159,7 +165,7 @@ function ClientHeader({
 
           <MetricCard
             label={tr(lang, 'الخطة المجانية', 'Free Plan', 'Plan gratuit')}
-            value={`${freeLinksRemaining} / ${freePlanRequests}`}
+            value={freePlanText}
             subtext={tr(lang, 'روابط متبقية هذا الشهر', 'Links remaining this period', 'Liens restants pour cette periode')}
             tone="border-emerald-300/30 bg-emerald-500/15 text-emerald-100"
           />
