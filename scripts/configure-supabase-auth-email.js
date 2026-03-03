@@ -166,11 +166,18 @@ async function main() {
     throw new Error('SUPABASE_ACCESS_TOKEN is required (env or backend/.env).');
   }
 
-  const projectRef =
-    getEnv(envFile, 'SUPABASE_PROJECT_REF') ||
-    parseProjectRefFromUrl(getEnv(envFile, 'SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_URL', 'VITE_SUPABASE_URL'));
+  const projectRefFromUrl = parseProjectRefFromUrl(
+    getEnv(envFile, 'SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_URL', 'VITE_SUPABASE_URL')
+  );
+  const explicitProjectRef = getEnv(envFile, 'SUPABASE_PROJECT_REF');
+  const projectRef = projectRefFromUrl || explicitProjectRef;
   if (!projectRef) {
     throw new Error('SUPABASE_PROJECT_REF (or SUPABASE_URL) is required.');
+  }
+  if (projectRefFromUrl && explicitProjectRef && projectRefFromUrl !== explicitProjectRef) {
+    console.warn(
+      `Warning: SUPABASE_PROJECT_REF (${explicitProjectRef}) does not match SUPABASE_URL ref (${projectRefFromUrl}). Using ${projectRef}.`
+    );
   }
 
   const senderName = getEnv(envFile, 'AUTH_EMAIL_FROM_NAME') || DEFAULT_SENDER_NAME;
