@@ -208,6 +208,7 @@ function App() {
   const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
   const [topupQuote, setTopupQuote] = useState(null);
   const [credits, setCredits] = useState(null);
+  const [freePlanLimit, setFreePlanLimit] = useState(FREE_PLAN_REQUESTS);
   const [freeLinksRemaining, setFreeLinksRemaining] = useState(FREE_PLAN_REQUESTS);
   const [accountAccess, setAccountAccess] = useState({ status: 'active', reason: null });
   const [clientPage, setClientPage] = useState(CLIENT_PAGES.dashboard);
@@ -294,6 +295,7 @@ function App() {
       const headers = await getAuthHeaders();
       if (!headers.Authorization) {
         setCredits(null);
+        setFreePlanLimit(FREE_PLAN_REQUESTS);
         setFreeLinksRemaining(FREE_PLAN_REQUESTS);
         setAccountAccess({ status: 'active', reason: null });
         return;
@@ -305,19 +307,24 @@ function App() {
       const data = await response.json().catch(() => ({}));
       if (response.ok && data.success) {
         const nextCredits = Number(data.data?.credits || 0);
+        const nextFreePlanLimit = Number.isFinite(Number(data.data?.freePlanLimit))
+          ? Number(data.data.freePlanLimit)
+          : FREE_PLAN_REQUESTS;
         const nextFreeLinks = Number.isFinite(Number(data.data?.freeLinksRemaining))
           ? Number(data.data.freeLinksRemaining)
-          : FREE_PLAN_REQUESTS;
+          : nextFreePlanLimit;
         const nextAccess = {
           status: data.data?.accessStatus || 'active',
           reason: data.data?.accessReason || null
         };
         setCredits(nextCredits);
+        setFreePlanLimit(nextFreePlanLimit);
         setFreeLinksRemaining(nextFreeLinks);
         setAccountAccess(nextAccess);
         if (user?.id) {
           writeAccountSnapshot(user.id, {
             credits: nextCredits,
+            freePlanLimit: nextFreePlanLimit,
             freeLinksRemaining: nextFreeLinks,
             accessStatus: nextAccess.status,
             accessReason: nextAccess.reason
@@ -332,6 +339,7 @@ function App() {
         });
       } else if (response.status === 401) {
         setCredits(null);
+        setFreePlanLimit(FREE_PLAN_REQUESTS);
         setFreeLinksRemaining(FREE_PLAN_REQUESTS);
         setAccountAccess({ status: 'active', reason: null });
       }
@@ -389,6 +397,7 @@ function App() {
       clearEdgeAuthCookie();
       setSession(null);
       setCredits(null);
+      setFreePlanLimit(FREE_PLAN_REQUESTS);
       setFreeLinksRemaining(FREE_PLAN_REQUESTS);
     }
 
@@ -415,6 +424,8 @@ function App() {
           setSession(null);
           clearEdgeAuthCookie();
           setCredits(null);
+          setFreePlanLimit(FREE_PLAN_REQUESTS);
+          setFreeLinksRemaining(FREE_PLAN_REQUESTS);
           setAuthReady(true);
           clearTimeout(authSafetyTimer);
           return;
@@ -427,6 +438,7 @@ function App() {
           await refreshAccount();
         } else {
           setCredits(null);
+          setFreePlanLimit(FREE_PLAN_REQUESTS);
           setFreeLinksRemaining(FREE_PLAN_REQUESTS);
           setTopupQuote(null);
         }
@@ -449,6 +461,7 @@ function App() {
         setSelectedUrl('');
         setAuthModalMode('login');
         setCredits(null);
+        setFreePlanLimit(FREE_PLAN_REQUESTS);
         setFreeLinksRemaining(FREE_PLAN_REQUESTS);
         setAccountAccess({ status: 'active', reason: null });
         setTranscriptData(null);
@@ -486,6 +499,9 @@ function App() {
     }
     if (Number.isFinite(Number(cached.freeLinksRemaining))) {
       setFreeLinksRemaining(Number(cached.freeLinksRemaining));
+    }
+    if (Number.isFinite(Number(cached.freePlanLimit))) {
+      setFreePlanLimit(Number(cached.freePlanLimit));
     }
     if (typeof cached.accessStatus === 'string') {
       setAccountAccess({
@@ -960,6 +976,7 @@ function App() {
     clearEdgeAuthCookie();
     setSession(null);
     setCredits(null);
+    setFreePlanLimit(FREE_PLAN_REQUESTS);
     setFreeLinksRemaining(FREE_PLAN_REQUESTS);
     setAccountAccess({ status: 'active', reason: null });
     setTranscriptData(null);
@@ -1133,7 +1150,7 @@ function App() {
           userEmail={user?.email}
           credits={credits}
           freeLinksRemaining={freeLinksRemaining}
-          freePlanRequests={FREE_PLAN_REQUESTS}
+          freePlanRequests={freePlanLimit}
           requestCost={CREDIT_COST_PER_SUCCESS}
           paidPlanCredits={PAID_PLAN_CREDITS}
           paidPlanPrice={PAID_PLAN_PRICE_USD}
@@ -1300,8 +1317,8 @@ function App() {
                 <div className="space-y-3 text-sm">
                   <p><span className="font-bold">{tr(lang, '\u0627\u0644\u0628\u0631\u064a\u062f:', 'Email:')}</span> {user?.email || '-'}</p>
                   <p><span className="font-bold">{tr(lang, '\u0627\u0644\u0631\u0635\u064a\u062f:', 'Credits:')}</span> {credits ?? '...'}</p>
-                  <p><span className="font-bold">{tr(lang, '\u0627\u0644\u062e\u0637\u0629 \u0627\u0644\u0645\u062c\u0627\u0646\u064a\u0629:', 'Free plan:')}</span> {FREE_PLAN_REQUESTS} {tr(lang, '\u0631\u0648\u0627\u0628\u0637 \u0641\u0642\u0637', 'links only')}</p>
-                  <p><span className="font-bold">{tr(lang, '\u0627\u0644\u0631\u0648\u0627\u0628\u0637 \u0627\u0644\u0645\u062c\u0627\u0646\u064a\u0629 \u0627\u0644\u0645\u062a\u0628\u0642\u064a\u0629:', 'Free links remaining:')}</span> {freeLinksRemaining} / {FREE_PLAN_REQUESTS}</p>
+                  <p><span className="font-bold">{tr(lang, '\u0627\u0644\u062e\u0637\u0629 \u0627\u0644\u0645\u062c\u0627\u0646\u064a\u0629:', 'Free plan:')}</span> {freePlanLimit} {tr(lang, '\u0631\u0648\u0627\u0628\u0637 \u0641\u0642\u0637', 'links only')}</p>
+                  <p><span className="font-bold">{tr(lang, '\u0627\u0644\u0631\u0648\u0627\u0628\u0637 \u0627\u0644\u0645\u062c\u0627\u0646\u064a\u0629 \u0627\u0644\u0645\u062a\u0628\u0642\u064a\u0629:', 'Free links remaining:')}</span> {freeLinksRemaining} / {freePlanLimit}</p>
                   <p><span className="font-bold">{tr(lang, '\u062a\u0643\u0644\u0641\u0629 \u0627\u0644\u0631\u0627\u0628\u0637:', 'Link cost:')}</span> {CREDIT_COST_PER_SUCCESS} {tr(lang, '\u0643\u0631\u064a\u062f\u064a\u062a \u0644\u0643\u0644 \u0631\u0627\u0628\u0637 \u0641\u064a\u062f\u064a\u0648 \u062c\u062f\u064a\u062f', 'credit per new video link')}</p>
                   <p><span className="font-bold">{tr(lang, '\u0627\u0644\u062c\u0644\u0633\u0629:', 'Session:')}</span> {tr(lang, '\u0646\u0634\u0637\u0629', 'Active')}</p>
                   {accountAccess.status !== 'active' ? (

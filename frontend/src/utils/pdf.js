@@ -1,5 +1,14 @@
-import { jsPDF } from 'jspdf';
-import html2canvas from 'html2canvas';
+let pdfDepsPromise = null;
+
+async function loadPdfDeps() {
+  if (!pdfDepsPromise) {
+    pdfDepsPromise = Promise.all([import('jspdf'), import('html2canvas')]).then(([jspdfModule, html2canvasModule]) => ({
+      jsPDF: jspdfModule.jsPDF,
+      html2canvas: html2canvasModule.default
+    }));
+  }
+  return pdfDepsPromise;
+}
 
 function ensurePdfFilename(filename) {
   if (!filename) return `export-${Date.now()}.pdf`;
@@ -49,7 +58,7 @@ function writeLinesWithPaging(doc, lines, startY, margin, lineHeight) {
   return y;
 }
 
-function legacyPdfExport({ filename, title, body, metadata }) {
+function legacyPdfExport({ jsPDF, filename, title, body, metadata }) {
   const doc = new jsPDF({ unit: 'pt', format: 'a4' });
   const margin = 40;
   const contentWidth = doc.internal.pageSize.getWidth() - margin * 2;
@@ -139,7 +148,7 @@ function renderContainer({ title, metadata, body }) {
   return wrapper;
 }
 
-function canvasToMultipagePdf(canvas, filename) {
+function canvasToMultipagePdf(canvas, filename, jsPDF) {
   const doc = new jsPDF({ unit: 'pt', format: 'a4' });
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -180,8 +189,19 @@ export async function downloadTextAsPdf({
   body = '',
   metadata = []
 }) {
+  let jsPDF;
+  let html2canvas;
+  try {
+    const deps = await loadPdfDeps();
+    jsPDF = deps.jsPDF;
+    html2canvas = deps.html2canvas;
+  } catch (loadError) {
+    console.error('Failed to load PDF dependencies:', loadError);
+    return;
+  }
+
   if (typeof window === 'undefined' || typeof document === 'undefined') {
-    legacyPdfExport({ filename, title, body, metadata });
+    legacyPdfExport({ jsPDF, filename, title, body, metadata });
     return;
   }
 
@@ -195,9 +215,9 @@ export async function downloadTextAsPdf({
       logging: false
     });
     container.remove();
-    canvasToMultipagePdf(canvas, filename);
+    canvasToMultipagePdf(canvas, filename, jsPDF);
   } catch (error) {
     console.error('PDF export fallback:', error);
-    legacyPdfExport({ filename, title, body, metadata });
+    legacyPdfExport({ jsPDF, filename, title, body, metadata });
   }
 }

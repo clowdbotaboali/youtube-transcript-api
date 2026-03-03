@@ -6,7 +6,7 @@ import crypto from 'crypto';
 let groqClient = null;
 
 let supabaseClient = null;
-const FREE_PLAN_CREDITS = 5;
+const FREE_PLAN_CREDITS = 0;
 const CREDIT_COST_PER_SUCCESS = 1;
 const MONTHLY_FREE_QUOTA = 5;
 const QUOTA_RESET_WINDOW_DAYS = 30;
@@ -30,6 +30,7 @@ const AI_CONFIG_TYPE = 'ai_provider_config';
 const AI_CONFIG_VIDEO_ID = 'ai_providers';
 const TRANSCRIPT_API_CONFIG_TYPE = 'transcript_api_config';
 const TRANSCRIPT_API_VIDEO_ID = 'transcript_api_keys';
+const RATE_LIMIT_MARKER_TYPE = 'rate_limit_marker';
 const EMAIL_NOT_VERIFIED_CODE = 'EMAIL_NOT_VERIFIED';
 const OAUTH_REDIRECT_DEFAULT_PATH = '/auth/callback?next=/dashboard';
 const TURNSTILE_VERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
@@ -60,6 +61,7 @@ const GUEST_EXTRACT_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const GUEST_EXTRACT_LIMIT_PER_TOKEN = 1;
 const VIDEO_ID_REGEX = /^[A-Za-z0-9_-]{11}$/;
 const PRO_SUBSCRIPTION_DAYS = 30;
+const RATE_LIMIT_OWNER_CACHE_TTL_MS = 5 * 60 * 1000;
 const DEFAULT_OUTPUT_LANG = 'ar';
 const OUTPUT_LANG_CONFIG = {
   ar: { label: 'Arabic', instruction: 'Write the final output in clear Modern Standard Arabic with natural phrasing (not literal translation).' },
@@ -90,11 +92,11 @@ const FEATURE_ACCESS_BY_TIER = {
 };
 const RATE_LIMIT_RULES = {
   ipGlobal: { limit: 240, windowMs: 60 * 1000 },
-  adminLoginIp: { limit: 12, windowMs: 10 * 60 * 1000 },
-  authSignupIp: { limit: 3, windowMs: 30 * 24 * 60 * 60 * 1000 },
-  authLoginIp: { limit: 10, windowMs: 10 * 60 * 1000 },
-  authResendIp: { limit: 6, windowMs: 10 * 60 * 1000 },
-  guestExtractIp: { limit: 6, windowMs: 10 * 60 * 1000 },
+  adminLoginIp: { limit: 12, windowMs: 10 * 60 * 1000, storage: 'durable' },
+  authSignupIp: { limit: 12, windowMs: 24 * 60 * 60 * 1000, storage: 'durable' },
+  authLoginIp: { limit: 10, windowMs: 10 * 60 * 1000, storage: 'durable' },
+  authResendIp: { limit: 6, windowMs: 10 * 60 * 1000, storage: 'durable' },
+  guestExtractIp: { limit: 6, windowMs: 10 * 60 * 1000, storage: 'durable' },
   transcriptByUser: { limit: 40, windowMs: 60 * 1000 },
   aiByUser: { limit: 45, windowMs: 60 * 1000 },
   chatByUser: { limit: 80, windowMs: 60 * 1000 },
@@ -116,6 +118,7 @@ const STATUS_DEFAULT_ERROR_CODE = {
 };
 const RESERVED_PROCESSING_TYPES = new Set([
   QUOTA_MARKER_TYPE,
+  RATE_LIMIT_MARKER_TYPE,
   EXTRACT_TYPE,
   ADMIN_CONFIG_TYPE,
   BILLING_CONFIG_TYPE,
@@ -155,6 +158,10 @@ const guestExtractUsage = new Map();
 const apiKeyRuntimeState = {
   ai: new Map(),
   transcript: new Map()
+};
+let rateLimitOwnerUserIdCache = {
+  value: '',
+  expiresAt: 0
 };
 
 function validateEnvironment() {
@@ -682,8 +689,7 @@ async function ensureUserAccountRow(supabase, authUser) {
   if (tier === 'free' && credits > FREE_PLAN_CREDITS) {
     const paidBefore = await hasApprovedPayments(supabase, authUser.id);
     if (!paidBefore) {
-      const usage = await getFreeLinksUsage(supabase, authUser.id);
-      const normalizedCredits = Number(usage.freeLinksRemaining || 0);
+      const normalizedCredits = FREE_PLAN_CREDITS;
       const { error: normalizeError } = await supabase
         .from('users')
         .update({ credits: normalizedCredits })
@@ -755,74 +761,12 @@ async function consumeCredits(supabase, userId, currentCredits, cost = CREDIT_CO
   return Math.max(Number(committedData.credits || freshNextCredits), 0);
 }
 
-async function hasQuotaMarkerForVideo(supabase, userId, videoId) {
-  const { data, error } = await supabase
-    .from('transcripts_history')
-    .select('id')
-    .eq('user_id', userId)
-    .eq('video_id', videoId)
-    .eq('processing_type', QUOTA_MARKER_TYPE)
-    .limit(1);
-
-  if (error) {
-    throw new Error('Failed to check extraction usage');
-  }
-
-  return Array.isArray(data) && data.length > 0;
-}
-
-async function addQuotaMarkerForVideo(supabase, userId, videoId) {
-  const { error } = await supabase
-    .from('transcripts_history')
-    .insert([
-      {
-        user_id: userId,
-        video_id: videoId,
-        video_title: `[quota:${videoId}]`,
-        transcript: '__quota_marker__',
-        ai_result: null,
-        processing_type: QUOTA_MARKER_TYPE
-      }
-    ]);
-
-  if (error) {
-    throw new Error('Failed to record extraction usage');
-  }
-}
-
-async function getFreeLinksUsage(supabase, userId) {
-  const { data, error } = await supabase
-    .from('transcripts_history')
-    .select('video_id')
-    .eq('user_id', userId)
-    .eq('processing_type', QUOTA_MARKER_TYPE)
-    .limit(10000);
-
-  if (error) {
-    throw new Error('Failed to load free plan usage');
-  }
-
-  const uniqueVideoIds = new Set(
-    (Array.isArray(data) ? data : [])
-      .map((row) => String(row?.video_id || '').trim())
-      .filter(Boolean)
-  );
-
-  const used = Math.min(uniqueVideoIds.size, FREE_PLAN_CREDITS);
-  const remaining = Math.max(FREE_PLAN_CREDITS - used, 0);
-  return {
-    freePlanLimit: FREE_PLAN_CREDITS,
-    freeLinksUsed: used,
-    freeLinksRemaining: remaining
-  };
-}
-
 async function countDailyExtractUsage(supabase, userId, sinceIso) {
   const { data, error } = await supabase
     .from('transcripts_history')
     .select('id')
     .eq('user_id', userId)
-    .eq('processing_type', QUOTA_MARKER_TYPE)
+    .eq('processing_type', EXTRACT_TYPE)
     .gte('created_at', sinceIso)
     .limit(10000);
 
@@ -3356,6 +3300,135 @@ function sendError(res, status, code, message, details) {
   return res.status(status).json(makeErrorPayload(status, code, message, details));
 }
 
+function isDurableRateLimitRule(ruleName) {
+  const rule = RATE_LIMIT_RULES[ruleName];
+  return rule?.storage === 'durable';
+}
+
+function hashRateLimitIdentity(ruleName, identity) {
+  const normalizedIdentity = String(identity || '').trim().toLowerCase();
+  return crypto
+    .createHash('sha256')
+    .update(`${ruleName}:${normalizedIdentity}`)
+    .digest('base64url')
+    .slice(0, 32);
+}
+
+function buildRateLimitMarkerVideoId(ruleName, identityHash) {
+  return `rate_limit:${ruleName}:${identityHash}`;
+}
+
+function toTimestampMs(value, fallback = Date.now()) {
+  const parsed = new Date(value || '').getTime();
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+async function getRateLimitOwnerUserId(supabase) {
+  const forced = String(process.env.RATE_LIMIT_OWNER_USER_ID || '').trim();
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(forced)) {
+    return forced;
+  }
+
+  if (!supabase) return '';
+  if (rateLimitOwnerUserIdCache.value && rateLimitOwnerUserIdCache.expiresAt > Date.now()) {
+    return rateLimitOwnerUserIdCache.value;
+  }
+
+  const adminConfig = await loadOrBootstrapAdminConfig(supabase);
+  const ownerUserId = String(adminConfig?.userId || '').trim();
+  if (!ownerUserId) return '';
+  rateLimitOwnerUserIdCache = {
+    value: ownerUserId,
+    expiresAt: Date.now() + RATE_LIMIT_OWNER_CACHE_TTL_MS
+  };
+  return ownerUserId;
+}
+
+async function pruneDurableRateLimitMarkers(supabase, ownerUserId, markerVideoId, cutoffIso) {
+  await supabase
+    .from('transcripts_history')
+    .delete()
+    .eq('user_id', ownerUserId)
+    .eq('processing_type', RATE_LIMIT_MARKER_TYPE)
+    .eq('video_id', markerVideoId)
+    .lt('created_at', cutoffIso);
+}
+
+async function consumeDurableRateLimit(supabase, ruleName, identity) {
+  const rule = RATE_LIMIT_RULES[ruleName];
+  const key = String(identity || '').trim();
+  if (!rule || !key) {
+    return { allowed: true, remaining: Infinity, resetAt: Date.now() };
+  }
+
+  const ownerUserId = await getRateLimitOwnerUserId(supabase);
+  if (!ownerUserId) {
+    throw new Error('Rate limit owner user is not configured');
+  }
+
+  const now = Date.now();
+  const windowStartIso = new Date(now - rule.windowMs).toISOString();
+  const identityHash = hashRateLimitIdentity(ruleName, key);
+  const markerVideoId = buildRateLimitMarkerVideoId(ruleName, identityHash);
+
+  const { data: recentRows, error: recentError } = await supabase
+    .from('transcripts_history')
+    .select('created_at')
+    .eq('user_id', ownerUserId)
+    .eq('processing_type', RATE_LIMIT_MARKER_TYPE)
+    .eq('video_id', markerVideoId)
+    .gte('created_at', windowStartIso)
+    .order('created_at', { ascending: true })
+    .limit(rule.limit);
+
+  if (recentError) {
+    throw new Error('Failed to load durable rate-limit state');
+  }
+
+  const rows = Array.isArray(recentRows) ? recentRows : [];
+  const firstSeenMs = rows.length > 0 ? toTimestampMs(rows[0]?.created_at, now) : now;
+  const resetAt = firstSeenMs + rule.windowMs;
+
+  if (rows.length >= rule.limit) {
+    if (Math.random() < 0.05) {
+      await pruneDurableRateLimitMarkers(supabase, ownerUserId, markerVideoId, windowStartIso);
+    }
+    return {
+      allowed: false,
+      remaining: 0,
+      resetAt
+    };
+  }
+
+  const { error: insertError } = await supabase
+    .from('transcripts_history')
+    .insert([
+      {
+        user_id: ownerUserId,
+        video_id: markerVideoId,
+        video_title: `[rate-limit:${ruleName}]`,
+        transcript: identityHash,
+        ai_result: null,
+        processing_type: RATE_LIMIT_MARKER_TYPE
+      }
+    ]);
+
+  if (insertError) {
+    throw new Error('Failed to persist durable rate-limit state');
+  }
+
+  if (Math.random() < 0.05) {
+    await pruneDurableRateLimitMarkers(supabase, ownerUserId, markerVideoId, windowStartIso);
+  }
+
+  const nextResetAt = rows.length > 0 ? resetAt : now + rule.windowMs;
+  return {
+    allowed: true,
+    remaining: Math.max(rule.limit - (rows.length + 1), 0),
+    resetAt: nextResetAt
+  };
+}
+
 function pruneRateLimitBucket(bucket, now = Date.now()) {
   for (const [key, entry] of bucket.entries()) {
     if (!entry || typeof entry !== 'object' || entry.resetAt <= now) {
@@ -3364,7 +3437,7 @@ function pruneRateLimitBucket(bucket, now = Date.now()) {
   }
 }
 
-function consumeRateLimit(ruleName, identity) {
+function consumeMemoryRateLimit(ruleName, identity) {
   const rule = RATE_LIMIT_RULES[ruleName];
   const key = String(identity || '').trim();
   if (!rule || !key) {
@@ -3406,6 +3479,24 @@ function consumeRateLimit(ruleName, identity) {
   };
 }
 
+async function consumeRateLimit(ruleName, identity, { supabase = null } = {}) {
+  const rule = RATE_LIMIT_RULES[ruleName];
+  const key = String(identity || '').trim();
+  if (!rule || !key) {
+    return { allowed: true, remaining: Infinity, resetAt: Date.now() };
+  }
+
+  if (isDurableRateLimitRule(ruleName) && supabase) {
+    try {
+      return await consumeDurableRateLimit(supabase, ruleName, key);
+    } catch (error) {
+      console.warn(`[rate-limit] durable limiter fallback for ${ruleName}: ${error?.message || 'unknown error'}`);
+    }
+  }
+
+  return consumeMemoryRateLimit(ruleName, key);
+}
+
 function setRateLimitHeaders(res, check, ruleName) {
   const rule = RATE_LIMIT_RULES[ruleName];
   if (!rule) return;
@@ -3418,8 +3509,8 @@ function setRateLimitHeaders(res, check, ruleName) {
   }
 }
 
-function enforceRateLimit(res, ruleName, identity, message = 'Too many requests') {
-  const check = consumeRateLimit(ruleName, identity);
+async function enforceRateLimit(res, ruleName, identity, message = 'Too many requests', { supabase = null } = {}) {
+  const check = await consumeRateLimit(ruleName, identity, { supabase });
   setRateLimitHeaders(res, check, ruleName);
   if (check.allowed) return true;
   sendError(res, 429, 'RATE_LIMITED', message, {
@@ -4016,7 +4107,7 @@ export default async function handler(req, res) {
     return res.status(200).end();
   }
 
-  if (pathname.startsWith('/api/') && !enforceRateLimit(res, 'ipGlobal', requestIp, 'Too many requests from this IP')) {
+  if (pathname.startsWith('/api/') && !(await enforceRateLimit(res, 'ipGlobal', requestIp, 'Too many requests from this IP'))) {
     return;
   }
 
@@ -4047,7 +4138,8 @@ export default async function handler(req, res) {
     }
 
     if (pathname === '/api/public/transcript/extract' && req.method === 'POST') {
-      if (!enforceRateLimit(res, 'guestExtractIp', requestIp, 'Too many guest extraction attempts from this IP')) return;
+      const guestSupabase = getSupabase();
+      if (!(await enforceRateLimit(res, 'guestExtractIp', requestIp, 'Too many guest extraction attempts from this IP', { supabase: guestSupabase }))) return;
 
       const guestStatus = getGuestExtractStatus(body.guestToken || body.guest_token);
       if (!guestStatus.token) {
@@ -4057,7 +4149,7 @@ export default async function handler(req, res) {
         return sendError(res, 403, 'GUEST_LIMIT_REACHED', 'Guest free extraction limit reached. Please create a free account to continue.');
       }
 
-      const supabase = getSupabase();
+      const supabase = guestSupabase;
       const { url: videoUrl } = body;
       const parsedVideo = parseYouTubeInput(videoUrl);
       if (!parsedVideo.ok) {
@@ -4178,7 +4270,8 @@ export default async function handler(req, res) {
     }
 
     if (pathname === '/api/auth/signup' && req.method === 'POST') {
-      if (!enforceRateLimit(res, 'authSignupIp', requestIp, 'Too many registration attempts from this IP')) return;
+      const signupSupabase = getSupabase();
+      if (!(await enforceRateLimit(res, 'authSignupIp', requestIp, 'Too many registration attempts from this IP', { supabase: signupSupabase }))) return;
 
       const email = normalizeEmail(body.email);
       const password = String(body.password || '');
@@ -4235,7 +4328,8 @@ export default async function handler(req, res) {
     }
 
     if (pathname === '/api/auth/login' && req.method === 'POST') {
-      if (!enforceRateLimit(res, 'authLoginIp', requestIp, 'Too many login attempts from this IP')) return;
+      const loginSupabase = getSupabase();
+      if (!(await enforceRateLimit(res, 'authLoginIp', requestIp, 'Too many login attempts from this IP', { supabase: loginSupabase }))) return;
 
       const email = normalizeEmail(body.email);
       const password = String(body.password || '');
@@ -4307,7 +4401,8 @@ export default async function handler(req, res) {
     }
 
     if (pathname === '/api/auth/resend-verification' && req.method === 'POST') {
-      if (!enforceRateLimit(res, 'authResendIp', requestIp, 'Too many verification email requests')) return;
+      const resendSupabase = getSupabase();
+      if (!(await enforceRateLimit(res, 'authResendIp', requestIp, 'Too many verification email requests', { supabase: resendSupabase }))) return;
 
       const email = normalizeEmail(body.email);
       if (!email || !email.includes('@')) {
@@ -4365,7 +4460,7 @@ export default async function handler(req, res) {
       if (!user) {
         return res.status(401).json({ success: false, error: 'Authentication required' });
       }
-      if (!enforceRateLimit(res, 'genericByUser', user.id, 'Too many profile requests')) return;
+      if (!(await enforceRateLimit(res, 'genericByUser', user.id, 'Too many profile requests', { supabase }))) return;
 
       const userRow = await ensureUserAccountRow(supabase, user);
       await assertUserIsActive(supabase, user.id);
@@ -4375,6 +4470,11 @@ export default async function handler(req, res) {
       });
       const access = await getUserAccessState(supabase, user.id);
       const monthlyUsage = await getUserUsageSummary(supabase, user.id);
+      const paidBefore = subscription.tier === 'admin' ? true : await hasApprovedPayments(supabase, user.id);
+      const monthlyQuotaEligible = subscription.tier === 'free' && !paidBefore;
+      const effectiveMonthlyQuota = monthlyQuotaEligible ? monthlyUsage.monthlyQuota : 0;
+      const effectiveUsedThisMonth = monthlyQuotaEligible ? monthlyUsage.usedThisMonth : 0;
+      const effectiveMonthlyRemaining = monthlyQuotaEligible ? monthlyUsage.remaining : 0;
       audit.userId = user.id;
       audit.tier = subscription.tier;
 
@@ -4390,14 +4490,15 @@ export default async function handler(req, res) {
           dailyExtractUsed: subscription.dailyExtractUsed,
           dailyExtractRemaining: subscription.dailyExtractRemaining,
           featureAccess: subscription.features,
-          freePlanLimit: monthlyUsage.monthlyQuota,
-          freeLinksUsed: monthlyUsage.usedThisMonth,
-          freeLinksRemaining: monthlyUsage.remaining,
-          monthlyQuota: monthlyUsage.monthlyQuota,
-          usedThisMonth: monthlyUsage.usedThisMonth,
-          monthlyQuotaRemaining: monthlyUsage.remaining,
-          quotaLastResetAt: monthlyUsage.lastResetAt,
-          quotaNextResetAt: monthlyUsage.nextResetAt,
+          monthlyQuotaEligible,
+          freePlanLimit: effectiveMonthlyQuota,
+          freeLinksUsed: effectiveUsedThisMonth,
+          freeLinksRemaining: effectiveMonthlyRemaining,
+          monthlyQuota: effectiveMonthlyQuota,
+          usedThisMonth: effectiveUsedThisMonth,
+          monthlyQuotaRemaining: effectiveMonthlyRemaining,
+          quotaLastResetAt: monthlyQuotaEligible ? monthlyUsage.lastResetAt : null,
+          quotaNextResetAt: monthlyQuotaEligible ? monthlyUsage.nextResetAt : null,
           accessStatus: access.status,
           accessReason: access.reason
         }
@@ -4409,7 +4510,7 @@ export default async function handler(req, res) {
       if (!supabase) {
         return res.status(500).json({ success: false, error: 'Server not configured: SUPABASE env vars missing' });
       }
-      if (!enforceRateLimit(res, 'adminLoginIp', requestIp, 'Too many admin login attempts')) return;
+      if (!(await enforceRateLimit(res, 'adminLoginIp', requestIp, 'Too many admin login attempts', { supabase }))) return;
 
       let config = await loadOrBootstrapAdminConfig(supabase);
       const identifierRaw = String(body.identifier || body.username || body.email || '').trim().toLowerCase();
@@ -5165,7 +5266,7 @@ export default async function handler(req, res) {
       if (!user) {
         return res.status(401).json({ success: false, error: 'Authentication required' });
       }
-      if (!enforceRateLimit(res, 'transcriptByUser', user.id, 'Too many transcript extraction requests')) return;
+      if (!(await enforceRateLimit(res, 'transcriptByUser', user.id, 'Too many transcript extraction requests', { supabase }))) return;
 
       const userRow = await ensureUserAccountRow(supabase, user);
       await assertUserIsActive(supabase, user.id);
@@ -5184,9 +5285,25 @@ export default async function handler(req, res) {
         lastResetAt: new Date().toISOString(),
         nextResetAt: new Date(Date.now() + QUOTA_RESET_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString()
       });
+      const buildDisabledQuotaSnapshot = () => ({
+        allowed: false,
+        monthlyQuota: 0,
+        usedThisMonth: 0,
+        remaining: 0,
+        lastResetAt: null,
+        nextResetAt: null
+      });
+      let allowMonthlyQuotaFallback = subscription.tier === 'free';
+      if (allowMonthlyQuotaFallback) {
+        const paidBefore = await hasApprovedPayments(supabase, user.id);
+        allowMonthlyQuotaFallback = !paidBefore;
+      }
       const getQuotaSnapshot = async () => {
         if (subscription.tier === 'admin') {
           return buildAdminQuotaSnapshot();
+        }
+        if (!allowMonthlyQuotaFallback) {
+          return buildDisabledQuotaSnapshot();
         }
         return getUserUsageSummary(supabase, user.id);
       };
@@ -5251,6 +5368,7 @@ export default async function handler(req, res) {
             monthlyQuota: quota.monthlyQuota,
             usedThisMonth: quota.usedThisMonth,
             monthlyQuotaRemaining: quota.remaining,
+            monthlyQuotaEligible: subscription.tier === 'admin' || allowMonthlyQuotaFallback,
             quotaLastResetAt: quota.lastResetAt,
             quotaNextResetAt: quota.nextResetAt,
             cached: true
@@ -5363,7 +5481,7 @@ export default async function handler(req, res) {
           creditsLeft = await consumeCredits(supabase, user.id, creditsLeft, CREDIT_COST_PER_SUCCESS);
           chargedForNewVideo = true;
           quota = await getQuotaSnapshot();
-        } else {
+        } else if (allowMonthlyQuotaFallback) {
           const quotaConsumption = await consumeUserMonthlyQuota(supabase, user.id);
           quota = quotaConsumption;
           if (!quotaConsumption.allowed) {
@@ -5383,6 +5501,21 @@ export default async function handler(req, res) {
             );
           }
           chargedForNewVideo = true;
+        } else {
+          return sendError(
+            res,
+            403,
+            'LIMIT_EXCEEDED',
+            'Insufficient credits. Please top up to continue.',
+            {
+              creditsLeft,
+              requiredCredits: CREDIT_COST_PER_SUCCESS,
+              monthlyQuota: quota.monthlyQuota,
+              usedThisMonth: quota.usedThisMonth,
+              remaining: quota.remaining,
+              monthlyQuotaEligible: false
+            }
+          );
         }
       }
 
@@ -5405,6 +5538,7 @@ export default async function handler(req, res) {
         monthlyQuota: quota.monthlyQuota,
         usedThisMonth: quota.usedThisMonth,
         monthlyQuotaRemaining: quota.remaining,
+        monthlyQuotaEligible: subscription.tier === 'admin' || allowMonthlyQuotaFallback,
         quotaLastResetAt: quota.lastResetAt,
         quotaNextResetAt: quota.nextResetAt,
         cached: fetchedFromCache
@@ -5420,7 +5554,7 @@ export default async function handler(req, res) {
       if (!user) {
         return res.status(401).json({ success: false, error: 'Authentication required' });
       }
-      if (!enforceRateLimit(res, 'aiByUser', user.id, 'Too many AI processing requests')) return;
+      if (!(await enforceRateLimit(res, 'aiByUser', user.id, 'Too many AI processing requests', { supabase }))) return;
       const { transcript, type, videoId: providedVideoId, lang: requestedLang } = body;
       if (!transcript) {
         return sendError(res, 400, 'INVALID_INPUT', 'Please provide transcript text');
@@ -5632,6 +5766,7 @@ export default async function handler(req, res) {
         .neq('processing_type', USER_ACCESS_CONFIG_TYPE)
         .neq('processing_type', AI_CONFIG_TYPE)
         .neq('processing_type', TRANSCRIPT_API_CONFIG_TYPE)
+        .neq('processing_type', RATE_LIMIT_MARKER_TYPE)
         .single();
       if (error || !data) return res.status(404).json({ success: false, error: 'History item not found' });
       return res.json({ success: true, item: data });
@@ -5669,6 +5804,7 @@ export default async function handler(req, res) {
         .neq('processing_type', USER_ACCESS_CONFIG_TYPE)
         .neq('processing_type', AI_CONFIG_TYPE)
         .neq('processing_type', TRANSCRIPT_API_CONFIG_TYPE)
+        .neq('processing_type', RATE_LIMIT_MARKER_TYPE)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return res.json({ success: true, data });
@@ -5862,7 +5998,7 @@ export default async function handler(req, res) {
       if (!user) {
         return res.status(401).json({ success: false, error: 'Authentication required' });
       }
-      if (!enforceRateLimit(res, 'chatByUser', user.id, 'Too many chat requests')) return;
+      if (!(await enforceRateLimit(res, 'chatByUser', user.id, 'Too many chat requests', { supabase }))) return;
       const userRow = await ensureUserAccountRow(supabase, user);
       await assertUserIsActive(supabase, user.id);
       const adminConfig = await loadOrBootstrapAdminConfig(supabase);
