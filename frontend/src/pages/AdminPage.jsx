@@ -118,9 +118,51 @@ function keyRuntimeBadgeClass(runtimeStatus) {
 
 function keyRuntimeLabel(runtimeStatus, lang) {
   const status = String(runtimeStatus || 'idle').toLowerCase();
-  if (status === 'success') return tr(lang, 'ÙØ¹Ø§Ù„ Ø§Ù„Ø¢Ù†', 'Working');
-  if (status === 'failure') return tr(lang, 'ÙØ´Ù„ Ø¢Ø®Ø± Ù…Ø­Ø§ÙˆÙ„Ø©', 'Last check failed');
-  return tr(lang, 'Ù„Ù… ÙŠÙØ³ØªØ®Ø¯Ù… ÙÙŠ Ù‡Ø°Ù‡ Ø§Ù„Ø¬Ù„Ø³Ø©', 'Not used in this runtime');
+  if (status === 'success') return tr(lang, 'تم الاستخدام بنجاح', 'Working now', 'Actif maintenant');
+  if (status === 'failure') return tr(lang, 'فشل آخر محاولة', 'Last check failed', 'Dernier test echoue');
+  return tr(lang, 'لم يُختبر بعد في هذه الجلسة', 'Not tested yet in this session', 'Pas encore teste dans cette session');
+}
+
+function subscriptionTierLabel(tier, lang) {
+  const value = String(tier || 'free').toLowerCase();
+  if (value === 'admin') return tr(lang, 'أدمن', 'Admin', 'Admin');
+  if (value === 'pro' || value === 'paid') return tr(lang, 'مدفوع', 'Paid', 'Payant');
+  return tr(lang, 'مجاني', 'Free', 'Gratuit');
+}
+
+function subscriptionTierBadgeClass(tier) {
+  const value = String(tier || 'free').toLowerCase();
+  if (value === 'admin') return 'bg-violet-100 text-violet-700';
+  if (value === 'pro' || value === 'paid') return 'bg-cyan-100 text-cyan-700';
+  return 'bg-slate-100 text-slate-700';
+}
+
+function userMonthlyQuotaHint(item, lang) {
+  const isAdmin = String(item?.subscription_tier || '').toLowerCase() === 'admin';
+  if (isAdmin) {
+    return tr(lang, 'لا حد شهري (حساب إدارة).', 'No monthly cap (admin account).', 'Pas de limite mensuelle (compte admin).');
+  }
+
+  const eligible = Boolean(item?.monthlyQuotaEligible);
+  const monthlyQuota = Math.max(Number(item?.monthlyQuota || 0), 0);
+  const remaining = Math.max(Number(item?.monthlyQuotaRemaining || 0), 0);
+  if (eligible && monthlyQuota > 0) {
+    return tr(
+      lang,
+      `المتبقي ${remaining} من ${monthlyQuota} ضمن الحصة الشهرية.`,
+      `${remaining} of ${monthlyQuota} monthly links remaining.`,
+      `${remaining} sur ${monthlyQuota} liens mensuels restants.`
+    );
+  }
+  if (eligible) {
+    return tr(lang, 'الحصة الشهرية مفعّلة.', 'Monthly quota is enabled.', 'Le quota mensuel est active.');
+  }
+  return tr(
+    lang,
+    'بعد أول شحن مدفوع لا تنطبق الحصة المجانية الشهرية.',
+    'Monthly free quota is disabled after first approved top-up.',
+    'Le quota gratuit mensuel est desactive apres la premiere recharge approuvee.'
+  );
 }
 
 function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) {
@@ -823,6 +865,7 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
                     <tr className={lang === LANG.ar ? 'text-right' : 'text-left'}>
                       <th className="p-3">{tr(lang, 'Ø§Ù„Ø¨Ø±ÙŠØ¯', 'Email')}</th>
                       <th className="p-3">{tr(lang, 'Ø§Ù„Ø±ØµÙŠØ¯', 'Credits')}</th>
+                      <th className="p-3">{tr(lang, 'الخطة / الحصة', 'Plan / Quota', 'Plan / Quota')}</th>
                       <th className="p-3">{tr(lang, 'Ø§Ù„Ø­Ø§Ù„Ø©', 'Status')}</th>
                       <th className="p-3">{tr(lang, 'Ù…Ø¯ÙÙˆØ¹Ø§Øª Ù…Ù‚Ø¨ÙˆÙ„Ø©', 'Approved Payments')}</th>
                       <th className="p-3">{tr(lang, 'Ù…Ø¯ÙÙˆØ¹Ø§Øª Ù…Ø¹Ù„Ù‚Ø©', 'Pending Payments')}</th>
@@ -842,6 +885,14 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
                             {item.access?.reason ? <div className="text-xs text-orange-600 mt-1">{item.access.reason}</div> : null}
                           </td>
                           <td className="p-3 font-bold">{item.credits}</td>
+                          <td className="p-3">
+                            <div className="space-y-1">
+                              <span className={`inline-flex rounded-full px-2 py-1 text-xs font-bold ${subscriptionTierBadgeClass(item.subscription_tier)}`}>
+                                {subscriptionTierLabel(item.subscription_tier, lang)}
+                              </span>
+                              <p className="text-xs text-slate-500">{userMonthlyQuotaHint(item, lang)}</p>
+                            </div>
+                          </td>
                           <td className="p-3">
                             <span className={`inline-flex rounded-full px-2 py-1 text-xs font-bold ${badgeClass(accessStatus)}`}>
                               {accessLabel(accessStatus, lang)}
@@ -1246,6 +1297,14 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
                       lang,
                       'ملاحظة: عند رجوع النتائج من الكاش لن يتم استدعاء المفتاح ولن يتغير مؤشر الاستخدام.',
                       'Note: cache-hit results do not call provider keys, so usage indicators may stay unchanged.'
+                    )}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    {tr(
+                      lang,
+                      'شرح الحالات: "تم الاستخدام بنجاح" يعني آخر استدعاء نجح، "فشل آخر محاولة" يعني آخر استدعاء فشل، "لم يُختبر بعد في هذه الجلسة" يعني لم يتم استدعاء المفتاح منذ آخر تشغيل للخادم.',
+                      'Status guide: "Working now" means last call succeeded, "Last check failed" means last call failed, and "Not tested yet in this session" means this key has not been called since the current server runtime started.',
+                      'Guide des etats: "Actif maintenant" signifie que le dernier appel a reussi, "Dernier test echoue" signifie echec du dernier appel, et "Pas encore teste dans cette session" signifie quaucun appel na eu lieu depuis le demarrage actuel du serveur.'
                     )}
                   </p>
                 </div>

@@ -3003,12 +3003,25 @@ async function addCreditsToUser(supabase, userId, creditsToAdd) {
 async function listAdminUsersWithStats(supabase, { limit, offset }) {
   const from = offset;
   const to = offset + limit - 1;
-  const { data: users, error } = await supabase
+  let users = null;
+  const preferredUsersResponse = await supabase
     .from('users')
-    .select('id, email, credits, created_at')
+    .select('id, email, credits, subscription_tier, created_at')
     .order('created_at', { ascending: false })
     .range(from, to);
-  if (error) throw error;
+
+  if (preferredUsersResponse.error) {
+    if (!isMissingRelationError(preferredUsersResponse.error)) throw preferredUsersResponse.error;
+    const fallbackUsersResponse = await supabase
+      .from('users')
+      .select('id, email, credits, created_at')
+      .order('created_at', { ascending: false })
+      .range(from, to);
+    if (fallbackUsersResponse.error) throw fallbackUsersResponse.error;
+    users = fallbackUsersResponse.data;
+  } else {
+    users = preferredUsersResponse.data;
+  }
 
   const rows = Array.isArray(users) ? users : [];
   if (rows.length === 0) return [];
@@ -3019,7 +3032,13 @@ async function listAdminUsersWithStats(supabase, { limit, offset }) {
     .select('user_id, amount_cents, credits_added, status, created_at')
     .in('user_id', ids)
     .order('created_at', { ascending: false });
-  if (paymentError) throw paymentError;
+  if (paymentError && !isMissingRelationError(paymentError)) throw paymentError;
+
+  const { data: usageRows, error: usageError } = await supabase
+    .from('user_usage')
+    .select('user_id, monthly_quota, used_this_month, last_reset_at')
+    .in('user_id', ids);
+  if (usageError && !isMissingRelationError(usageError)) throw usageError;
 
   const paymentMap = new Map();
   for (const row of paymentRows || []) {
@@ -3051,10 +3070,15 @@ async function listAdminUsersWithStats(supabase, { limit, offset }) {
     }
   }
 
-  return rows.map((item) => ({
-    ...item,
-    credits: toInteger(item.credits, 0),
-    stats: paymentMap.get(item.id) || {
+  const usageMap = new Map();
+  for (const row of usageRows || []) {
+    const key = String(row?.user_id || '').trim();
+    if (!key) continue;
+    usageMap.set(key, normalizeUsageRow(row));
+  }
+
+  return rows.map((item) => {
+    const stats = paymentMap.get(item.id) || {
       totalPayments: 0,
       approvedPayments: 0,
       pendingPayments: 0,
@@ -3062,8 +3086,23 @@ async function listAdminUsersWithStats(supabase, { limit, offset }) {
       paidCredits: 0,
       paidAmountCents: 0,
       lastPaymentAt: null
-    }
-  }));
+    };
+    const usage = usageMap.get(item.id) || normalizeUsageRow({});
+    const tier = normalizeTier(item.subscription_tier);
+    const monthlyQuotaEligible = tier === 'free' && Number(stats.approvedPayments || 0) === 0;
+    return {
+      ...item,
+      credits: toInteger(item.credits, 0),
+      subscription_tier: tier,
+      monthlyQuotaEligible,
+      monthlyQuota: monthlyQuotaEligible ? usage.monthlyQuota : 0,
+      usedThisMonth: monthlyQuotaEligible ? usage.usedThisMonth : 0,
+      monthlyQuotaRemaining: monthlyQuotaEligible ? usage.remaining : 0,
+      quotaLastResetAt: monthlyQuotaEligible ? usage.lastResetAt : null,
+      quotaNextResetAt: monthlyQuotaEligible ? usage.nextResetAt : null,
+      stats
+    };
+  });
 }
 
 async function getAdminUsageSummary(supabase, { days = 7 } = {}) {

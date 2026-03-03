@@ -91,6 +91,15 @@ export function formatApiErrorMessage({
     );
   }
 
+  if (code === 'QUOTA_EXCEEDED') {
+    return localize(
+      lang,
+      'تم استهلاك الروابط الشهرية المجانية ولا يوجد رصيد كافٍ حالياً. انتظر التجديد الشهري أو اشحن رصيدك للمتابعة.',
+      'Monthly free links are exhausted and no credits are available. Wait for reset or top up your balance.',
+      'Le quota mensuel gratuit est epuise et aucun credit nest disponible. Attendez la reinitialisation ou rechargez votre solde.'
+    );
+  }
+
   if (code === 'FEATURE_NOT_AVAILABLE') {
     return localize(
       lang,
@@ -146,6 +155,23 @@ export function formatApiErrorMessage({
   }
 
   const raw = cleanText(parsed.message || '');
+  const rawLower = raw.toLowerCase();
+  if (rawLower.includes('monthly transcript quota reached') && rawLower.includes('no credits')) {
+    return localize(
+      lang,
+      'تم استهلاك الروابط الشهرية المجانية ولا يوجد رصيد كافٍ حالياً. انتظر التجديد الشهري أو اشحن رصيدك للمتابعة.',
+      'Monthly free links are exhausted and no credits are available. Wait for reset or top up your balance.',
+      'Le quota mensuel gratuit est epuise et aucun credit nest disponible. Attendez la reinitialisation ou rechargez votre solde.'
+    );
+  }
+  if (rawLower.includes('insufficient credits')) {
+    return localize(
+      lang,
+      'الرصيد غير كافٍ لاستخراج رابط جديد. اشحن رصيدك ثم حاول مرة أخرى.',
+      'Insufficient credits for a new video link. Top up and try again.',
+      'Credits insuffisants pour un nouveau lien video. Rechargez puis reessayez.'
+    );
+  }
   if (raw) return raw;
 
   return localize(lang, cleanText(fallbackAr), cleanText(fallbackEn), cleanText(fallbackFr));
