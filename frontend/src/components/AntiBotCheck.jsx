@@ -41,12 +41,12 @@ function AntiBotCheck({ onTokenChange, theme = 'auto', lang = LANG.en }) {
       || import.meta.env.NEXT_PUBLIC_CF_TURNSTILE_SITE_KEY
       || ''
   ).trim();
-  const hasConfiguredSiteKey = Boolean(configuredSiteKey);
+  const missingSiteKey = !configuredSiteKey;
 
   useEffect(() => {
     let cancelled = false;
-    if (!hasConfiguredSiteKey) {
-      if (typeof onTokenChange === 'function') onTokenChange('__turnstile_not_configured__');
+    if (missingSiteKey) {
+      if (typeof onTokenChange === 'function') onTokenChange('');
       return undefined;
     }
 
@@ -99,14 +99,21 @@ function AntiBotCheck({ onTokenChange, theme = 'auto', lang = LANG.en }) {
         }
       }
     };
-  }, [configuredSiteKey, hasConfiguredSiteKey, lang, onTokenChange, theme]);
+  }, [configuredSiteKey, lang, missingSiteKey, onTokenChange, theme]);
 
-  if (!hasConfiguredSiteKey) return null;
+  const displayedError = missingSiteKey
+    ? tr(
+        lang,
+        'إعداد Turnstile غير مكتمل: أضف VITE_TURNSTILE_SITE_KEY (أو NEXT_PUBLIC_TURNSTILE_SITE_KEY) ثم أعد النشر.',
+        'Turnstile site key is missing. Add VITE_TURNSTILE_SITE_KEY (or NEXT_PUBLIC_TURNSTILE_SITE_KEY) then redeploy.',
+        'La cle de site Turnstile est manquante. Ajoutez VITE_TURNSTILE_SITE_KEY (ou NEXT_PUBLIC_TURNSTILE_SITE_KEY) puis redeployez.'
+      )
+    : widgetError;
 
   return (
     <div className="space-y-2">
-      <div ref={containerRef} className="min-h-[65px]" />
-      {widgetError ? <p className="text-xs text-rose-600">{widgetError}</p> : null}
+      {!missingSiteKey ? <div ref={containerRef} className="min-h-[65px]" /> : null}
+      {displayedError ? <p className="text-xs text-rose-600">{displayedError}</p> : null}
     </div>
   );
 }

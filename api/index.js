@@ -300,7 +300,7 @@ function extractSupabaseAuthErrorMessage(payload, fallback = 'Authentication fai
 async function validateTurnstileToken(token, remoteIp = '') {
   const configuredSecret = String(process.env.TURNSTILE_SECRET_KEY || '').trim();
   if (!configuredSecret) {
-    return { ok: true, details: { bypassed: true } };
+    return { ok: false, code: 'ANTI_BOT_UNAVAILABLE', message: 'Anti-bot protection is not configured on the server' };
   }
   const responseToken = String(token || '').trim();
   if (!responseToken) {
