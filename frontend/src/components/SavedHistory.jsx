@@ -64,7 +64,7 @@ function mapTypeLabel(type, lang) {
   if (baseType === 'resources') return tr(lang, 'موارد', 'Resources', 'Ressources');
   if (baseType === 'study-kit') return tr(lang, 'حزمة دراسة', 'Study Kit', "Pack d'étude");
   if (baseType === 'content-kit') return tr(lang, 'حزمة محتوى', 'Content Kit', 'Pack contenu');
-  if (baseType === 'all') return tr(lang, 'تحليل متكامل', 'Comprehensive Analysis', 'Analyse complète');
+  if (baseType === 'all') return tr(lang, 'برومبت تنفيذ احترافي', 'Implementation Prompt', "Prompt d'implementation");
   if (baseType === 'chat') return tr(lang, 'شات', 'Chat', 'Chat');
   return baseType || tr(lang, 'أخرى', 'Other', 'Autre');
 }
@@ -413,7 +413,7 @@ function SavedHistory({ apiUrl = defaultApiUrl, user, lang = LANG.ar, onNotify }
               resources: tr(lang, 'موارد', 'Resources', 'Ressources'),
               'study-kit': tr(lang, 'حزمة دراسة', 'Study Kit', "Pack d'étude"),
               'content-kit': tr(lang, 'حزمة محتوى', 'Content Kit', 'Pack contenu'),
-              'all-analysis': tr(lang, 'تحليل متكامل', 'Comprehensive', 'Analyse complète'),
+              'all-analysis': tr(lang, 'برومبت تنفيذ', 'Implementation Prompt', "Prompt d'implementation"),
               chat: tr(lang, 'شات', 'Chat', 'Chat')
             };
             const active = activeFilter === filter;

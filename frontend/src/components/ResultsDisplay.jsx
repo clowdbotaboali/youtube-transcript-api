@@ -73,7 +73,7 @@ function ResultsDisplay({ result, type, videoId, videoTitle, transcript, onSave,
   const resultBlocks = useMemo(() => buildAiBlocks(normalizedResult), [normalizedResult]);
 
   const todos = useMemo(() => {
-    if (!normalizedResult || (baseType !== 'steps' && baseType !== 'all')) return [];
+    if (!normalizedResult || baseType !== 'steps') return [];
     const savedState = loadTodoState(videoId);
     if (savedState && savedState.length > 0) return savedState;
     return extractTodos(normalizedResult);
@@ -90,10 +90,10 @@ function ResultsDisplay({ result, type, videoId, videoTitle, transcript, onSave,
     resources: tr(lang, 'موارد', 'Resources', 'Ressources'),
     'study-kit': tr(lang, 'حزمة دراسة', 'Study Kit', "Pack d'étude"),
     'content-kit': tr(lang, 'حزمة محتوى', 'Content Kit', 'Pack contenu'),
-    all: tr(lang, 'تحليل متكامل', 'Comprehensive Analysis', 'Analyse complète')
+    all: tr(lang, 'برومبت تنفيذ احترافي', 'Implementation Prompt', "Prompt d'implementation")
   };
 
-  const shouldShowTodo = (baseType === 'steps' || baseType === 'all') && todos.length > 0;
+  const shouldShowTodo = baseType === 'steps' && todos.length > 0;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(normalizedResult);

@@ -148,12 +148,12 @@ function ProcessingOptions({
       {
         key: 'all',
         type: 'all',
-        label: tr(lang, '\u062a\u062d\u0644\u064a\u0644 \u0645\u062a\u0643\u0627\u0645\u0644', 'Comprehensive Analysis', 'Analyse complete'),
+        label: tr(lang, '\u0628\u0631\u0648\u0645\u0628\u062a \u062a\u0646\u0641\u064a\u0630 \u0627\u062d\u062a\u0631\u0627\u0641\u064a', 'Implementation Prompt', "Prompt d'implementation"),
         description: tr(
           lang,
-          '\u0645\u0644\u0641 \u0634\u0627\u0645\u0644 \u064a\u062c\u0645\u0639 \u0627\u0644\u0645\u0644\u062e\u0635 \u0648\u0627\u0644\u0623\u0641\u0643\u0627\u0631 \u0648\u0627\u0644\u062e\u0637\u0648\u0627\u062a \u0648\u0627\u0644\u0645\u0648\u0627\u0631\u062f.',
-          'Full package: summary, insights, steps, and resources.',
-          'Pack complet : resume, insights, etapes et ressources.'
+          '\u0628\u0631\u0648\u0645\u0628\u062a \u062c\u0627\u0647\u0632 \u0644\u0644\u062a\u0646\u0641\u064a\u0630 \u0628\u0647\u0646\u062f\u0633\u0629 \u0623\u0648\u0627\u0645\u0631: \u0647\u062f\u0641\u060c \u062e\u0637\u0648\u0627\u062a\u060c \u0645\u0644\u0641\u0627\u062a \u0645\u0637\u0644\u0648\u0628\u0629\u060c \u0648\u0645\u0639\u0627\u064a\u064a\u0631 \u062a\u0633\u0644\u064a\u0645.',
+          'Execution-ready prompt with prompt-engineering structure: goal, steps, target files, and acceptance criteria.',
+          "Prompt pret a executer avec structure d'ingenierie des commandes: objectif, etapes, fichiers cibles et criteres d'acceptation."
         ),
         icon: FaLayerGroup,
         colors: 'border-indigo-500 hover:bg-indigo-50 hover:border-indigo-600 text-indigo-600'

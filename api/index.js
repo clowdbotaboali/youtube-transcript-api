@@ -3951,10 +3951,31 @@ function resolveAiProcessingProfile(type, outputLang = DEFAULT_OUTPUT_LANG) {
     all: {
       baseType: 'all',
       processingType: `all:${langSuffix}`,
-      maxTokens: 1800,
+      maxTokens: 2200,
       prompt:
         `${langInstruction}\n${formattingInstruction}\n` +
-        'Provide a comprehensive analysis package with sections: Summary, Key Insights, Steps, Resources, and final action checklist.'
+        [
+          'You are in IMPLEMENTATION PROMPT mode.',
+          'Convert the transcript into a professional execution brief that can be handed to a developer or pasted into an AI coding assistant.',
+          'First, infer whether the content is software/programming-related.',
+          'If yes, produce technical implementation guidance.',
+          'If no, still produce an execution-ready prompt adapted to the domain (operations/marketing/content/business, etc.).',
+          'Required output structure:',
+          '1) Objective and expected outcome.',
+          '2) Scope and assumptions.',
+          '3) Inputs required from the user/team before implementation.',
+          '4) Step-by-step implementation plan (ordered and actionable).',
+          '5) Deliverables and acceptance criteria (measurable).',
+          '6) Validation and test checklist.',
+          '7) Risks, edge cases, and rollback/fallback plan.',
+          '8) Prompt for human developer (copy-ready).',
+          '9) Prompt for AI coding assistant (copy-ready) with strict constraints and success criteria.',
+          'Important constraints:',
+          '- Do not hallucinate specific libraries, APIs, or file paths unless strongly supported by the transcript.',
+          '- Explicitly mark inferred items as assumptions.',
+          '- Keep wording practical, direct, and implementation-focused.',
+          '- Keep all prose in the requested output language.'
+        ].join('\n')
     },
     'description-instructions': {
       baseType: 'description-instructions',
