@@ -46,11 +46,7 @@
       "Resume structure du flux pedagogique reel.",
       "Plan d'execution avec jalons, hypotheses et risques.",
       "Prompt pret a copier pour developpeur humain et assistant IA."
-    ],
-    "beforeOutputLabel": "Avant (notes brutes)",
-    "afterOutputLabel": "Apres (pret a executer)",
-    "beforeOutput": "Notes video:\\n- Auth peut-etre dabord\\n- Facturation plus tard\\n- Cles API? pas clair\\n- Revoir minute 37 et 52\\n- Demander au dev plus tard",
-    "afterOutput": "Brief dexecution:\\n1) Ajouter middleware JWT sur les endpoints /api\\n2) Modele de packs: 19 $ = 200 videos\\n3) Page admin pool de cles avec statuts explicites\\n4) Critere: un utilisateur a 0 solde video ne traite pas de nouveau lien\\n5) Livraison en une PR avec tests et notes de deploiement"
+    ]
   },
   "guest": {
     "loading": "Extraction en cours...",

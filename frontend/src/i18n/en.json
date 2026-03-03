@@ -46,11 +46,7 @@
       "Concise structured summary of the lesson flow.",
       "Execution plan with milestones, assumptions, and risks.",
       "Copy-ready prompt for human developer and AI coding assistant."
-    ],
-    "beforeOutputLabel": "Before output (raw notes)",
-    "afterOutputLabel": "After output (execution-ready)",
-    "beforeOutput": "Video note dump:\\n- Build auth first maybe\\n- Add billing someday\\n- API keys? not sure where\\n- Rewatch minute 37 and 52\\n- TODO: ask dev later",
-    "afterOutput": "Execution brief:\\n1) Add JWT auth middleware for /api endpoints\\n2) Add billing pack model: $19 = 200 videos\\n3) Create admin key-pool page with status labels\\n4) Acceptance: user with 0 video balance cannot process new links\\n5) Deliver in one PR with tests + rollout notes"
+    ]
   },
   "guest": {
     "loading": "Extracting your transcript...",

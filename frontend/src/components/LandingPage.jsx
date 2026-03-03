@@ -75,8 +75,6 @@ function LandingPage({
   const whatYouGetItems = asArray(t('whatYouGet.items'));
   const transformationBeforePoints = asArray(t('transformation.beforePoints'));
   const transformationAfterPoints = asArray(t('transformation.afterPoints'));
-  const transformationBeforeOutput = String(t('transformation.beforeOutput') || '').trim();
-  const transformationAfterOutput = String(t('transformation.afterOutput') || '').trim();
   const trustItems = asArray(t('trust.items'));
   const whoForItems = asArray(t('whoFor.items'));
   const socialStats = asArray(t('socialProof.stats'));
@@ -355,20 +353,6 @@ function LandingPage({
               </article>
             </div>
 
-            <div className="mt-4 grid gap-4 md:grid-cols-2">
-              <article className={`rounded-xl border p-4 ${isDark ? 'border-rose-400/40 bg-rose-950/10' : 'border-rose-200 bg-white'}`}>
-                <p className={`text-xs font-bold mb-2 ${isDark ? 'text-rose-200' : 'text-rose-700'}`}>{t('transformation.beforeOutputLabel')}</p>
-                <pre className={`text-xs sm:text-sm leading-relaxed whitespace-pre-wrap ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
-                  {transformationBeforeOutput}
-                </pre>
-              </article>
-              <article className={`rounded-xl border p-4 ${isDark ? 'border-emerald-400/40 bg-emerald-950/15' : 'border-emerald-200 bg-white'}`}>
-                <p className={`text-xs font-bold mb-2 ${isDark ? 'text-emerald-200' : 'text-emerald-700'}`}>{t('transformation.afterOutputLabel')}</p>
-                <pre className={`text-xs sm:text-sm leading-relaxed whitespace-pre-wrap ${isDark ? 'text-slate-100' : 'text-slate-700'}`}>
-                  {transformationAfterOutput}
-                </pre>
-              </article>
-            </div>
           </div>
         </section>
 
