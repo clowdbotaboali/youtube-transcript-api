@@ -66,7 +66,7 @@ function ClientHeader({
   const isDark = theme === 'dark';
 
   return (
-    <header className="sticky top-0 z-30 rounded-3xl border border-slate-700/80 bg-[linear-gradient(160deg,#071229_0%,#0f1d3a_60%,#18274b_100%)] text-slate-100 p-4 sm:p-5 mb-4 sm:mb-6 overflow-hidden">
+    <header className="relative z-10 rounded-3xl border border-slate-700/80 bg-[linear-gradient(160deg,#071229_0%,#0f1d3a_60%,#18274b_100%)] text-slate-100 p-4 sm:p-5 mb-4 sm:mb-6 overflow-hidden">
       <div className="absolute inset-0 pointer-events-none opacity-20 bg-[radial-gradient(circle_at_12%_12%,#22d3ee_0%,transparent_45%),radial-gradient(circle_at_88%_22%,#6366f1_0%,transparent_40%)]" />
 
       <div className="relative">

@@ -299,12 +299,12 @@ function extractSupabaseAuthErrorMessage(payload, fallback = 'Authentication fai
 
 async function validateTurnstileToken(token, remoteIp = '') {
   const configuredSecret = String(process.env.TURNSTILE_SECRET_KEY || '').trim();
+  if (!configuredSecret) {
+    return { ok: true, details: { bypassed: true } };
+  }
   const responseToken = String(token || '').trim();
   if (!responseToken) {
     return { ok: false, code: 'ANTI_BOT_REQUIRED', message: 'Anti-bot validation is required' };
-  }
-  if (!configuredSecret) {
-    return { ok: true, details: { bypassed: true } };
   }
   const secret = configuredSecret;
 

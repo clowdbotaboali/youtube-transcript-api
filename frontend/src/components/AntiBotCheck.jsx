@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { LANG, tr } from '../utils/lang';
 
 const TURNSTILE_SCRIPT_SRC = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
-const TURNSTILE_TEST_SITE_KEY = '1x00000000000000000000AA';
 let turnstileScriptPromise = null;
 
 function loadTurnstileScript() {
@@ -42,17 +41,21 @@ function AntiBotCheck({ onTokenChange, theme = 'auto', lang = LANG.en }) {
       || import.meta.env.NEXT_PUBLIC_CF_TURNSTILE_SITE_KEY
       || ''
   ).trim();
-  const siteKey = configuredSiteKey || TURNSTILE_TEST_SITE_KEY;
+  const hasConfiguredSiteKey = Boolean(configuredSiteKey);
 
   useEffect(() => {
     let cancelled = false;
+    if (!hasConfiguredSiteKey) {
+      if (typeof onTokenChange === 'function') onTokenChange('__turnstile_not_configured__');
+      return undefined;
+    }
 
     loadTurnstileScript()
       .then((turnstile) => {
         if (cancelled || !containerRef.current || !turnstile?.render) return;
         setWidgetError('');
         widgetIdRef.current = turnstile.render(containerRef.current, {
-          sitekey: siteKey,
+          sitekey: configuredSiteKey,
           theme,
           callback: (token) => {
             if (typeof onTokenChange === 'function') onTokenChange(String(token || ''));
@@ -96,7 +99,9 @@ function AntiBotCheck({ onTokenChange, theme = 'auto', lang = LANG.en }) {
         }
       }
     };
-  }, [lang, onTokenChange, siteKey, theme]);
+  }, [configuredSiteKey, hasConfiguredSiteKey, lang, onTokenChange, theme]);
+
+  if (!hasConfiguredSiteKey) return null;
 
   return (
     <div className="space-y-2">
