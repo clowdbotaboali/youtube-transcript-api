@@ -7,6 +7,7 @@
   FaMagic,
   FaMoon,
   FaSignOutAlt,
+  FaSyncAlt,
   FaSun,
   FaUserCircle
 } from 'react-icons/fa';
@@ -59,6 +60,8 @@ function ClientHeader({
   onPageChange,
   onLangChange,
   onToggleTheme,
+  onRefreshPoints,
+  refreshBusy = false,
   onOpenSettings,
   onOpenPricing,
   onLogout
@@ -84,6 +87,16 @@ function ClientHeader({
               className="rounded-xl px-4 py-2 bg-orange-400 text-slate-950 font-extrabold hover:bg-orange-300 transition"
             >
               {tr(lang, 'اشحن', 'Top up', 'Recharger')}
+            </button>
+
+            <button
+              type="button"
+              onClick={onRefreshPoints}
+              disabled={refreshBusy}
+              className="inline-flex items-center gap-2 rounded-xl px-3 py-2 bg-emerald-500/20 text-emerald-100 hover:bg-emerald-500/30 transition border border-emerald-300/20 disabled:opacity-70"
+            >
+              <FaSyncAlt className={refreshBusy ? 'animate-spin' : ''} />
+              <span>{tr(lang, 'تحديث النقاط', 'Refresh points', 'Actualiser points')}</span>
             </button>
 
             {typeof onOpenSettings === 'function' && (

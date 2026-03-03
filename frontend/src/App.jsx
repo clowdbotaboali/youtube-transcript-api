@@ -208,6 +208,7 @@ function App() {
   const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
   const [topupQuote, setTopupQuote] = useState(null);
   const [credits, setCredits] = useState(null);
+  const [isRefreshingAccount, setIsRefreshingAccount] = useState(false);
   const [freePlanLimit, setFreePlanLimit] = useState(FREE_PLAN_REQUESTS);
   const [freeLinksRemaining, setFreeLinksRemaining] = useState(FREE_PLAN_REQUESTS);
   const [accountAccess, setAccountAccess] = useState({ status: 'active', reason: null });
@@ -229,6 +230,7 @@ function App() {
   const [toasts, setToasts] = useState([]);
   const [currentPath, setCurrentPath] = useState(() => (hasWindow ? window.location.pathname : '/'));
   const videoBriefCacheRef = useRef(new Map());
+  const refreshingAccountRef = useRef(false);
 
   const canUseLocalGuide =
     import.meta.env.DEV || (hasWindow && new URLSearchParams(window.location.search).get('dev') === '1');
@@ -291,6 +293,9 @@ function App() {
   }, [accountAccess.reason, accountAccess.status, lang]);
 
   const refreshAccount = async () => {
+    if (refreshingAccountRef.current) return;
+    refreshingAccountRef.current = true;
+    setIsRefreshingAccount(true);
     try {
       const headers = await getAuthHeaders();
       if (!headers.Authorization) {
@@ -345,6 +350,9 @@ function App() {
       }
     } catch {
       // Keep current credits value to avoid noisy UI resets on transient failures.
+    } finally {
+      refreshingAccountRef.current = false;
+      setIsRefreshingAccount(false);
     }
   };
 
@@ -1158,6 +1166,10 @@ function App() {
           onPageChange={setClientPage}
           onLangChange={handleLangChange}
           onToggleTheme={toggleTheme}
+          onRefreshPoints={() => {
+            void refreshAccount();
+          }}
+          refreshBusy={isRefreshingAccount}
           onOpenSettings={canUseLocalGuide ? () => setShowSettings(true) : undefined}
           onOpenPricing={openTopupPicker}
           onLogout={handleLogout}
