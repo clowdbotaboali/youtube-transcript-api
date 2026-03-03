@@ -62,7 +62,13 @@ function ResultsDisplay({ result, type, videoId, videoTitle, transcript, onSave,
     if (typeof onNotify === 'function') onNotify(kind, message);
   };
 
-  const baseType = getBaseProcessingType(type);
+  const rawType = String(type || '').trim().toLowerCase();
+  const baseType = getBaseProcessingType(rawType);
+  const summaryMode = rawType.includes('summary:study-review')
+    ? 'study-review'
+    : rawType.includes('summary:lecture')
+      ? 'lecture'
+      : '';
   const normalizedResult = useMemo(() => normalizeAiText(result), [result]);
   const resultBlocks = useMemo(() => buildAiBlocks(normalizedResult), [normalizedResult]);
 
@@ -74,6 +80,8 @@ function ResultsDisplay({ result, type, videoId, videoTitle, transcript, onSave,
   }, [normalizedResult, baseType, videoId]);
 
   const typeLabels = {
+    'summary:lecture': tr(lang, '\u0645\u0644\u062e\u0635 \u0627\u0644\u0645\u062d\u0627\u0636\u0631\u0629', 'Lecture Summary', 'Resume du cours'),
+    'summary:study-review': tr(lang, '\u0645\u0631\u0627\u062c\u0639\u0629 \u062f\u0631\u0627\u0633\u064a\u0629', 'Study Review', "Revision d'etude"),
     summary: tr(lang, 'ملخص شامل', 'Summary', 'Résumé'),
     'key-insights': tr(lang, 'أهم الأفكار', 'Key Insights', 'Idées clés'),
     'clean-transcript': tr(lang, 'تنظيف النص', 'Clean Transcript', 'Transcription nettoyée'),
@@ -116,7 +124,7 @@ function ResultsDisplay({ result, type, videoId, videoTitle, transcript, onSave,
       videoId,
       videoTitle: videoTitle || videoId,
       transcript,
-      processingType: baseType,
+      processingType: rawType || baseType,
       result: normalizedResult
     });
 
@@ -126,7 +134,12 @@ function ResultsDisplay({ result, type, videoId, videoTitle, transcript, onSave,
     }
   };
 
-  const titleLabel = typeLabels[baseType] || tr(lang, 'مخرجات الذكاء الاصطناعي', 'AI Output', 'Sortie IA');
+  const titleLabel =
+    (summaryMode === 'lecture' ? typeLabels['summary:lecture'] : null) ||
+    (summaryMode === 'study-review' ? typeLabels['summary:study-review'] : null) ||
+    typeLabels[rawType] ||
+    typeLabels[baseType] ||
+    tr(lang, '\u0645\u062e\u0631\u062c\u0627\u062a \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064a', 'AI Output', 'Sortie IA');
 
   return (
     <div className="space-y-6">

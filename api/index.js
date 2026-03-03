@@ -3546,11 +3546,105 @@ function resolveAiProcessingProfile(type, outputLang = DEFAULT_OUTPUT_LANG) {
   const profiles = {
     summary: {
       baseType: 'summary',
-      processingType: `summary:${langSuffix}`,
-      maxTokens: 1000,
+      clientType: 'summary:lecture',
+      processingType: `summary:lecture:${langSuffix}`,
+      maxTokens: 1300,
       prompt:
         `${langInstruction}\n${formattingInstruction}\n` +
-        'Create a concise executive summary with: (1) what the video is about, (2) who it helps, (3) key conclusion.'
+        [
+          'You are in LECTURE SUMMARY mode.',
+          'Reconstruct the teaching flow exactly as explained in the video, in chronological order.',
+          'Required structure:',
+          '1) Chronological explanation timeline (ordered sections that follow the lecture sequence).',
+          '2) Instructor examples exactly as presented in the lecture.',
+          '3) Repeated/emphasized points and why they were emphasized.',
+          '4) Warnings and common mistakes mentioned (if any).',
+          '5) Final concise takeaway that reflects the actual lecture close.',
+          'Strict rules:',
+          '- Do NOT convert content into learning objectives.',
+          '- Do NOT create concept maps.',
+          '- Do NOT add quiz questions.',
+          '- Do NOT use generic educational templates.',
+          '- Stay faithful to what was actually said.'
+        ].join('\n')
+    },
+    'summary:lecture': {
+      baseType: 'summary',
+      clientType: 'summary:lecture',
+      processingType: `summary:lecture:${langSuffix}`,
+      maxTokens: 1300,
+      prompt:
+        `${langInstruction}\n${formattingInstruction}\n` +
+        [
+          'You are in LECTURE SUMMARY mode.',
+          'Reconstruct the teaching flow exactly as explained in the video, in chronological order.',
+          'Required structure:',
+          '1) Chronological explanation timeline (ordered sections that follow the lecture sequence).',
+          '2) Instructor examples exactly as presented in the lecture.',
+          '3) Repeated/emphasized points and why they were emphasized.',
+          '4) Warnings and common mistakes mentioned (if any).',
+          '5) Final concise takeaway that reflects the actual lecture close.',
+          'Strict rules:',
+          '- Do NOT convert content into learning objectives.',
+          '- Do NOT create concept maps.',
+          '- Do NOT add quiz questions.',
+          '- Do NOT use generic educational templates.',
+          '- Stay faithful to what was actually said.'
+        ].join('\n')
+    },
+    'summary:study-review': {
+      baseType: 'summary',
+      clientType: 'summary:study-review',
+      processingType: `summary:study-review:${langSuffix}`,
+      maxTokens: 1300,
+      prompt:
+        `${langInstruction}\n${formattingInstruction}\n` +
+        [
+          'You are in STUDY REVIEW mode.',
+          'Transform the content into a fast revision sheet, not a lecture replay.',
+          'Required structure:',
+          '1) Learning objectives (4-7 clear objectives).',
+          '2) Concept map (hierarchical bullets showing relationships).',
+          '3) Quick revision points (high-density bullets for last-minute review).',
+          '4) Short quiz (5 questions) with concise model answers.',
+          'Focus on exam/review readiness and compact structure.'
+        ].join('\n')
+    },
+    'summary:study': {
+      baseType: 'summary',
+      clientType: 'summary:study-review',
+      processingType: `summary:study-review:${langSuffix}`,
+      maxTokens: 1300,
+      prompt:
+        `${langInstruction}\n${formattingInstruction}\n` +
+        [
+          'You are in STUDY REVIEW mode.',
+          'Transform the content into a fast revision sheet, not a lecture replay.',
+          'Required structure:',
+          '1) Learning objectives (4-7 clear objectives).',
+          '2) Concept map (hierarchical bullets showing relationships).',
+          '3) Quick revision points (high-density bullets for last-minute review).',
+          '4) Short quiz (5 questions) with concise model answers.',
+          'Focus on exam/review readiness and compact structure.'
+        ].join('\n')
+    },
+    'summary:review': {
+      baseType: 'summary',
+      clientType: 'summary:study-review',
+      processingType: `summary:study-review:${langSuffix}`,
+      maxTokens: 1300,
+      prompt:
+        `${langInstruction}\n${formattingInstruction}\n` +
+        [
+          'You are in STUDY REVIEW mode.',
+          'Transform the content into a fast revision sheet, not a lecture replay.',
+          'Required structure:',
+          '1) Learning objectives (4-7 clear objectives).',
+          '2) Concept map (hierarchical bullets showing relationships).',
+          '3) Quick revision points (high-density bullets for last-minute review).',
+          '4) Short quiz (5 questions) with concise model answers.',
+          'Focus on exam/review readiness and compact structure.'
+        ].join('\n')
     },
     'key-insights': {
       baseType: 'key-insights',
@@ -5244,7 +5338,7 @@ export default async function handler(req, res) {
         if (cachedAi?.ai_result) {
           return res.json({
             success: true,
-            type: profile.baseType || processingType,
+            type: profile.clientType || profile.baseType || processingType,
             result: cachedAi.ai_result,
             creditsLeft: Number(userRow.credits || 0),
             inputTrimmed: transcriptTruncated,
@@ -5282,7 +5376,7 @@ export default async function handler(req, res) {
 
       return res.json({
         success: true,
-        type: profile.baseType || processingType,
+        type: profile.clientType || profile.baseType || processingType,
         result,
         creditsLeft: Number(userRow.credits || 0),
         inputTrimmed: transcriptTruncated,
