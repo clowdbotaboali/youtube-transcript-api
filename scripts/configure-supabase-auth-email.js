@@ -237,7 +237,8 @@ async function main() {
 
   if (hasFullSmtp) {
     payload.smtp_host = smtpHost;
-    payload.smtp_port = smtpPort;
+    // Supabase Management API expects smtp_port as a string value.
+    payload.smtp_port = String(smtpPort);
     payload.smtp_user = smtpUser;
     payload.smtp_pass = smtpPass;
     payload.smtp_sender_name = senderName;
