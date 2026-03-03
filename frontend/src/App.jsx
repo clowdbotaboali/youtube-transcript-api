@@ -1322,7 +1322,7 @@ function App() {
                 <div className="rounded-xl border border-orange-200 bg-orange-50 p-4">
                   <p className="font-black text-orange-900 mb-2">{tr(lang, '\u0627\u0644\u0634\u062d\u0646 \u0627\u0644\u0645\u062f\u0641\u0648\u0639', 'Paid top-up')}</p>
                   <p className="text-sm text-orange-800 mb-3">
-                    {tr(lang, '\u064a\u0628\u062f\u0623 \u0645\u0646 5\$ = 200 \u0643\u0631\u064a\u062f\u064a\u062a\u060c \u0648\u062a\u0641\u0627\u0635\u064a\u0644 \u0627\u0644\u062f\u0641\u0639 \u0627\u0644\u0643\u0627\u0645\u0644\u0629 \u062a\u0638\u0647\u0631 \u0641\u064a \u0635\u0641\u062d\u0629 \u0645\u062e\u0635\u0635\u0629 \u0628\u0639\u062f \u0627\u062e\u062a\u064a\u0627\u0631 \u0627\u0644\u0645\u0628\u0644\u063a\u060c', 'Starts at $5 = 200 credits. Full payment details open on a dedicated page after choosing the amount.')}
+                    {tr(lang, '\u064a\u0628\u062f\u0623 \u0645\u0646 5$ = 200 \u0643\u0631\u064a\u062f\u064a\u062a\u060c \u0648\u062a\u0641\u0627\u0635\u064a\u0644 \u0627\u0644\u062f\u0641\u0639 \u0627\u0644\u0643\u0627\u0645\u0644\u0629 \u062a\u0638\u0647\u0631 \u0641\u064a \u0635\u0641\u062d\u0629 \u0645\u062e\u0635\u0635\u0629 \u0628\u0639\u062f \u0627\u062e\u062a\u064a\u0627\u0631 \u0627\u0644\u0645\u0628\u0644\u063a\u060c', 'Starts at $5 = 200 credits. Full payment details open on a dedicated page after choosing the amount.')}
                   </p>
                   <button
                     type="button"

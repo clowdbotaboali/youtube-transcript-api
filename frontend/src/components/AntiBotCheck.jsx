@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { LANG, tr } from '../utils/lang';
 
 const TURNSTILE_SCRIPT_SRC = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+const TURNSTILE_TEST_SITE_KEY = '1x00000000000000000000AA';
 let turnstileScriptPromise = null;
 
 function loadTurnstileScript() {
@@ -34,21 +35,16 @@ function AntiBotCheck({ onTokenChange, theme = 'auto', lang = LANG.en }) {
   const containerRef = useRef(null);
   const widgetIdRef = useRef(null);
   const [widgetError, setWidgetError] = useState('');
-  const siteKey = String(
-    import.meta.env.VITE_TURNSTILE_SITE_KEY ||
-      import.meta.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ||
-      import.meta.env.VITE_CF_TURNSTILE_SITE_KEY ||
-      import.meta.env.NEXT_PUBLIC_CF_TURNSTILE_SITE_KEY ||
-      ''
+  const configuredSiteKey = String(
+    import.meta.env.VITE_TURNSTILE_SITE_KEY
+      || import.meta.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY
+      || import.meta.env.VITE_CF_TURNSTILE_SITE_KEY
+      || import.meta.env.NEXT_PUBLIC_CF_TURNSTILE_SITE_KEY
+      || ''
   ).trim();
-  const missingSiteKey = !siteKey;
+  const siteKey = configuredSiteKey || TURNSTILE_TEST_SITE_KEY;
 
   useEffect(() => {
-    if (missingSiteKey) {
-      if (typeof onTokenChange === 'function') onTokenChange('');
-      return undefined;
-    }
-
     let cancelled = false;
 
     loadTurnstileScript()
@@ -84,7 +80,7 @@ function AntiBotCheck({ onTokenChange, theme = 'auto', lang = LANG.en }) {
             lang,
             'تعذر تحميل عنصر الحماية ضد الروبوت.',
             'Could not load anti-bot widget.',
-            "Impossible de charger le widget anti-bot."
+            'Impossible de charger le widget anti-bot.'
           )
         );
         if (typeof onTokenChange === 'function') onTokenChange('');
@@ -100,21 +96,12 @@ function AntiBotCheck({ onTokenChange, theme = 'auto', lang = LANG.en }) {
         }
       }
     };
-  }, [lang, missingSiteKey, onTokenChange, siteKey, theme]);
-
-  const displayedError = missingSiteKey
-    ? tr(
-        lang,
-        'إعداد Turnstile غير مكتمل: أضف VITE_TURNSTILE_SITE_KEY (أو NEXT_PUBLIC_TURNSTILE_SITE_KEY) ثم أعد النشر.',
-        'Turnstile site key is missing. Add VITE_TURNSTILE_SITE_KEY (or NEXT_PUBLIC_TURNSTILE_SITE_KEY) then redeploy.',
-        'La cle de site Turnstile est manquante. Ajoutez VITE_TURNSTILE_SITE_KEY (ou NEXT_PUBLIC_TURNSTILE_SITE_KEY) puis redeployez.'
-      )
-    : widgetError;
+  }, [lang, onTokenChange, siteKey, theme]);
 
   return (
     <div className="space-y-2">
       <div ref={containerRef} className="min-h-[65px]" />
-      {displayedError ? <p className="text-xs text-rose-600">{displayedError}</p> : null}
+      {widgetError ? <p className="text-xs text-rose-600">{widgetError}</p> : null}
     </div>
   );
 }

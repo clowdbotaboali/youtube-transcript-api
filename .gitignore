@@ -41,3 +41,6 @@ backend/dist/
 backend/.cache/
 backend/*-player-script.js
 .vercel
+
+# Sensitive recovery codes
+Authentications/RECOVERY-CODES-*.txt

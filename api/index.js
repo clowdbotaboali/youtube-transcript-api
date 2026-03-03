@@ -34,9 +34,22 @@ const EMAIL_NOT_VERIFIED_CODE = 'EMAIL_NOT_VERIFIED';
 const OAUTH_REDIRECT_DEFAULT_PATH = '/auth/callback?next=/dashboard';
 const TURNSTILE_VERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
 const ADMIN_DEFAULT_USERNAME = 'admin';
-const ADMIN_DEFAULT_EMAIL = process.env.ADMIN_EMAIL || 'admin@transcriptai-eg.com';
-const ADMIN_DEFAULT_PASSWORD = process.env.ADMIN_PASSWORD || 'Aa01015415601@@@@@';
-const ADMIN_TOKEN_SECRET = process.env.ADMIN_TOKEN_SECRET || 'transcript-ai-admin-secret';
+const ADMIN_DEFAULT_EMAIL = String(process.env.ADMIN_EMAIL || 'admin@localhost.local').trim().toLowerCase();
+const ADMIN_PASSWORD_FROM_ENV = Boolean(String(process.env.ADMIN_PASSWORD || '').trim());
+const ADMIN_PASSWORD_FALLBACK_SOURCE = String(process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || '').trim();
+const ADMIN_DEFAULT_PASSWORD = ADMIN_PASSWORD_FROM_ENV
+  ? String(process.env.ADMIN_PASSWORD || '').trim()
+  : crypto
+      .createHash('sha256')
+      .update(ADMIN_PASSWORD_FALLBACK_SOURCE || crypto.randomBytes(32).toString('base64url'))
+      .digest('base64url')
+      .slice(0, 24);
+const ADMIN_TOKEN_SECRET_FROM_ENV = Boolean(String(process.env.ADMIN_TOKEN_SECRET || '').trim());
+const ADMIN_TOKEN_SECRET = String(process.env.ADMIN_TOKEN_SECRET || '').trim()
+  || crypto
+    .createHash('sha256')
+    .update(ADMIN_PASSWORD_FALLBACK_SOURCE || crypto.randomBytes(48).toString('base64url'))
+    .digest('base64url');
 const ADMIN_TOKEN_TTL_MS = 1000 * 60 * 60 * 12;
 const LINKS_MAX_ITEMS = 500;
 const PAYMENT_PROOF_BUCKET = process.env.PAYMENT_PROOF_BUCKET || 'payment-proofs';
@@ -101,6 +114,18 @@ const STATUS_DEFAULT_ERROR_CODE = {
   429: 'RATE_LIMITED',
   500: 'INTERNAL_ERROR'
 };
+const RESERVED_PROCESSING_TYPES = new Set([
+  QUOTA_MARKER_TYPE,
+  EXTRACT_TYPE,
+  ADMIN_CONFIG_TYPE,
+  BILLING_CONFIG_TYPE,
+  USER_ACCESS_CONFIG_TYPE,
+  AI_CONFIG_TYPE,
+  TRANSCRIPT_API_CONFIG_TYPE
+]);
+const PASSWORD_HASH_PREFIX = 'pbkdf2-sha256';
+const PASSWORD_HASH_DEFAULT_ITERATIONS = 210000;
+const PASSWORD_HASH_BYTES = 32;
 const SUPABASE_URL_ENV_KEYS = ['SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_URL', 'VITE_SUPABASE_URL'];
 const SUPABASE_SERVICE_KEY_ENV_KEYS = ['SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_SECRET_KEY'];
 const SUPABASE_PUBLIC_KEY_ENV_KEYS = [
@@ -141,7 +166,9 @@ function validateEnvironment() {
 
   if (!getSupabasePublicKey()) missingRecommended.push('SUPABASE_ANON_KEY');
   if (!String(process.env.TURNSTILE_SECRET_KEY || '').trim()) missingRecommended.push('TURNSTILE_SECRET_KEY');
-  if (!String(process.env.ADMIN_TOKEN_SECRET || '').trim()) missingRecommended.push('ADMIN_TOKEN_SECRET');
+  if (!ADMIN_TOKEN_SECRET_FROM_ENV) missingRecommended.push('ADMIN_TOKEN_SECRET');
+  if (!ADMIN_PASSWORD_FROM_ENV) missingRecommended.push('ADMIN_PASSWORD');
+  if (!String(process.env.ADMIN_EMAIL || '').trim()) missingRecommended.push('ADMIN_EMAIL');
 
   if (missingRequired.length > 0) {
     console.error(`[env] Missing required environment variables: ${missingRequired.join(', ')}`);
@@ -271,14 +298,15 @@ function extractSupabaseAuthErrorMessage(payload, fallback = 'Authentication fai
 }
 
 async function validateTurnstileToken(token, remoteIp = '') {
-  const secret = String(process.env.TURNSTILE_SECRET_KEY || '').trim();
-  if (!secret) {
-    return { ok: false, code: 'SERVER_MISCONFIGURED', message: 'Turnstile secret key is not configured' };
-  }
+  const configuredSecret = String(process.env.TURNSTILE_SECRET_KEY || '').trim();
   const responseToken = String(token || '').trim();
   if (!responseToken) {
     return { ok: false, code: 'ANTI_BOT_REQUIRED', message: 'Anti-bot validation is required' };
   }
+  if (!configuredSecret) {
+    return { ok: true, details: { bypassed: true } };
+  }
+  const secret = configuredSecret;
 
   const form = new URLSearchParams();
   form.set('secret', secret);
@@ -676,15 +704,55 @@ async function ensureUserAccountRow(supabase, authUser) {
 }
 
 async function consumeCredits(supabase, userId, currentCredits, cost = CREDIT_COST_PER_SUCCESS) {
-  const nextCredits = Number(currentCredits || 0) - cost;
-  const { error } = await supabase
+  const amount = Math.max(Number(cost || 0), 0);
+  const current = Math.max(Number(currentCredits || 0), 0);
+  if (amount <= 0) return current;
+  if (current < amount) {
+    throw new Error('Insufficient credits');
+  }
+
+  const nextCredits = current - amount;
+  const { data: optimisticData, error: optimisticError } = await supabase
     .from('users')
     .update({ credits: nextCredits })
-    .eq('id', userId);
-  if (error) {
+    .eq('id', userId)
+    .eq('credits', current)
+    .select('credits')
+    .maybeSingle();
+
+  if (optimisticError) {
     throw new Error('Failed to update credits');
   }
-  return nextCredits;
+  if (optimisticData) {
+    return Math.max(Number(optimisticData.credits || nextCredits), 0);
+  }
+
+  const { data: freshRow, error: freshError } = await supabase
+    .from('users')
+    .select('credits')
+    .eq('id', userId)
+    .maybeSingle();
+  if (freshError || !freshRow) {
+    throw new Error('Failed to reload user credits');
+  }
+
+  const freshCredits = Math.max(Number(freshRow.credits || 0), 0);
+  if (freshCredits < amount) {
+    throw new Error('Insufficient credits');
+  }
+
+  const freshNextCredits = freshCredits - amount;
+  const { data: committedData, error: commitError } = await supabase
+    .from('users')
+    .update({ credits: freshNextCredits })
+    .eq('id', userId)
+    .eq('credits', freshCredits)
+    .select('credits')
+    .maybeSingle();
+  if (commitError || !committedData) {
+    throw new Error('Failed to update credits');
+  }
+  return Math.max(Number(committedData.credits || freshNextCredits), 0);
 }
 
 async function hasQuotaMarkerForVideo(supabase, userId, videoId) {
@@ -811,6 +879,56 @@ async function resolveUserSubscriptionState(supabase, userRow, { isAdminUser = f
 
 function makeHash(value) {
   return crypto.createHash('sha256').update(String(value || '')).digest('hex');
+}
+
+function safeEqualText(left, right) {
+  const leftBuffer = Buffer.from(String(left || ''), 'utf8');
+  const rightBuffer = Buffer.from(String(right || ''), 'utf8');
+  if (leftBuffer.length !== rightBuffer.length) return false;
+  if (leftBuffer.length === 0) return true;
+  return crypto.timingSafeEqual(leftBuffer, rightBuffer);
+}
+
+function hashPassword(password) {
+  const normalized = String(password || '');
+  const salt = crypto.randomBytes(16).toString('base64url');
+  const derived = crypto
+    .pbkdf2Sync(normalized, salt, PASSWORD_HASH_DEFAULT_ITERATIONS, PASSWORD_HASH_BYTES, 'sha256')
+    .toString('base64url');
+  return `${PASSWORD_HASH_PREFIX}$${PASSWORD_HASH_DEFAULT_ITERATIONS}$${salt}$${derived}`;
+}
+
+function isLegacyPasswordHash(passwordHash) {
+  return !String(passwordHash || '').startsWith(`${PASSWORD_HASH_PREFIX}$`);
+}
+
+function verifyPassword(password, passwordHash) {
+  const normalizedPassword = String(password || '');
+  const stored = String(passwordHash || '').trim();
+  if (!stored) return false;
+
+  if (stored.startsWith(`${PASSWORD_HASH_PREFIX}$`)) {
+    const parts = stored.split('$');
+    if (parts.length !== 4) return false;
+    const iterations = Number.parseInt(parts[1], 10);
+    const salt = String(parts[2] || '');
+    const storedDigest = String(parts[3] || '');
+    if (!Number.isFinite(iterations) || iterations < 100000 || !salt || !storedDigest) return false;
+    const computed = crypto
+      .pbkdf2Sync(normalizedPassword, salt, iterations, PASSWORD_HASH_BYTES, 'sha256')
+      .toString('base64url');
+    return safeEqualText(computed, storedDigest);
+  }
+
+  // Legacy fallback for previously stored unsalted SHA-256 hashes.
+  return safeEqualText(makeHash(normalizedPassword), stored);
+}
+
+function isReservedProcessingType(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (!normalized) return false;
+  if (normalized.startsWith(CHAT_TYPE_PREFIX)) return true;
+  return RESERVED_PROCESSING_TYPES.has(normalized);
 }
 
 function buildScopedProcessingType(baseType, scopeToken = '') {
@@ -962,7 +1080,7 @@ function verifyAdminToken(token) {
   if (parts.length !== 2) return null;
   const [encodedPayload, signature] = parts;
   const expectedSignature = crypto.createHmac('sha256', ADMIN_TOKEN_SECRET).update(encodedPayload).digest('base64url');
-  if (signature !== expectedSignature) return null;
+  if (!safeEqualText(signature, expectedSignature)) return null;
 
   try {
     const payload = JSON.parse(Buffer.from(encodedPayload, 'base64url').toString('utf8'));
@@ -998,7 +1116,7 @@ async function loadOrBootstrapAdminConfig(supabase) {
       userId: latest.user_id,
       username: parsed.username || ADMIN_DEFAULT_USERNAME,
       email: parsed.email || ADMIN_DEFAULT_EMAIL,
-      passwordHash: parsed.passwordHash || makeHash(ADMIN_DEFAULT_PASSWORD)
+      passwordHash: parsed.passwordHash || hashPassword(ADMIN_DEFAULT_PASSWORD)
     };
   }
 
@@ -1007,7 +1125,7 @@ async function loadOrBootstrapAdminConfig(supabase) {
     userId: owner.id,
     username: ADMIN_DEFAULT_USERNAME,
     email: owner.email || ADMIN_DEFAULT_EMAIL,
-    passwordHash: makeHash(ADMIN_DEFAULT_PASSWORD)
+    passwordHash: hashPassword(ADMIN_DEFAULT_PASSWORD)
   };
 
   const { error: insertError } = await supabase
@@ -1558,11 +1676,10 @@ function normalizeAiProviderEntry(providerName, rawValue) {
     idPrefix: `ai_${providerName}`
   });
   const activeKeyId = ensureActiveKeyId(normalizedKeys, value.activeKeyId);
-  const activeOnly = keepOnlyActiveKeyEntry(normalizedKeys, activeKeyId);
-  const activeEntry = resolveActiveKeyEntry(activeOnly.keys, activeOnly.activeKeyId);
+  const activeEntry = resolveActiveKeyEntry(normalizedKeys, activeKeyId);
   return {
-    keys: activeOnly.keys,
-    activeKeyId: activeOnly.activeKeyId,
+    keys: normalizedKeys,
+    activeKeyId,
     apiKey: String(activeEntry?.apiKey || '').trim()
   };
 }
@@ -1715,10 +1832,9 @@ function normalizeTranscriptApiConfig(payload) {
     idPrefix: 'tap'
   });
   const activeKeyId = ensureActiveKeyId(normalizedKeys, data.activeKeyId);
-  const activeOnly = keepOnlyActiveKeyEntry(normalizedKeys, activeKeyId);
   return {
-    keys: activeOnly.keys,
-    activeKeyId: activeOnly.activeKeyId,
+    keys: normalizedKeys,
+    activeKeyId,
     updatedAt: data.updatedAt || defaults.updatedAt
   };
 }
@@ -3191,7 +3307,7 @@ function applyCors(req, res) {
   } else if (!origin) {
     res.setHeader('Access-Control-Allow-Origin', '*');
   }
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.setHeader('Access-Control-Max-Age', '86400');
 }
@@ -4258,7 +4374,6 @@ export default async function handler(req, res) {
         isAdminUser: user.id === adminConfig.userId
       });
       const access = await getUserAccessState(supabase, user.id);
-      const usage = await getFreeLinksUsage(supabase, user.id);
       const monthlyUsage = await getUserUsageSummary(supabase, user.id);
       audit.userId = user.id;
       audit.tier = subscription.tier;
@@ -4275,9 +4390,9 @@ export default async function handler(req, res) {
           dailyExtractUsed: subscription.dailyExtractUsed,
           dailyExtractRemaining: subscription.dailyExtractRemaining,
           featureAccess: subscription.features,
-          freePlanLimit: usage.freePlanLimit,
-          freeLinksUsed: usage.freeLinksUsed,
-          freeLinksRemaining: usage.freeLinksRemaining,
+          freePlanLimit: monthlyUsage.monthlyQuota,
+          freeLinksUsed: monthlyUsage.usedThisMonth,
+          freeLinksRemaining: monthlyUsage.remaining,
           monthlyQuota: monthlyUsage.monthlyQuota,
           usedThisMonth: monthlyUsage.usedThisMonth,
           monthlyQuotaRemaining: monthlyUsage.remaining,
@@ -4296,17 +4411,30 @@ export default async function handler(req, res) {
       }
       if (!enforceRateLimit(res, 'adminLoginIp', requestIp, 'Too many admin login attempts')) return;
 
-      const config = await loadOrBootstrapAdminConfig(supabase);
+      let config = await loadOrBootstrapAdminConfig(supabase);
       const identifierRaw = String(body.identifier || body.username || body.email || '').trim().toLowerCase();
       const password = String(body.password || '');
       const validIdentifier =
         identifierRaw &&
         (identifierRaw === String(config.username || '').toLowerCase() ||
           identifierRaw === String(config.email || '').toLowerCase());
-      const validPassword = makeHash(password) === config.passwordHash;
+      const validPassword = verifyPassword(password, config.passwordHash);
 
       if (!validIdentifier || !validPassword) {
         return res.status(401).json({ success: false, error: 'Invalid admin credentials' });
+      }
+
+      if (isLegacyPasswordHash(config.passwordHash)) {
+        try {
+          const migratedConfig = {
+            ...config,
+            passwordHash: hashPassword(password)
+          };
+          await saveAdminConfig(supabase, migratedConfig);
+          config = migratedConfig;
+        } catch {
+          // Non-blocking migration fallback.
+        }
       }
 
       const token = signAdminToken(config);
@@ -4622,7 +4750,7 @@ export default async function handler(req, res) {
         userId: current.userId,
         username: nextUsername,
         email: nextEmail,
-        passwordHash: nextPassword ? makeHash(nextPassword) : current.passwordHash
+        passwordHash: nextPassword ? hashPassword(nextPassword) : current.passwordHash
       };
       await saveAdminConfig(supabase, nextConfig);
 
@@ -5047,18 +5175,20 @@ export default async function handler(req, res) {
       });
       audit.userId = user.id;
       audit.tier = subscription.tier;
-      const consumeQuotaForExtraction = async () => {
+      let creditsLeft = Math.max(Number(userRow.credits || 0), 0);
+      const buildAdminQuotaSnapshot = () => ({
+        allowed: true,
+        monthlyQuota: MONTHLY_FREE_QUOTA,
+        usedThisMonth: 0,
+        remaining: MONTHLY_FREE_QUOTA,
+        lastResetAt: new Date().toISOString(),
+        nextResetAt: new Date(Date.now() + QUOTA_RESET_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString()
+      });
+      const getQuotaSnapshot = async () => {
         if (subscription.tier === 'admin') {
-          return {
-            allowed: true,
-            monthlyQuota: MONTHLY_FREE_QUOTA,
-            usedThisMonth: 0,
-            remaining: MONTHLY_FREE_QUOTA,
-            lastResetAt: new Date().toISOString(),
-            nextResetAt: new Date(Date.now() + QUOTA_RESET_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString()
-          };
+          return buildAdminQuotaSnapshot();
         }
-        return consumeUserMonthlyQuota(supabase, user.id);
+        return getUserUsageSummary(supabase, user.id);
       };
 
       const { url: videoUrl } = body;
@@ -5105,21 +5235,7 @@ export default async function handler(req, res) {
               .eq('user_id', user.id);
           }
           console.info(`[cache] transcript user-hit video=${videoId} user=${user.id}`);
-          const quota = await consumeQuotaForExtraction();
-          if (!quota.allowed) {
-            return sendError(
-              res,
-              403,
-              'QUOTA_EXCEEDED',
-              'Monthly transcript quota reached. Please wait for reset or upgrade your plan.',
-              {
-                monthlyQuota: quota.monthlyQuota,
-                usedThisMonth: quota.usedThisMonth,
-                remaining: quota.remaining,
-                nextResetAt: quota.nextResetAt
-              }
-            );
-          }
+          const quota = await getQuotaSnapshot();
           return res.json({
             success: true,
             videoId,
@@ -5130,8 +5246,8 @@ export default async function handler(req, res) {
             thumbnailUrl: hydratedMeta.thumbnailUrl || defaultExtractMeta.thumbnailUrl,
             descriptionLinks: hydratedMeta.descriptionLinks || [],
             descriptionInstructions: hydratedMeta.descriptionInstructions || [],
-            creditsLeft: Number(userRow.credits || 0),
-            chargedForNewVideo: true,
+            creditsLeft,
+            chargedForNewVideo: false,
             monthlyQuota: quota.monthlyQuota,
             usedThisMonth: quota.usedThisMonth,
             monthlyQuotaRemaining: quota.remaining,
@@ -5240,20 +5356,34 @@ export default async function handler(req, res) {
       }
       resolvedVideoTitle = sanitizeVideoTitle(resolvedVideoTitle, videoId);
 
-      const quota = await consumeQuotaForExtraction();
-      if (!quota.allowed) {
-        return sendError(
-          res,
-          403,
-          'QUOTA_EXCEEDED',
-          'Monthly transcript quota reached. Please wait for reset or upgrade your plan.',
-          {
-            monthlyQuota: quota.monthlyQuota,
-            usedThisMonth: quota.usedThisMonth,
-            remaining: quota.remaining,
-            nextResetAt: quota.nextResetAt
+      let chargedForNewVideo = false;
+      let quota = await getQuotaSnapshot();
+      if (subscription.tier !== 'admin') {
+        if (creditsLeft >= CREDIT_COST_PER_SUCCESS) {
+          creditsLeft = await consumeCredits(supabase, user.id, creditsLeft, CREDIT_COST_PER_SUCCESS);
+          chargedForNewVideo = true;
+          quota = await getQuotaSnapshot();
+        } else {
+          const quotaConsumption = await consumeUserMonthlyQuota(supabase, user.id);
+          quota = quotaConsumption;
+          if (!quotaConsumption.allowed) {
+            return sendError(
+              res,
+              403,
+              'QUOTA_EXCEEDED',
+              'Monthly transcript quota reached and no credits are available. Please wait for reset or top up your balance.',
+              {
+                creditsLeft,
+                requiredCredits: CREDIT_COST_PER_SUCCESS,
+                monthlyQuota: quotaConsumption.monthlyQuota,
+                usedThisMonth: quotaConsumption.usedThisMonth,
+                remaining: quotaConsumption.remaining,
+                nextResetAt: quotaConsumption.nextResetAt
+              }
+            );
           }
-        );
+          chargedForNewVideo = true;
+        }
       }
 
       await saveExtractionRecord(supabase, user.id, videoId, transcript.trim(), method, resolvedVideoTitle, extractMeta);
@@ -5269,8 +5399,8 @@ export default async function handler(req, res) {
         thumbnailUrl: extractMeta.thumbnailUrl || buildYouTubeThumbnailUrl(videoId),
         descriptionLinks: extractMeta.descriptionLinks || [],
         descriptionInstructions: extractMeta.descriptionInstructions || [],
-        creditsLeft: Number(userRow.credits || 0),
-        chargedForNewVideo: true,
+        creditsLeft,
+        chargedForNewVideo,
         subscriptionTier: subscription.tier,
         monthlyQuota: quota.monthlyQuota,
         usedThisMonth: quota.usedThisMonth,
@@ -5399,17 +5529,25 @@ export default async function handler(req, res) {
         return res.status(400).json({ success: false, error: 'Missing required fields' });
       }
 
-      const normalizedType = String(processingType || 'manual').trim();
+      const normalizedType = String(processingType || 'manual').trim() || 'manual';
+      if (isReservedProcessingType(normalizedType)) {
+        return sendError(res, 400, 'INVALID_INPUT', 'Processing type is reserved');
+      }
+      const parsedHistoryVideo = parseYouTubeInput(videoId);
+      if (!parsedHistoryVideo.ok) {
+        return sendError(res, 400, 'INVALID_VIDEO_ID', 'Invalid YouTube video ID format');
+      }
+      const canonicalVideoId = parsedHistoryVideo.videoId;
       const preferredTitle = sanitizeVideoTitle(
         videoTitle,
-        await getPreferredVideoTitleForUser(supabase, user.id, videoId, videoId)
+        await getPreferredVideoTitleForUser(supabase, user.id, canonicalVideoId, canonicalVideoId)
       );
       const finalAi = result ?? aiResult ?? null;
       const { data: existingRows, error: existingError } = await supabase
         .from('transcripts_history')
         .select('id, user_id, video_id, processing_type, ai_result, transcript, created_at')
         .eq('user_id', user.id)
-        .eq('video_id', videoId)
+        .eq('video_id', canonicalVideoId)
         .eq('processing_type', normalizedType)
         .order('created_at', { ascending: false })
         .limit(1);
@@ -5425,7 +5563,7 @@ export default async function handler(req, res) {
         .insert([
           {
             user_id: user.id,
-            video_id: videoId,
+            video_id: canonicalVideoId,
             video_title: preferredTitle,
             transcript,
             ai_result: finalAi,
@@ -5809,6 +5947,9 @@ export default async function handler(req, res) {
     if (lowerMessage.includes('rate limit')) {
       return sendError(res, 429, 'RATE_LIMITED', 'Rate limit exceeded. Please retry later.');
     }
+    if (lowerMessage.includes('insufficient credits')) {
+      return sendError(res, 403, 'LIMIT_EXCEEDED', 'Insufficient credits. Please top up to continue.');
+    }
     if (lowerMessage.includes('request too large') || lowerMessage.includes('input is too large')) {
       return sendError(res, 400, 'INVALID_INPUT', 'Input is too large for current limits.');
     }
@@ -5823,4 +5964,3 @@ export default async function handler(req, res) {
     return sendError(res, 500, 'INTERNAL_ERROR', error.message || 'Internal error');
   }
 }
-
