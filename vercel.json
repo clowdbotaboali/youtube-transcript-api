@@ -10,6 +10,14 @@
       "destination": "/api/index.js"
     },
     {
+      "source": "/tool",
+      "destination": "/"
+    },
+    {
+      "source": "/blog/:slug",
+      "destination": "/"
+    },
+    {
       "source": "/privacy-policy",
       "destination": "/"
     },

@@ -26,6 +26,7 @@ import RefundPolicyPage from './pages/RefundPolicyPage';
 import ContactPage from './pages/ContactPage';
 import PricingPage from './pages/PricingPage';
 import AdminPage from './pages/AdminPage';
+import BlogArticlePage, { BLOG_ARTICLE_PATHS } from './pages/BlogArticlePage';
 import { supabase, SUPABASE_CONFIGURED } from './utils/supabase';
 import defaultApiUrl from './config';
 import { getAuthHeaders } from './utils/authHeaders';
@@ -59,7 +60,15 @@ const probeApiUrl = async (baseUrl) => {
 };
 
 const hasWindow = typeof window !== 'undefined';
-const STATIC_ROUTES = new Set(['/privacy-policy', '/terms', '/refund-policy', '/contact', '/pricing', '/admin']);
+const STATIC_ROUTES = new Set([
+  '/privacy-policy',
+  '/terms',
+  '/refund-policy',
+  '/contact',
+  '/pricing',
+  '/admin',
+  ...BLOG_ARTICLE_PATHS
+]);
 const LOGOUT_MARKER_KEY = 'forceLoggedOut';
 const FREE_PLAN_REQUESTS = 5;
 const CREDIT_COST_PER_SUCCESS = 1;
@@ -1048,6 +1057,7 @@ function App() {
     if (currentPath === '/contact') return <ContactPage lang={lang} theme={theme} />;
     if (currentPath === '/pricing') return <PricingPage lang={lang} theme={theme} />;
     if (currentPath === '/admin') return <AdminPage apiUrl={apiUrl} lang={lang} theme={theme} />;
+    if (BLOG_ARTICLE_PATHS.includes(currentPath)) return <BlogArticlePage currentPath={currentPath} theme={theme} />;
     return null;
   };
 

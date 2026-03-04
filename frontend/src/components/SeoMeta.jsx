@@ -19,14 +19,18 @@ function upsertLink(selector, attrs) {
   Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
 }
 
-function SeoMeta({ title, description, path = '/' }) {
+function SeoMeta({ title, description, path = '/', robots = '', ogType = 'website' }) {
   useEffect(() => {
     const prevTitle = document.title;
     document.title = title;
 
     upsertMeta('meta[name="description"]', { name: 'description' }, description);
+    if (robots) {
+      upsertMeta('meta[name="robots"]', { name: 'robots' }, robots);
+    }
     upsertMeta('meta[property="og:title"]', { property: 'og:title' }, title);
     upsertMeta('meta[property="og:description"]', { property: 'og:description' }, description);
+    upsertMeta('meta[property="og:type"]', { property: 'og:type' }, ogType);
     upsertMeta('meta[name="twitter:title"]', { name: 'twitter:title' }, title);
     upsertMeta('meta[name="twitter:description"]', { name: 'twitter:description' }, description);
 
@@ -39,7 +43,7 @@ function SeoMeta({ title, description, path = '/' }) {
     return () => {
       document.title = prevTitle;
     };
-  }, [title, description, path]);
+  }, [title, description, path, robots, ogType]);
 
   return null;
 }
