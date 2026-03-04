@@ -26,7 +26,7 @@ import RefundPolicyPage from './pages/RefundPolicyPage';
 import ContactPage from './pages/ContactPage';
 import PricingPage from './pages/PricingPage';
 import AdminPage from './pages/AdminPage';
-import BlogArticlePage, { BLOG_ARTICLE_PATHS } from './pages/BlogArticlePage';
+import BlogArticlePage, { getBlogRouteInfo } from './pages/BlogArticlePage';
 import { supabase, SUPABASE_CONFIGURED } from './utils/supabase';
 import defaultApiUrl from './config';
 import { getAuthHeaders } from './utils/authHeaders';
@@ -60,15 +60,7 @@ const probeApiUrl = async (baseUrl) => {
 };
 
 const hasWindow = typeof window !== 'undefined';
-const STATIC_ROUTES = new Set([
-  '/privacy-policy',
-  '/terms',
-  '/refund-policy',
-  '/contact',
-  '/pricing',
-  '/admin',
-  ...BLOG_ARTICLE_PATHS
-]);
+const STATIC_ROUTES = new Set(['/privacy-policy', '/terms', '/refund-policy', '/contact', '/pricing', '/admin']);
 const LOGOUT_MARKER_KEY = 'forceLoggedOut';
 const FREE_PLAN_REQUESTS = 5;
 const CREDIT_COST_PER_SUCCESS = 1;
@@ -80,6 +72,22 @@ const THEME = {
 };
 const ACCOUNT_SNAPSHOT_KEY_PREFIX = 'account-snapshot:';
 const EDGE_AUTH_COOKIE_NAME = 'sb_access_token';
+
+const normalizePathname = (value) => {
+  const raw = String(value || '/').trim();
+  if (!raw) return '/';
+  const withLeadingSlash = raw.startsWith('/') ? raw : `/${raw}`;
+  if (withLeadingSlash === '/') return '/';
+  return withLeadingSlash.replace(/\/+$/, '');
+};
+
+const getLangFromPath = (pathValue) => {
+  const match = normalizePathname(pathValue).match(/^\/(en|ar|fr)(?:\/|$)/i);
+  if (!match) return null;
+  const next = String(match[1] || '').toLowerCase();
+  if (next === LANG.ar || next === LANG.fr) return next;
+  return LANG.en;
+};
 
 const clearEdgeAuthCookie = () => {
   if (!hasWindow) return;
@@ -222,7 +230,10 @@ function App() {
   const [freeLinksRemaining, setFreeLinksRemaining] = useState(FREE_PLAN_REQUESTS);
   const [accountAccess, setAccountAccess] = useState({ status: 'active', reason: null });
   const [clientPage, setClientPage] = useState(CLIENT_PAGES.dashboard);
-  const [lang, setLang] = useState(() => (hasWindow ? localStorage.getItem('appLang') || LANG.en : LANG.en));
+  const [lang, setLang] = useState(() => {
+    if (!hasWindow) return LANG.en;
+    return getLangFromPath(window.location.pathname) || localStorage.getItem('appLang') || LANG.en;
+  });
   const [theme, setTheme] = useState(() => (hasWindow ? localStorage.getItem('appTheme') || THEME.light : THEME.light));
   const [outputLang, setOutputLang] = useState(() =>
     normalizeOutputLanguage(hasWindow ? localStorage.getItem('outputLang') || DEFAULT_OUTPUT_LANGUAGE : DEFAULT_OUTPUT_LANGUAGE)
@@ -237,7 +248,7 @@ function App() {
   const [recentTopupRequests, setRecentTopupRequests] = useState([]);
   const [recentTopupLoading, setRecentTopupLoading] = useState(false);
   const [toasts, setToasts] = useState([]);
-  const [currentPath, setCurrentPath] = useState(() => (hasWindow ? window.location.pathname : '/'));
+  const [currentPath, setCurrentPath] = useState(() => (hasWindow ? normalizePathname(window.location.pathname) : '/'));
   const videoBriefCacheRef = useRef(new Map());
   const refreshingAccountRef = useRef(false);
 
@@ -245,14 +256,22 @@ function App() {
     import.meta.env.DEV || (hasWindow && new URLSearchParams(window.location.search).get('dev') === '1');
 
   const user = session?.user ?? null;
-  const isStaticRoute = STATIC_ROUTES.has(currentPath);
+  const blogRouteInfo = useMemo(() => getBlogRouteInfo(currentPath), [currentPath]);
+  const isStaticRoute = STATIC_ROUTES.has(currentPath) || Boolean(blogRouteInfo);
 
   useEffect(() => {
     if (!hasWindow) return;
-    const handler = () => setCurrentPath(window.location.pathname);
+    const handler = () => setCurrentPath(normalizePathname(window.location.pathname));
     window.addEventListener('popstate', handler);
     return () => window.removeEventListener('popstate', handler);
   }, []);
+
+  useEffect(() => {
+    const routeLang = getLangFromPath(currentPath);
+    if (!routeLang || routeLang === lang) return;
+    setLang(routeLang);
+    if (hasWindow) localStorage.setItem('appLang', routeLang);
+  }, [currentPath, lang]);
 
   useEffect(() => {
     if (!hasWindow) return;
@@ -577,9 +596,10 @@ function App() {
     const params = new URLSearchParams(window.location.search);
     const requestedNext = String(params.get('next') || '/dashboard').trim();
     const nextPath = requestedNext.startsWith('/') ? requestedNext : '/dashboard';
-    window.history.replaceState({}, '', nextPath);
-    setCurrentPath(nextPath);
-    if (nextPath === '/dashboard') {
+    const normalizedNextPath = normalizePathname(nextPath);
+    window.history.replaceState({}, '', normalizedNextPath);
+    setCurrentPath(normalizedNextPath);
+    if (normalizedNextPath === '/dashboard') {
       setClientPage(CLIENT_PAGES.dashboard);
     }
   }, [currentPath, user?.id]);
@@ -1057,7 +1077,7 @@ function App() {
     if (currentPath === '/contact') return <ContactPage lang={lang} theme={theme} />;
     if (currentPath === '/pricing') return <PricingPage lang={lang} theme={theme} />;
     if (currentPath === '/admin') return <AdminPage apiUrl={apiUrl} lang={lang} theme={theme} />;
-    if (BLOG_ARTICLE_PATHS.includes(currentPath)) return <BlogArticlePage currentPath={currentPath} theme={theme} />;
+    if (blogRouteInfo) return <BlogArticlePage routeInfo={blogRouteInfo} theme={theme} />;
     return null;
   };
 
