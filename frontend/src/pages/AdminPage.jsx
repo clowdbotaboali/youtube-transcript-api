@@ -123,6 +123,35 @@ function keyRuntimeLabel(runtimeStatus, lang) {
   return tr(lang, 'لم يُختبر بعد في هذه الجلسة', 'Not tested yet in this session', 'Pas encore teste dans cette session');
 }
 
+function transcriptCreditBadgeClass(key) {
+  const status = String(key?.creditsStatus || 'unknown').toLowerCase();
+  if (typeof key?.availableCredits === 'number') {
+    return key.availableCredits > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700';
+  }
+  if (status === 'exhausted') return 'bg-orange-100 text-orange-700';
+  if (status === 'invalid') return 'bg-red-100 text-red-700';
+  if (status === 'available') return 'bg-cyan-100 text-cyan-700';
+  return 'bg-slate-100 text-slate-600';
+}
+
+function transcriptCreditLabel(key, lang) {
+  if (typeof key?.availableCredits === 'number') {
+    return tr(lang, `الكريديت: ${key.availableCredits}`, `Credits: ${key.availableCredits}`, `Credits: ${key.availableCredits}`);
+  }
+  const status = String(key?.creditsStatus || 'unknown').toLowerCase();
+  if (status === 'exhausted') return tr(lang, 'الكريديت: 0 (منتهي)', 'Credits: 0 (exhausted)', 'Credits: 0 (epuises)');
+  if (status === 'invalid') return tr(lang, 'مفتاح غير صالح', 'Invalid key', 'Cle invalide');
+  if (status === 'available') {
+    return tr(
+      lang,
+      'الكريديت متاح (العدد غير ظاهر من المزود)',
+      'Credits available (count not exposed by provider)',
+      'Credits disponibles (nombre non expose par le fournisseur)'
+    );
+  }
+  return tr(lang, 'الكريديت: غير متاح', 'Credits: unavailable', 'Credits: indisponibles');
+}
+
 function subscriptionTierLabel(tier, lang) {
   const value = String(tier || 'free').toLowerCase();
   if (value === 'admin') return tr(lang, 'أدمن', 'Admin', 'Admin');
@@ -309,8 +338,9 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
     applyAiConfigData(data.data || {});
   }, [authedFetch, applyAiConfigData]);
 
-  const loadTranscriptApiConfig = useCallback(async () => {
-    const data = await authedFetch('/api/admin/transcript-api/config');
+  const loadTranscriptApiConfig = useCallback(async ({ forceCredits = false } = {}) => {
+    const suffix = forceCredits ? '?forceCredits=1' : '';
+    const data = await authedFetch(`/api/admin/transcript-api/config${suffix}`);
     setTranscriptApiMeta({
       keysCount: Number(data.data?.keysCount || 0),
       activeKeyId: cleanText(data.data?.activeKeyId),
@@ -318,7 +348,7 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
       updatedAt: data.data?.updatedAt || null
     });
   }, [authedFetch]);
-  const loadAll = useCallback(async () => {
+  const loadAll = useCallback(async ({ forceCredits = false } = {}) => {
     if (!token) return;
     setLoading(true);
     setError('');
@@ -331,7 +361,7 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
         loadSettings(),
         loadBillingConfig(),
         loadAiConfig(),
-        loadTranscriptApiConfig()
+        loadTranscriptApiConfig({ forceCredits })
       ]);
     } catch (err) {
       setError(cleanText(err.message) || tr(lang, 'ØªØ¹Ø°Ø± ØªØ­Ù…ÙŠÙ„ Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø£Ø¯Ù…Ù†', 'Failed to load admin data', 'Echec du chargement admin'));
@@ -756,7 +786,7 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
                 <p className="text-sm text-slate-500">{overview?.admin?.email || '-'}</p>
               </div>
               <div className="flex items-center gap-2">
-                <button onClick={loadAll} className="rounded-lg border border-slate-300 px-3 py-2 text-sm hover:bg-slate-50">
+                <button onClick={() => loadAll({ forceCredits: true })} className="rounded-lg border border-slate-300 px-3 py-2 text-sm hover:bg-slate-50">
                   {loading ? tr(lang, 'Ø¬Ø§Ø±Ù Ø§Ù„ØªØ­Ø¯ÙŠØ«...', 'Refreshing...', 'Actualisation...') : tr(lang, 'ØªØ­Ø¯ÙŠØ«', 'Refresh', 'Actualiser')}
                 </button>
                 <button
@@ -1307,6 +1337,14 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
                       'Guide des etats: "Actif maintenant" signifie que le dernier appel a reussi, "Dernier test echoue" signifie echec du dernier appel, et "Pas encore teste dans cette session" signifie quaucun appel na eu lieu depuis le demarrage actuel du serveur.'
                     )}
                   </p>
+                  <p className="text-xs text-slate-500">
+                    {tr(
+                      lang,
+                      'الكريديت يتم عرضه عند توفره من استجابة TranscriptAPI. بعض الحسابات/الخطط لا تُظهر الرقم عبر API.',
+                      'Credits are shown when TranscriptAPI exposes them in API responses. Some accounts/plans do not expose an exact number via API.',
+                      'Les credits sont affiches lorsque TranscriptAPI les expose dans ses reponses API. Certains comptes/plans ne donnent pas le nombre exact.'
+                    )}
+                  </p>
                 </div>
 
                 <form onSubmit={addTranscriptApiKey} className="grid md:grid-cols-[1fr_1.2fr_auto] gap-2">
@@ -1349,6 +1387,9 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
                           <div className="flex flex-wrap items-center gap-1">
                             <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${keyRuntimeBadgeClass(key.runtimeStatus)}`}>
                               {keyRuntimeLabel(key.runtimeStatus, lang)}
+                            </span>
+                            <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${transcriptCreditBadgeClass(key)}`}>
+                              {transcriptCreditLabel(key, lang)}
                             </span>
                             {key.isActive ? (
                               <span className="rounded-full bg-blue-100 text-blue-700 px-2 py-0.5 text-[11px] font-bold">
@@ -1393,8 +1434,16 @@ function AdminPage({ apiUrl = defaultApiUrl, lang = LANG.ar, theme = 'light' }) 
                             {tr(lang, 'آخر استخدام:', 'Last used:')} {formatDate(key.lastUsedAt, lang)}
                           </p>
                         ) : null}
+                        {key.creditCheckedAt ? (
+                          <p className="mt-1 text-[11px] text-slate-500">
+                            {tr(lang, 'آخر فحص كريديت:', 'Last credit check:')} {formatDate(key.creditCheckedAt, lang)}
+                          </p>
+                        ) : null}
                         {key.lastError ? (
                           <p className="mt-1 text-[11px] text-red-600">{key.lastError}</p>
+                        ) : null}
+                        {key.creditMessage && key.creditsStatus !== 'unknown' && typeof key.availableCredits !== 'number' ? (
+                          <p className="mt-1 text-[11px] text-slate-500">{key.creditMessage}</p>
                         ) : null}
                       </div>
                     ))

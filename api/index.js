@@ -18,6 +18,16 @@ const USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 const YTDL_AGENT = ytdl.createAgent();
 const EXTRACTION_TIMEOUT_MS = 20000;
+const TRANSCRIPT_CREDIT_CACHE_TTL_MS = 5 * 60 * 1000;
+const TRANSCRIPT_CREDIT_PROBE_URL = 'https://example.com';
+const TRANSCRIPT_CREDIT_HEADER_CANDIDATES = [
+  'x-credits-remaining',
+  'x-credit-remaining',
+  'x-remaining-credits',
+  'x-credit-balance',
+  'x-credits-balance',
+  'x-available-credits'
+];
 const AI_TRANSCRIPT_CHAR_LIMIT = 12000;
 const CHAT_TRANSCRIPT_CHAR_LIMIT = 6500;
 const CHAT_QUESTION_CHAR_LIMIT = 1200;
@@ -1272,6 +1282,13 @@ function getRuntimeState(scope, provider, keyId) {
   return bucket.get(key) || null;
 }
 
+function normalizeCreditCount(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0) return null;
+  return Math.floor(parsed);
+}
+
 function recordRuntimeState(scope, provider, keyId, { success, errorMessage = '' } = {}) {
   const bucket = scope === 'transcript' ? apiKeyRuntimeState.transcript : apiKeyRuntimeState.ai;
   const key = runtimeStateKey(scope, provider, keyId);
@@ -1280,14 +1297,22 @@ function recordRuntimeState(scope, provider, keyId, { success, errorMessage = ''
     failureCount: 0,
     lastStatus: 'idle',
     lastUsedAt: null,
-    lastError: ''
+    lastError: '',
+    creditsStatus: 'unknown',
+    availableCredits: null,
+    creditCheckedAt: null,
+    creditMessage: ''
   };
   const next = {
     successCount: Number(prev.successCount || 0),
     failureCount: Number(prev.failureCount || 0),
     lastStatus: prev.lastStatus || 'idle',
     lastUsedAt: new Date().toISOString(),
-    lastError: prev.lastError || ''
+    lastError: prev.lastError || '',
+    creditsStatus: String(prev.creditsStatus || 'unknown').trim() || 'unknown',
+    availableCredits: normalizeCreditCount(prev.availableCredits),
+    creditCheckedAt: prev.creditCheckedAt || null,
+    creditMessage: String(prev.creditMessage || '').trim()
   };
 
   if (success) {
@@ -1302,6 +1327,40 @@ function recordRuntimeState(scope, provider, keyId, { success, errorMessage = ''
 
   bucket.set(key, next);
   return next;
+}
+
+function recordTranscriptCreditState(keyId, { status = 'unknown', availableCredits = null, message = '' } = {}) {
+  const bucket = apiKeyRuntimeState.transcript;
+  const key = runtimeStateKey('transcript', 'transcript', keyId);
+  const prev = bucket.get(key) || {
+    successCount: 0,
+    failureCount: 0,
+    lastStatus: 'idle',
+    lastUsedAt: null,
+    lastError: ''
+  };
+  const normalizedCredits = normalizeCreditCount(availableCredits);
+  const next = {
+    successCount: Number(prev.successCount || 0),
+    failureCount: Number(prev.failureCount || 0),
+    lastStatus: prev.lastStatus || 'idle',
+    lastUsedAt: prev.lastUsedAt || null,
+    lastError: prev.lastError || '',
+    creditsStatus: String(status || 'unknown').trim() || 'unknown',
+    availableCredits: normalizedCredits,
+    creditCheckedAt: new Date().toISOString(),
+    creditMessage: String(message || '').trim()
+  };
+  bucket.set(key, next);
+  return next;
+}
+
+function shouldUseCachedTranscriptCreditState(runtimeState, force = false) {
+  if (force) return false;
+  if (!runtimeState?.creditCheckedAt) return false;
+  const checkedAtMs = new Date(runtimeState.creditCheckedAt).getTime();
+  if (!Number.isFinite(checkedAtMs)) return false;
+  return Date.now() - checkedAtMs < TRANSCRIPT_CREDIT_CACHE_TTL_MS;
 }
 
 function sanitizeKeyEntriesForAdmin(entries, { scope, provider, activeKeyId } = {}) {
@@ -1319,6 +1378,10 @@ function sanitizeKeyEntriesForAdmin(entries, { scope, provider, activeKeyId } = 
       runtimeStatus: runtime.lastStatus || 'idle',
       lastUsedAt: runtime.lastUsedAt || null,
       lastError: runtime.lastError || '',
+      creditsStatus: runtime.creditsStatus || 'unknown',
+      availableCredits: normalizeCreditCount(runtime.availableCredits),
+      creditCheckedAt: runtime.creditCheckedAt || null,
+      creditMessage: runtime.creditMessage || '',
       successCount: Number(runtime.successCount || 0),
       failureCount: Number(runtime.failureCount || 0)
     };
@@ -1856,6 +1919,14 @@ function getTranscriptApiKeyCandidates(config) {
   if (activeEntry.enabled === false) return [];
   if (!String(activeEntry.apiKey || '').trim()) return [];
   return [activeEntry];
+}
+
+function getTranscriptApiCreditProbeCandidates(config) {
+  const keys = normalizeApiKeyEntries(config?.keys || [], {
+    labelPrefix: 'Transcript key',
+    idPrefix: 'tap'
+  });
+  return keys.filter((item) => String(item.apiKey || '').trim());
 }
 
 function getActiveTranscriptApiKeyId(config) {
@@ -4042,6 +4113,121 @@ function isUsableTranscript(text = '') {
   return stats.wordsCount >= 3 && stats.uniqueWords >= 2;
 }
 
+function extractTranscriptApiErrorMessage(payload, fallback = '') {
+  if (!payload) return String(fallback || '').trim();
+  if (typeof payload === 'string') {
+    const text = payload.trim();
+    return text || String(fallback || '').trim();
+  }
+  const detail = payload?.detail;
+  if (typeof detail === 'string' && detail.trim()) {
+    return detail.trim();
+  }
+  if (detail && typeof detail === 'object') {
+    const nested = String(detail.message || detail.error || detail.detail || '').trim();
+    if (nested) return nested;
+  }
+  const message = String(payload?.message || payload?.error || payload?.reason || '').trim();
+  return message || String(fallback || '').trim();
+}
+
+function extractTranscriptApiCredits(response, payload) {
+  for (const headerName of TRANSCRIPT_CREDIT_HEADER_CANDIDATES) {
+    const headerValue = response?.headers?.get?.(headerName);
+    const normalized = normalizeCreditCount(headerValue);
+    if (normalized !== null) return normalized;
+  }
+
+  const candidates = [
+    payload?.credits_remaining,
+    payload?.creditsRemaining,
+    payload?.remaining_credits,
+    payload?.remainingCredits,
+    payload?.credit_balance,
+    payload?.creditBalance,
+    payload?.balance,
+    payload?.quota?.remaining,
+    payload?.quota?.credits_remaining,
+    payload?.data?.credits_remaining,
+    payload?.data?.creditsRemaining
+  ];
+  for (const value of candidates) {
+    const normalized = normalizeCreditCount(value);
+    if (normalized !== null) return normalized;
+  }
+
+  return null;
+}
+
+function resolveTranscriptCreditStatus(statusCode, availableCredits) {
+  if (availableCredits !== null) return availableCredits > 0 ? 'available' : 'exhausted';
+  if (statusCode === 402) return 'exhausted';
+  if (statusCode === 401 || statusCode === 403) return 'invalid';
+  if (statusCode === 422 || (statusCode >= 200 && statusCode < 300)) return 'available';
+  return 'unknown';
+}
+
+async function probeTranscriptApiCreditsForKey(keyEntry, { force = false } = {}) {
+  const keyId = String(keyEntry?.id || '').trim();
+  const apiKey = String(keyEntry?.apiKey || '').trim();
+  if (!keyId || !apiKey) return null;
+
+  const cached = getRuntimeState('transcript', 'transcript', keyId);
+  if (shouldUseCachedTranscriptCreditState(cached, force)) {
+    return cached;
+  }
+
+  let statusCode = 0;
+  let payload = null;
+  let availableCredits = null;
+  let message = '';
+  try {
+    const probeUrl = `https://transcriptapi.com/api/v2/youtube/transcript?video_url=${encodeURIComponent(TRANSCRIPT_CREDIT_PROBE_URL)}`;
+    const response = await fetchWithTimeout(
+      probeUrl,
+      {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'User-Agent': USER_AGENT,
+          Accept: 'application/json'
+        }
+      },
+      10000,
+      'TranscriptAPI credits probe'
+    );
+    statusCode = Number(response.status || 0);
+    payload = await response.json().catch(() => null);
+    availableCredits = extractTranscriptApiCredits(response, payload);
+    if (statusCode === 402 && availableCredits === null) {
+      availableCredits = 0;
+    }
+    message = extractTranscriptApiErrorMessage(payload, statusCode ? `TranscriptAPI credits probe status ${statusCode}` : 'TranscriptAPI credits probe completed');
+  } catch (error) {
+    return recordTranscriptCreditState(keyId, {
+      status: 'unknown',
+      availableCredits: null,
+      message: error?.message || 'Failed to check TranscriptAPI credits'
+    });
+  }
+
+  const status = resolveTranscriptCreditStatus(statusCode, availableCredits);
+  if (status === 'available' && availableCredits === null) {
+    message = 'TranscriptAPI key is valid, but remaining credits are not exposed by provider response';
+  }
+  return recordTranscriptCreditState(keyId, {
+    status,
+    availableCredits,
+    message
+  });
+}
+
+async function refreshTranscriptApiCredits(config, { force = false } = {}) {
+  const candidates = getTranscriptApiCreditProbeCandidates(config);
+  if (candidates.length === 0) return;
+  await Promise.all(candidates.map((entry) => probeTranscriptApiCreditsForKey(entry, { force })));
+}
+
 async function fetchWithTranscriptApi(videoUrl, supabase, transcriptConfig = null) {
   const config = transcriptConfig || (supabase ? await loadOrBootstrapTranscriptApiConfig(supabase) : { keys: [], activeKeyId: '' });
   const candidates = getTranscriptApiKeyCandidates(config);
@@ -4067,9 +4253,24 @@ async function fetchWithTranscriptApi(videoUrl, supabase, transcriptConfig = nul
         12000,
         'TranscriptAPI request'
       );
+      const data = await response.json().catch(() => null);
+      let availableCredits = extractTranscriptApiCredits(response, data);
+      if (Number(response.status || 0) === 402 && availableCredits === null) {
+        availableCredits = 0;
+      }
+      const creditStatus = resolveTranscriptCreditStatus(Number(response.status || 0), availableCredits);
+      let creditMessage = extractTranscriptApiErrorMessage(data, response.ok ? '' : `TranscriptAPI failed with status ${response.status}`);
+      if (creditStatus === 'available' && availableCredits === null) {
+        creditMessage = 'TranscriptAPI key is valid, but remaining credits are not exposed by provider response';
+      }
+      recordTranscriptCreditState(keyEntry.id, {
+        status: creditStatus,
+        availableCredits,
+        message: creditMessage
+      });
 
       if (!response.ok) {
-        lastError = new Error(`TranscriptAPI failed with status ${response.status}`);
+        lastError = new Error(extractTranscriptApiErrorMessage(data, `TranscriptAPI failed with status ${response.status}`));
         recordRuntimeState('transcript', 'transcript', keyEntry.id, {
           success: false,
           errorMessage: lastError.message
@@ -4077,7 +4278,6 @@ async function fetchWithTranscriptApi(videoUrl, supabase, transcriptConfig = nul
         continue;
       }
 
-      const data = await response.json().catch(() => null);
       if (!data?.transcript || !Array.isArray(data.transcript)) {
         lastError = new Error('TranscriptAPI response did not include transcript');
         recordRuntimeState('transcript', 'transcript', keyEntry.id, {
@@ -5272,6 +5472,16 @@ export default async function handler(req, res) {
         return res.status(401).json({ success: false, error: 'Admin authentication required' });
       }
       const config = await loadOrBootstrapTranscriptApiConfig(supabase);
+      const forceCreditsRefresh = (() => {
+        try {
+          const parsedUrl = new URL(String(url || ''), 'http://localhost');
+          const value = String(parsedUrl.searchParams.get('forceCredits') || '').trim().toLowerCase();
+          return value === '1' || value === 'true' || value === 'yes';
+        } catch {
+          return false;
+        }
+      })();
+      await refreshTranscriptApiCredits(config, { force: forceCreditsRefresh });
       return res.json({
         success: true,
         data: sanitizeTranscriptApiConfigForAdmin(config)
@@ -5314,6 +5524,7 @@ export default async function handler(req, res) {
         updatedBy: adminSession.config.username,
         updatedAt: new Date().toISOString()
       });
+      await refreshTranscriptApiCredits(saved, { force: false });
       return res.json({
         success: true,
         data: sanitizeTranscriptApiConfigForAdmin(saved)
