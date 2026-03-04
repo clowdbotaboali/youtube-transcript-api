@@ -3,7 +3,14 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "build": "cd frontend && npm install && npm run build",
+    "build": "npm run seo:deploy",
+    "build:frontend": "npm --prefix frontend install && npm --prefix frontend run build:compile",
+    "seo:generate-sitemap": "node scripts/generate-sitemap.mjs",
+    "seo:validate-sitemap": "npm --prefix frontend run seo:validate-sitemap",
+    "seo:ping-search-engines": "node scripts/ping-search-engines.mjs",
+    "seo:check-urls": "node scripts/check-urls.mjs",
+    "seo:indexnow": "node scripts/indexnow.mjs",
+    "seo:deploy": "npm run seo:generate-sitemap && npm run build:frontend && npm run seo:validate-sitemap && npm run seo:ping-search-engines && npm run seo:check-urls && npm run seo:indexnow",
     "auth:email:configure": "node scripts/configure-supabase-auth-email.js --apply",
     "auth:email:dry-run": "node scripts/configure-supabase-auth-email.js"
   },
