@@ -20,6 +20,10 @@ const YTDL_AGENT = ytdl.createAgent();
 const EXTRACTION_TIMEOUT_MS = 20000;
 const TRANSCRIPT_CREDIT_CACHE_TTL_MS = 5 * 60 * 1000;
 const TRANSCRIPT_CREDIT_PROBE_URL = 'https://example.com';
+const TRANSCRIPT_API_MAX_RETRIES_PER_KEY = 2;
+const TRANSCRIPT_API_RETRY_BASE_DELAY_MS = 350;
+const TRANSCRIPT_API_RETRY_MAX_DELAY_MS = 2500;
+const TRANSCRIPT_API_RETRY_JITTER_MS = 180;
 const TRANSCRIPT_CREDIT_HEADER_CANDIDATES = [
   'x-credits-remaining',
   'x-credit-remaining',
@@ -249,6 +253,39 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 10000, label = 'F
   } finally {
     clearTimeout(timer);
   }
+}
+
+async function delayMs(ms = 0) {
+  const safeMs = Math.max(Number(ms || 0), 0);
+  if (!safeMs) return;
+  await new Promise((resolve) => setTimeout(resolve, safeMs));
+}
+
+function shouldRetryTranscriptApiStatus(statusCode = 0) {
+  const status = Number(statusCode || 0);
+  if (status === 429) return true;
+  if (status >= 500 && status <= 599) return true;
+  return false;
+}
+
+function shouldRetryTranscriptApiError(error) {
+  const message = String(error?.message || '').toLowerCase();
+  if (!message) return false;
+  if (message.includes('timeout')) return true;
+  if (message.includes('network')) return true;
+  if (message.includes('fetch failed')) return true;
+  if (message.includes('econnreset')) return true;
+  if (message.includes('etimedout')) return true;
+  if (message.includes('socket hang up')) return true;
+  if (message.includes('temporarily unavailable')) return true;
+  return false;
+}
+
+function transcriptApiRetryDelayMs(retryIndex = 0) {
+  const exp = Math.min(Math.max(Number(retryIndex || 0), 0), 5);
+  const exponential = TRANSCRIPT_API_RETRY_BASE_DELAY_MS * (2 ** exp);
+  const jitter = Math.floor(Math.random() * TRANSCRIPT_API_RETRY_JITTER_MS);
+  return Math.min(exponential + jitter, TRANSCRIPT_API_RETRY_MAX_DELAY_MS);
 }
 
 function getSupabase() {
@@ -1914,11 +1951,7 @@ function getTranscriptApiKeyCandidates(config) {
     labelPrefix: 'Transcript key',
     idPrefix: 'tap'
   });
-  const activeEntry = resolveActiveKeyEntry(keys, config?.activeKeyId);
-  if (!activeEntry) return [];
-  if (activeEntry.enabled === false) return [];
-  if (!String(activeEntry.apiKey || '').trim()) return [];
-  return [activeEntry];
+  return orderKeyCandidates(keys, config?.activeKeyId);
 }
 
 function getTranscriptApiCreditProbeCandidates(config) {
@@ -4234,84 +4267,93 @@ async function fetchWithTranscriptApi(videoUrl, supabase, transcriptConfig = nul
   if (candidates.length === 0) return null;
 
   const encodedUrl = encodeURIComponent(videoUrl);
-  let lastError = null;
 
   for (const keyEntry of candidates) {
     const apiKey = String(keyEntry.apiKey || '').trim();
     if (!apiKey) continue;
-    try {
-      const response = await fetchWithTimeout(
-        `https://transcriptapi.com/api/v2/youtube/transcript?video_url=${encodedUrl}`,
-        {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            'User-Agent': USER_AGENT,
-            Accept: 'application/json'
+    const attemptsPerKey = Math.max(1, Number(TRANSCRIPT_API_MAX_RETRIES_PER_KEY || 0) + 1);
+    let keyError = null;
+
+    for (let attempt = 0; attempt < attemptsPerKey; attempt += 1) {
+      try {
+        const response = await fetchWithTimeout(
+          `https://transcriptapi.com/api/v2/youtube/transcript?video_url=${encodedUrl}`,
+          {
+            method: 'GET',
+            headers: {
+              Authorization: `Bearer ${apiKey}`,
+              'User-Agent': USER_AGENT,
+              Accept: 'application/json'
+            }
+          },
+          12000,
+          'TranscriptAPI request'
+        );
+        const data = await response.json().catch(() => null);
+        let availableCredits = extractTranscriptApiCredits(response, data);
+        if (Number(response.status || 0) === 402 && availableCredits === null) {
+          availableCredits = 0;
+        }
+        const creditStatus = resolveTranscriptCreditStatus(Number(response.status || 0), availableCredits);
+        let creditMessage = extractTranscriptApiErrorMessage(data, response.ok ? '' : `TranscriptAPI failed with status ${response.status}`);
+        if (creditStatus === 'available' && availableCredits === null) {
+          creditMessage = 'TranscriptAPI key is valid, but remaining credits are not exposed by provider response';
+        }
+        recordTranscriptCreditState(keyEntry.id, {
+          status: creditStatus,
+          availableCredits,
+          message: creditMessage
+        });
+
+        if (!response.ok) {
+          keyError = new Error(extractTranscriptApiErrorMessage(data, `TranscriptAPI failed with status ${response.status}`));
+          const canRetry = attempt < attemptsPerKey - 1 && shouldRetryTranscriptApiStatus(response.status);
+          if (canRetry) {
+            await delayMs(transcriptApiRetryDelayMs(attempt));
+            continue;
           }
-        },
-        12000,
-        'TranscriptAPI request'
-      );
-      const data = await response.json().catch(() => null);
-      let availableCredits = extractTranscriptApiCredits(response, data);
-      if (Number(response.status || 0) === 402 && availableCredits === null) {
-        availableCredits = 0;
-      }
-      const creditStatus = resolveTranscriptCreditStatus(Number(response.status || 0), availableCredits);
-      let creditMessage = extractTranscriptApiErrorMessage(data, response.ok ? '' : `TranscriptAPI failed with status ${response.status}`);
-      if (creditStatus === 'available' && availableCredits === null) {
-        creditMessage = 'TranscriptAPI key is valid, but remaining credits are not exposed by provider response';
-      }
-      recordTranscriptCreditState(keyEntry.id, {
-        status: creditStatus,
-        availableCredits,
-        message: creditMessage
-      });
+          break;
+        }
 
-      if (!response.ok) {
-        lastError = new Error(extractTranscriptApiErrorMessage(data, `TranscriptAPI failed with status ${response.status}`));
-        recordRuntimeState('transcript', 'transcript', keyEntry.id, {
-          success: false,
-          errorMessage: lastError.message
+        if (!data?.transcript || !Array.isArray(data.transcript)) {
+          keyError = new Error('TranscriptAPI response did not include transcript');
+          break;
+        }
+
+        const transcript = data.transcript.map((item) => item.text || '').join(' ').trim();
+        if (transcript) {
+          recordRuntimeState('transcript', 'transcript', keyEntry.id, { success: true });
+          return {
+            transcript,
+            keyId: String(keyEntry.id || '').trim() || null
+          };
+        }
+        keyError = new Error('TranscriptAPI returned empty transcript');
+        break;
+      } catch (error) {
+        keyError = error instanceof Error ? error : new Error(String(error || 'Transcript key failed'));
+        const canRetry = attempt < attemptsPerKey - 1 && shouldRetryTranscriptApiError(error);
+        if (canRetry) {
+          await delayMs(transcriptApiRetryDelayMs(attempt));
+          continue;
+        }
+        recordTranscriptCreditState(keyEntry.id, {
+          status: 'unknown',
+          availableCredits: null,
+          message: keyError.message || 'Transcript key failed'
         });
-        continue;
+        break;
       }
+    }
 
-      if (!data?.transcript || !Array.isArray(data.transcript)) {
-        lastError = new Error('TranscriptAPI response did not include transcript');
-        recordRuntimeState('transcript', 'transcript', keyEntry.id, {
-          success: false,
-          errorMessage: lastError.message
-        });
-        continue;
-      }
-
-      const transcript = data.transcript.map((item) => item.text || '').join(' ').trim();
-      if (transcript) {
-        recordRuntimeState('transcript', 'transcript', keyEntry.id, { success: true });
-        return {
-          transcript,
-          keyId: String(keyEntry.id || '').trim() || null
-        };
-      }
-      lastError = new Error('TranscriptAPI returned empty transcript');
+    if (keyError) {
       recordRuntimeState('transcript', 'transcript', keyEntry.id, {
         success: false,
-        errorMessage: lastError.message
-      });
-    } catch (error) {
-      lastError = error;
-      recordRuntimeState('transcript', 'transcript', keyEntry.id, {
-        success: false,
-        errorMessage: error?.message || 'Transcript key failed'
+        errorMessage: keyError.message || 'Transcript key failed'
       });
     }
   }
 
-  if (lastError) {
-    return null;
-  }
   return null;
 }
 
