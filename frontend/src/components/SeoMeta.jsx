@@ -1,4 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
+
+const DEFAULT_SOCIAL_IMAGE = 'https://www.transcripta.tech/logo.png';
 
 function upsertMeta(selector, attrs, content) {
   let el = document.head.querySelector(selector);
@@ -47,21 +49,19 @@ function setAlternates(alternates) {
   });
 }
 
-function upsertJsonLdScript(content) {
-  const selector = 'script[type="application/ld+json"][data-seo-jsonld="1"]';
-  if (!content) {
-    removeNode(selector);
-    return;
-  }
-
-  let script = document.head.querySelector(selector);
-  if (!script) {
-    script = document.createElement('script');
+function setJsonLdScripts(items) {
+  document.head.querySelectorAll('script[type="application/ld+json"][data-seo-jsonld="1"]').forEach((el) => el.remove());
+  if (!Array.isArray(items) || items.length === 0) return;
+  items.forEach((item, index) => {
+    const content = stableStringify(item);
+    if (!content) return;
+    const script = document.createElement('script');
     script.setAttribute('type', 'application/ld+json');
     script.setAttribute('data-seo-jsonld', '1');
+    script.setAttribute('data-seo-jsonld-index', String(index));
+    script.textContent = content;
     document.head.appendChild(script);
-  }
-  script.textContent = content;
+  });
 }
 
 function stableStringify(value) {
@@ -81,10 +81,19 @@ function SeoMeta({
   canonicalOrigin = '',
   alternates = [],
   publishedTime = '',
-  structuredData = null
+  structuredData = null,
+  ogImage = DEFAULT_SOCIAL_IMAGE,
+  twitterImage = '',
+  twitterCard = 'summary_large_image'
 }) {
   const alternatesKey = stableStringify(alternates);
-  const structuredDataKey = stableStringify(structuredData);
+  const structuredDataList = useMemo(() => {
+    if (!structuredData) return [];
+    return Array.isArray(structuredData) ? structuredData.filter(Boolean) : [structuredData];
+  }, [structuredData]);
+  const structuredDataKey = stableStringify(structuredDataList);
+  const normalizedOgImage = String(ogImage || DEFAULT_SOCIAL_IMAGE).trim() || DEFAULT_SOCIAL_IMAGE;
+  const normalizedTwitterImage = String(twitterImage || normalizedOgImage).trim() || normalizedOgImage;
 
   useEffect(() => {
     const prevTitle = document.title;
@@ -99,8 +108,12 @@ function SeoMeta({
     upsertMeta('meta[property="og:title"]', { property: 'og:title' }, title);
     upsertMeta('meta[property="og:description"]', { property: 'og:description' }, description);
     upsertMeta('meta[property="og:type"]', { property: 'og:type' }, ogType);
+    upsertMeta('meta[property="og:image"]', { property: 'og:image' }, normalizedOgImage);
+    upsertMeta('meta[property="og:image:secure_url"]', { property: 'og:image:secure_url' }, normalizedOgImage);
     upsertMeta('meta[name="twitter:title"]', { name: 'twitter:title' }, title);
     upsertMeta('meta[name="twitter:description"]', { name: 'twitter:description' }, description);
+    upsertMeta('meta[name="twitter:card"]', { name: 'twitter:card' }, twitterCard);
+    upsertMeta('meta[name="twitter:image"]', { name: 'twitter:image' }, normalizedTwitterImage);
     if (publishedTime) {
       upsertMeta('meta[property="article:published_time"]', { property: 'article:published_time' }, publishedTime);
     } else {
@@ -113,7 +126,7 @@ function SeoMeta({
       upsertLink('link[rel="canonical"]', { rel: 'canonical', href: canonicalHref });
       upsertMeta('meta[property="og:url"]', { property: 'og:url' }, canonicalHref);
       setAlternates(alternates);
-      upsertJsonLdScript(structuredDataKey || '');
+      setJsonLdScripts(structuredDataList);
     }
 
     return () => {
@@ -129,7 +142,11 @@ function SeoMeta({
     alternatesKey,
     publishedTime,
     structuredDataKey,
-    alternates
+    normalizedOgImage,
+    normalizedTwitterImage,
+    twitterCard,
+    alternates,
+    structuredDataList
   ]);
 
   return null;

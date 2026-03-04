@@ -27,6 +27,7 @@ import ContactPage from './pages/ContactPage';
 import PricingPage from './pages/PricingPage';
 import AdminPage from './pages/AdminPage';
 import BlogArticlePage, { getBlogRouteInfo } from './pages/BlogArticlePage';
+import { getSoftwareApplicationSchema } from './seo/seoCatalog';
 import { supabase, SUPABASE_CONFIGURED } from './utils/supabase';
 import defaultApiUrl from './config';
 import { getAuthHeaders } from './utils/authHeaders';
@@ -258,6 +259,11 @@ function App() {
   const user = session?.user ?? null;
   const blogRouteInfo = useMemo(() => getBlogRouteInfo(currentPath), [currentPath]);
   const isStaticRoute = STATIC_ROUTES.has(currentPath) || Boolean(blogRouteInfo);
+  const schemaPath = currentPath === '/tool' ? '/tool' : '/';
+  const softwareSchema = useMemo(() => {
+    if (currentPath !== '/' && currentPath !== '/tool') return null;
+    return getSoftwareApplicationSchema(schemaPath);
+  }, [currentPath, schemaPath]);
 
   useEffect(() => {
     if (!hasWindow) return;
@@ -1141,7 +1147,8 @@ function App() {
       <SeoMeta
         title="Transcripta AI | Knowledge Extraction & Execution Engine"
         description="Transform long YouTube videos into structured knowledge, execution plans, and implementation-ready outputs."
-        path="/"
+        path={schemaPath}
+        structuredData={softwareSchema}
       />
         <div className="flex-1">
           <LandingPage
@@ -1178,7 +1185,8 @@ function App() {
       <SeoMeta
         title="Client Workspace | Transcripta AI"
         description="Authenticated workspace for knowledge extraction, AI processing, and execution-ready outputs from long videos."
-        path="/"
+        path={schemaPath}
+        structuredData={softwareSchema}
       />
       <ToastStack items={toasts} onDismiss={dismissToast} />
       <div className="max-w-7xl mx-auto w-full px-3 sm:px-4 py-4 sm:py-6 flex-1">

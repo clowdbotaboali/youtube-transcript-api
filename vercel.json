@@ -42,6 +42,70 @@
       "destination": "/"
     },
     {
+      "source": "/en/:slug",
+      "destination": "/"
+    },
+    {
+      "source": "/ar/:slug",
+      "destination": "/"
+    },
+    {
+      "source": "/fr/:slug",
+      "destination": "/"
+    },
+    {
+      "source": "/youtube-transcript-generator",
+      "destination": "/"
+    },
+    {
+      "source": "/youtube-video-to-text",
+      "destination": "/"
+    },
+    {
+      "source": "/extract-youtube-transcript",
+      "destination": "/"
+    },
+    {
+      "source": "/download-youtube-transcript",
+      "destination": "/"
+    },
+    {
+      "source": "/youtube-transcript-api",
+      "destination": "/"
+    },
+    {
+      "source": "/video-to-text-ai",
+      "destination": "/"
+    },
+    {
+      "source": "/youtube-caption-extractor",
+      "destination": "/"
+    },
+    {
+      "source": "/youtube-subtitle-to-text",
+      "destination": "/"
+    },
+    {
+      "source": "/youtube-transcript-free",
+      "destination": "/"
+    },
+    {
+      "source": "/youtube-video-notes",
+      "destination": "/"
+    },
+    {
+      "source": "/youtube-transcripts",
+      "destination": "/"
+    },
+    {
+      "source": "/video-to-text",
+      "destination": "/"
+    },
+    {
+      "source": "/ai-video-learning",
+      "destination": "/"
+    },
+    {
       "source": "/privacy-policy",
       "destination": "/"
     },
