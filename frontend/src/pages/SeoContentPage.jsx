@@ -1,12 +1,17 @@
-import SeoMeta from '../components/SeoMeta';
+﻿import SeoMeta from '../components/SeoMeta';
 import { SEO_CONFIG } from '../seo/seoCatalog';
 
-function formatPublishedDate(lang) {
-  if (lang === 'ar') return '5 مارس 2026';
-  if (lang === 'fr') return '5 mars 2026';
-  return 'March 5, 2026';
-}
+const PUBLISHED_DATE = new Date('2026-03-05T00:00:00.000Z');
 
+function formatPublishedDate(lang) {
+  const locale = lang === 'ar' ? 'ar-EG' : lang === 'fr' ? 'fr-FR' : 'en-US';
+  return new Intl.DateTimeFormat(locale, {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC'
+  }).format(PUBLISHED_DATE);
+}
 function SeoContentPage({ routeInfo, theme = 'light' }) {
   const page = routeInfo || null;
   if (!page) return null;
@@ -130,7 +135,7 @@ function SeoContentPage({ routeInfo, theme = 'light' }) {
             </section>
 
             <section className="mb-7">
-              <h2 className={`text-xl sm:text-2xl font-black mb-2 ${headingColor}`}>{page.copy.relatedLandingTitle}</h2>
+              <h2 className={`text-xl sm:text-2xl font-black mb-2 ${headingColor}`}>{page.copy.canonicalLandingTitle}</h2>
               <ul className={`space-y-1 text-sm sm:text-base mb-4 ${textColor}`}>
                 {page.relatedLandingPages.map((item) => (
                   <li key={item.path}>
@@ -142,7 +147,7 @@ function SeoContentPage({ routeInfo, theme = 'light' }) {
                 </li>
               </ul>
 
-              <h3 className={`text-base sm:text-lg font-extrabold mb-2 ${headingColor}`}>{page.copy.relatedArticlesTitle}</h3>
+              <h3 className={`text-base sm:text-lg font-extrabold mb-2 ${headingColor}`}>{page.copy.relatedBlogsTitle}</h3>
               <ul className={`space-y-1 text-sm sm:text-base mb-4 ${textColor}`}>
                 {page.relatedArticles.map((item) => (
                   <li key={item.path}>
@@ -151,7 +156,7 @@ function SeoContentPage({ routeInfo, theme = 'light' }) {
                 ))}
               </ul>
 
-              <h3 className={`text-base sm:text-lg font-extrabold mb-2 ${headingColor}`}>SEO Hubs</h3>
+              <h3 className={`text-base sm:text-lg font-extrabold mb-2 ${headingColor}`}>{page.copy.clusterTitle}</h3>
               <ul className={`space-y-1 text-sm sm:text-base ${textColor}`}>
                 {page.clusterLinks.map((item) => (
                   <li key={item.path}>
@@ -180,4 +185,5 @@ function SeoContentPage({ routeInfo, theme = 'light' }) {
 }
 
 export default SeoContentPage;
+
 

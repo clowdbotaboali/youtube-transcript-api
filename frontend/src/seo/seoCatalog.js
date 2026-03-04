@@ -5,190 +5,166 @@ const DEFAULT_LANG = 'en';
 const SUPPORTED_LANGS = Object.freeze(['en', 'ar', 'fr']);
 const PUBLISHED_AT_ISO = '2026-03-05T00:00:00.000Z';
 
-const LANDING_SLUGS = Object.freeze([
-  'youtube-transcript-generator',
-  'youtube-video-to-text',
-  'extract-youtube-transcript',
-  'download-youtube-transcript',
-  'youtube-transcript-api',
-  'video-to-text-ai',
-  'youtube-caption-extractor',
-  'youtube-subtitle-to-text',
-  'youtube-transcript-free',
-  'youtube-video-notes'
+const TOPICS = Object.freeze([
+  {
+    id: 'youtube-transcript-generator',
+    landingSlug: 'youtube-transcript-generator',
+    clusterSlug: 'youtube-transcript-generator',
+    keywords: {
+      en: 'youtube transcript generator',
+      ar: 'مولد تفريغ يوتيوب',
+      fr: 'generateur de transcription YouTube'
+    },
+    labels: {
+      en: 'YouTube Transcript Generator',
+      ar: 'مولد تفريغ يوتيوب',
+      fr: 'Generateur de transcription YouTube'
+    },
+    angles: ['how-to', 'for-research', 'copy-paste-guide']
+  },
+  {
+    id: 'extract-youtube-transcript',
+    landingSlug: 'extract-youtube-transcript',
+    clusterSlug: 'extract-youtube-transcript',
+    keywords: {
+      en: 'extract youtube transcript',
+      ar: 'استخراج تفريغ يوتيوب',
+      fr: 'extraire la transcription YouTube'
+    },
+    labels: {
+      en: 'Extract YouTube Transcript',
+      ar: 'استخراج تفريغ يوتيوب',
+      fr: 'Extraction transcription YouTube'
+    },
+    angles: ['how-to', 'download-guide', 'captions-workflow']
+  },
+  {
+    id: 'youtube-subtitles-extractor',
+    landingSlug: 'youtube-subtitles-extractor',
+    clusterSlug: 'youtube-subtitles-extractor',
+    keywords: {
+      en: 'youtube subtitles extractor',
+      ar: 'استخراج ترجمات يوتيوب',
+      fr: 'extracteur de sous-titres YouTube'
+    },
+    labels: {
+      en: 'YouTube Subtitles Extractor',
+      ar: 'استخراج ترجمات يوتيوب',
+      fr: 'Extracteur de sous-titres YouTube'
+    },
+    angles: ['how-to', 'subtitle-to-text-guide', 'article-workflow']
+  },
+  {
+    id: 'youtube-video-to-text',
+    landingSlug: 'video-to-text',
+    clusterSlug: 'video-to-text',
+    keywords: {
+      en: 'youtube video to text',
+      ar: 'تحويل فيديو يوتيوب إلى نص',
+      fr: 'video YouTube vers texte'
+    },
+    labels: {
+      en: 'YouTube Video to Text',
+      ar: 'تحويل فيديو يوتيوب إلى نص',
+      fr: 'Video YouTube vers texte'
+    },
+    angles: ['how-to', 'speech-to-text-workflow', 'ai-workflow']
+  },
+  {
+    id: 'youtube-video-notes',
+    landingSlug: 'youtube-video-notes',
+    clusterSlug: 'youtube-video-notes',
+    keywords: {
+      en: 'youtube video notes',
+      ar: 'ملاحظات من فيديو يوتيوب',
+      fr: 'notes de video YouTube'
+    },
+    labels: {
+      en: 'YouTube Video Notes',
+      ar: 'ملاحظات من فيديو يوتيوب',
+      fr: 'Notes de video YouTube'
+    },
+    angles: ['for-students', 'for-study', 'for-research']
+  },
+  {
+    id: 'youtube-transcript-ai-summary',
+    landingSlug: 'youtube-transcript-ai-summary',
+    clusterSlug: 'youtube-transcript-ai-summary',
+    keywords: {
+      en: 'youtube transcript ai summary',
+      ar: 'ملخص ذكاء اصطناعي لتفريغ يوتيوب',
+      fr: 'resume IA de transcription YouTube'
+    },
+    labels: {
+      en: 'YouTube Transcript AI Summary',
+      ar: 'ملخص ذكاء اصطناعي لتفريغ يوتيوب',
+      fr: 'Resume IA de transcription YouTube'
+    },
+    angles: ['ai-workflow', 'summarize-guide', 'research-brief']
+  },
+  {
+    id: 'youtube-transcript-for-seo',
+    landingSlug: 'youtube-transcript-for-seo',
+    clusterSlug: 'youtube-transcript-for-seo',
+    keywords: {
+      en: 'youtube transcript for seo',
+      ar: 'تفريغ يوتيوب للسيو',
+      fr: 'transcription YouTube pour le SEO'
+    },
+    labels: {
+      en: 'YouTube Transcript for SEO',
+      ar: 'تفريغ يوتيوب للسيو',
+      fr: 'Transcription YouTube pour le SEO'
+    },
+    angles: ['for-content-creators', 'copy-paste-guide', 'ai-workflow']
+  }
 ]);
 
-const CLUSTER_SLUGS = Object.freeze([
-  'youtube-transcripts',
-  'video-to-text',
-  'ai-video-learning'
-]);
-
-const BASE_BLOG_SLUGS = Object.freeze([
-  'youtube-transcript-generator',
-  'youtube-transcript-downloader',
-  'youtube-subtitles-extractor',
-  'youtube-transcript-to-text',
-  'youtube-video-to-transcript',
-  'copy-youtube-transcript',
-  'youtube-subtitle-converter',
-  'youtube-transcript-ai-summary',
-  'youtube-video-text-extraction',
-  'convert-youtube-speech-to-text',
-  'extract-youtube-captions',
-  'get-youtube-video-transcript',
-  'download-youtube-captions-text',
-  'youtube-closed-captions-to-text',
-  'youtube-audio-to-text-online',
-  'transcribe-youtube-videos-fast',
-  'youtube-transcript-for-notes',
-  'youtube-transcript-for-seo',
-  'summarize-youtube-transcript',
-  'youtube-transcript-for-study',
-  'youtube-transcript-for-podcast',
-  'translate-youtube-transcript',
-  'youtube-transcript-export',
-  'youtube-subtitles-to-article',
-  'youtube-video-summary-generator',
-  'youtube-content-repurposing-text',
-  'youtube-transcript-copy-paste',
-  'youtube-caption-text-generator',
-  'youtube-video-caption-extractor',
-  'youtube-transcript-tool-online'
-]);
-
-const PLATFORM_SLUGS = Object.freeze(['youtube', 'ted', 'vimeo', 'udemy', 'coursera', 'tiktok']);
-const LANGUAGE_SLUGS = Object.freeze(['arabic', 'french', 'spanish', 'german', 'italian', 'portuguese']);
-const USECASE_SLUGS = Object.freeze(['students', 'research', 'blogging', 'content-creators', 'marketers']);
-
-const PROGRAMMATIC_BLOG_SLUGS = Object.freeze([
-  ...PLATFORM_SLUGS.map((platform) => `how-to-get-transcript-from-${platform}`),
-  ...LANGUAGE_SLUGS.map((language) => `video-to-text-${language}`),
-  ...USECASE_SLUGS.map((useCase) => `youtube-transcript-for-${useCase}`)
-]);
-
-const BLOG_SLUGS = Object.freeze(Array.from(new Set([...BASE_BLOG_SLUGS, ...PROGRAMMATIC_BLOG_SLUGS])));
-const BLOG_SLUG_SET = new Set(BLOG_SLUGS);
-const LANDING_SLUG_SET = new Set(LANDING_SLUGS);
-const CLUSTER_SLUG_SET = new Set(CLUSTER_SLUGS);
-
-export const BLOG_TOPIC_SLUGS = BLOG_SLUGS;
-export const BLOG_ARTICLE_PATHS = Object.freeze(
-  SUPPORTED_LANGS.flatMap((lang) => BLOG_SLUGS.map((slug) => `/${lang}/blog/${slug}`))
-);
-export const BLOG_LEGACY_PATHS = Object.freeze(BLOG_SLUGS.map((slug) => `/blog/${slug}`));
-
-const STOP_TOKENS = new Set([
-  'how',
-  'to',
-  'get',
-  'from',
-  'for',
-  'the',
-  'a',
-  'an',
-  'in',
-  'on',
-  'of',
-  'and',
-  'online',
-  'fast',
-  'free'
-]);
-
-const PLATFORM_LABELS = {
+const ANGLE_LABELS = {
   en: {
-    youtube: 'YouTube',
-    ted: 'TED',
-    vimeo: 'Vimeo',
-    udemy: 'Udemy',
-    coursera: 'Coursera',
-    tiktok: 'TikTok'
+    'how-to': 'how to',
+    'for-research': 'for research',
+    'copy-paste-guide': 'copy paste guide',
+    'download-guide': 'download guide',
+    'captions-workflow': 'captions workflow',
+    'subtitle-to-text-guide': 'subtitle to text guide',
+    'article-workflow': 'article workflow',
+    'speech-to-text-workflow': 'speech to text workflow',
+    'ai-workflow': 'ai workflow',
+    'for-students': 'for students',
+    'for-study': 'for study',
+    'research-brief': 'research brief',
+    'for-content-creators': 'for content creators'
   },
   ar: {
-    youtube: 'يوتيوب',
-    ted: 'TED',
-    vimeo: 'فيميو',
-    udemy: 'يوديمي',
-    coursera: 'كورسيرا',
-    tiktok: 'تيك توك'
+    'how-to': 'دليل عملي',
+    'for-research': 'للبحث',
+    'copy-paste-guide': 'دليل النسخ واللصق',
+    'download-guide': 'دليل التنزيل',
+    'captions-workflow': 'سير عمل الكابتشن',
+    'subtitle-to-text-guide': 'دليل تحويل الترجمة إلى نص',
+    'article-workflow': 'سير عمل تحويل الفيديو إلى مقال',
+    'speech-to-text-workflow': 'سير عمل تحويل الكلام إلى نص',
+    'ai-workflow': 'سير عمل الذكاء الاصطناعي',
+    'for-students': 'للطلاب',
+    'for-study': 'للدراسة',
+    'research-brief': 'ملخص بحثي',
+    'for-content-creators': 'لصناع المحتوى'
   },
   fr: {
-    youtube: 'YouTube',
-    ted: 'TED',
-    vimeo: 'Vimeo',
-    udemy: 'Udemy',
-    coursera: 'Coursera',
-    tiktok: 'TikTok'
-  }
-};
-
-const LANGUAGE_LABELS = {
-  en: {
-    arabic: 'Arabic',
-    french: 'French',
-    spanish: 'Spanish',
-    german: 'German',
-    italian: 'Italian',
-    portuguese: 'Portuguese'
-  },
-  ar: {
-    arabic: 'العربية',
-    french: 'الفرنسية',
-    spanish: 'الإسبانية',
-    german: 'الألمانية',
-    italian: 'الإيطالية',
-    portuguese: 'البرتغالية'
-  },
-  fr: {
-    arabic: 'arabe',
-    french: 'francais',
-    spanish: 'espagnol',
-    german: 'allemand',
-    italian: 'italien',
-    portuguese: 'portugais'
-  }
-};
-
-const USECASE_LABELS = {
-  en: {
-    students: 'students',
-    research: 'research',
-    blogging: 'blogging',
-    'content-creators': 'content creators',
-    marketers: 'marketers'
-  },
-  ar: {
-    students: 'الطلاب',
-    research: 'البحث العلمي',
-    blogging: 'التدوين',
-    'content-creators': 'صناع المحتوى',
-    marketers: 'المسوقين'
-  },
-  fr: {
-    students: 'etudiants',
-    research: 'recherche',
-    blogging: 'blogging',
-    'content-creators': 'createurs de contenu',
-    marketers: 'marketeurs'
-  }
-};
-
-const CLUSTER_COPY = {
-  'youtube-transcripts': {
-    en: 'YouTube Transcripts',
-    ar: 'تفريغ يوتيوب',
-    fr: 'Transcriptions YouTube'
-  },
-  'video-to-text': {
-    en: 'Video to Text',
-    ar: 'تحويل الفيديو إلى نص',
-    fr: 'Video vers texte'
-  },
-  'ai-video-learning': {
-    en: 'AI Video Learning',
-    ar: 'التعلم من الفيديو بالذكاء الاصطناعي',
-    fr: 'Apprentissage video avec IA'
+    'how-to': 'guide pratique',
+    'for-research': 'pour la recherche',
+    'copy-paste-guide': 'guide copier coller',
+    'download-guide': 'guide de telechargement',
+    'captions-workflow': 'workflow captions',
+    'subtitle-to-text-guide': 'guide sous-titres vers texte',
+    'article-workflow': 'workflow video vers article',
+    'speech-to-text-workflow': 'workflow parole vers texte',
+    'ai-workflow': 'workflow IA',
+    'for-students': 'pour etudiants',
+    'for-study': 'pour etudes',
+    'research-brief': 'brief recherche',
+    'for-content-creators': 'pour createurs de contenu'
   }
 };
 
@@ -202,11 +178,12 @@ const COPY = {
     stepsTitle: 'Section 2: Step-by-step method',
     benefitsTitle: 'Section 3: Benefits of transcripts',
     useCasesTitle: 'Use cases',
-    detailTitle: 'Deep practical guide',
+    detailTitle: 'Practical guide',
     ctaTitle: 'Section 4: Use the tool',
     faqTitle: 'Section 5: FAQ',
-    relatedArticlesTitle: 'Related articles',
-    relatedLandingTitle: 'Recommended tool pages',
+    relatedBlogsTitle: 'Related blog guides',
+    canonicalLandingTitle: 'Canonical landing page',
+    clusterTitle: 'Topic cluster page',
     languageHomeText: 'Back to language homepage',
     toolLinkText: 'Open transcript tool'
   },
@@ -219,11 +196,12 @@ const COPY = {
     stepsTitle: 'القسم 2: الطريقة خطوة بخطوة',
     benefitsTitle: 'القسم 3: فوائد التفريغ النصي',
     useCasesTitle: 'حالات الاستخدام',
-    detailTitle: 'دليل عملي تفصيلي',
+    detailTitle: 'دليل عملي',
     ctaTitle: 'القسم 4: استخدم الأداة',
     faqTitle: 'القسم 5: الأسئلة الشائعة',
-    relatedArticlesTitle: 'مقالات مرتبطة',
-    relatedLandingTitle: 'صفحات المنتج المقترحة',
+    relatedBlogsTitle: 'مقالات مرتبطة',
+    canonicalLandingTitle: 'الصفحة الأساسية للموضوع',
+    clusterTitle: 'صفحة الكلاستر',
     languageHomeText: 'العودة إلى الصفحة الرئيسية باللغة الحالية',
     toolLinkText: 'فتح أداة التفريغ'
   },
@@ -236,34 +214,116 @@ const COPY = {
     stepsTitle: 'Section 2: Methode pas a pas',
     benefitsTitle: 'Section 3: Benefices des transcriptions',
     useCasesTitle: 'Cas d usage',
-    detailTitle: 'Guide pratique detaille',
+    detailTitle: 'Guide pratique',
     ctaTitle: 'Section 4: Utiliser l outil',
     faqTitle: 'Section 5: FAQ',
-    relatedArticlesTitle: 'Articles associes',
-    relatedLandingTitle: 'Pages produit recommandees',
+    relatedBlogsTitle: 'Articles lies',
+    canonicalLandingTitle: 'Page principale canonique',
+    clusterTitle: 'Page cluster du sujet',
     languageHomeText: 'Retour a la page d accueil de la langue',
     toolLinkText: 'Ouvrir l outil de transcription'
   }
 };
 
+const BLOG_DEFINITIONS = TOPICS.flatMap((topic) =>
+  topic.angles.map((angle) => ({
+    topicId: topic.id,
+    angle,
+    slug: `${topic.landingSlug}-${angle}`
+  }))
+);
+
+const TOPIC_BY_ID = new Map(TOPICS.map((topic) => [topic.id, topic]));
+const TOPIC_BY_LANDING_SLUG = new Map(TOPICS.map((topic) => [topic.landingSlug, topic]));
+const TOPIC_BY_CLUSTER_SLUG = new Map(TOPICS.map((topic) => [topic.clusterSlug, topic]));
+const BLOG_BY_SLUG = new Map(BLOG_DEFINITIONS.map((blog) => [blog.slug, blog]));
+
+const LANDING_SLUGS = Object.freeze(TOPICS.map((topic) => topic.landingSlug));
+const CLUSTER_SLUGS = Object.freeze(TOPICS.map((topic) => topic.clusterSlug));
+const BLOG_SLUGS = Object.freeze(BLOG_DEFINITIONS.map((blog) => blog.slug));
+
+const LANDING_SLUG_SET = new Set(LANDING_SLUGS);
+const CLUSTER_SLUG_SET = new Set(CLUSTER_SLUGS);
+const BLOG_SLUG_SET = new Set(BLOG_SLUGS);
+
+export const BLOG_TOPIC_SLUGS = BLOG_SLUGS;
+export const BLOG_ARTICLE_PATHS = Object.freeze(
+  SUPPORTED_LANGS.flatMap((lang) => BLOG_SLUGS.map((slug) => `/${lang}/blog/${slug}`))
+);
+export const BLOG_LEGACY_PATHS = Object.freeze(BLOG_SLUGS.map((slug) => `/blog/${slug}`));
+
+const MERGE_REDIRECT_GROUPS = Object.freeze({
+  'youtube-transcript-generator': [
+    'youtube-transcript-tool-online',
+    'get-youtube-video-transcript',
+    'youtube-video-to-transcript',
+    'copy-youtube-transcript',
+    'youtube-transcript-copy-paste',
+    'youtube-transcript-free'
+  ],
+  'extract-youtube-transcript': [
+    'download-youtube-transcript',
+    'youtube-transcript-downloader',
+    'extract-youtube-captions',
+    'download-youtube-captions-text',
+    'youtube-caption-extractor',
+    'youtube-video-caption-extractor'
+  ],
+  'youtube-subtitles-extractor': [
+    'youtube-subtitle-to-text',
+    'youtube-closed-captions-to-text',
+    'youtube-caption-text-generator',
+    'youtube-subtitles-to-article'
+  ],
+  'video-to-text': [
+    'youtube-video-to-text',
+    'youtube-transcript-to-text',
+    'youtube-video-text-extraction',
+    'convert-youtube-speech-to-text',
+    'youtube-audio-to-text-online',
+    'video-to-text-ai',
+    'video-to-text-arabic',
+    'video-to-text-french',
+    'video-to-text-spanish',
+    'video-to-text-german',
+    'video-to-text-italian',
+    'video-to-text-portuguese'
+  ],
+  'youtube-video-notes': [
+    'youtube-transcript-for-notes',
+    'youtube-transcript-for-study',
+    'youtube-transcript-for-students'
+  ],
+  'youtube-transcript-ai-summary': [
+    'summarize-youtube-transcript',
+    'youtube-video-summary-generator'
+  ],
+  'youtube-transcript-for-seo': [
+    'youtube-content-repurposing-text',
+    'youtube-transcript-for-blogging',
+    'youtube-transcript-for-marketers'
+  ]
+});
+
+const OUT_OF_SCOPE_BLOG_SLUGS = Object.freeze([
+  'how-to-get-transcript-from-vimeo',
+  'how-to-get-transcript-from-ted',
+  'how-to-get-transcript-from-udemy',
+  'how-to-get-transcript-from-coursera',
+  'how-to-get-transcript-from-tiktok'
+]);
+
 function normalizePath(pathname) {
   const raw = String(pathname || '/').trim();
   if (!raw) return '/';
-  const withSlash = raw.startsWith('/') ? raw : `/${raw}`;
-  if (withSlash === '/') return '/';
-  return withSlash.replace(/\/+$/, '');
+  const withLeading = raw.startsWith('/') ? raw : `/${raw}`;
+  if (withLeading === '/') return '/';
+  return withLeading.replace(/\/+$/, '');
 }
 
 function normalizeLang(value) {
   const candidate = String(value || '').trim().toLowerCase();
   return SUPPORTED_LANGS.includes(candidate) ? candidate : DEFAULT_LANG;
-}
-
-function wordsFromSlug(slug) {
-  return String(slug || '')
-    .split('-')
-    .map((item) => item.trim().toLowerCase())
-    .filter(Boolean);
 }
 
 function toTitleCase(value) {
@@ -274,428 +334,232 @@ function toTitleCase(value) {
     .trim();
 }
 
-function slugToReadable(slug) {
-  return String(slug || '')
-    .split('-')
-    .filter(Boolean)
-    .join(' ');
+function topicLabel(lang, topic) {
+  return topic.labels?.[lang] || topic.labels?.en || toTitleCase(topic.landingSlug.replace(/-/g, ' '));
 }
 
-function getPlatformLabel(lang, platformSlug) {
-  return PLATFORM_LABELS[lang]?.[platformSlug] || PLATFORM_LABELS.en[platformSlug] || platformSlug;
+function angleLabel(lang, angle) {
+  return ANGLE_LABELS[lang]?.[angle] || ANGLE_LABELS.en?.[angle] || angle.replace(/-/g, ' ');
 }
 
-function getLanguageLabel(lang, languageSlug) {
-  return LANGUAGE_LABELS[lang]?.[languageSlug] || LANGUAGE_LABELS.en[languageSlug] || languageSlug;
+function keywordForRoute(lang, routeType, topic, blogDef = null) {
+  if (routeType === 'blog' && blogDef) {
+    const base = topic.keywords?.[lang] || topic.keywords?.en || topicLabel(lang, topic);
+    return `${base} ${angleLabel(lang, blogDef.angle)}`;
+  }
+  return topic.keywords?.[lang] || topic.keywords?.en || topicLabel(lang, topic);
 }
 
-function getUsecaseLabel(lang, usecaseSlug) {
-  return USECASE_LABELS[lang]?.[usecaseSlug] || USECASE_LABELS.en[usecaseSlug] || usecaseSlug;
+function routePath(routeType, lang, slug) {
+  if (routeType === 'blog') return `/${lang}/blog/${slug}`;
+  if (routeType === 'cluster') return `/${lang}/cluster/${slug}`;
+  return `/${lang}/${slug}`;
 }
 
-function getClusterLabel(lang, clusterSlug) {
-  return CLUSTER_COPY[clusterSlug]?.[lang] || CLUSTER_COPY[clusterSlug]?.en || toTitleCase(slugToReadable(clusterSlug));
-}
-function detectProgrammaticKeyword(lang, slug) {
-  const platformMatch = slug.match(/^how-to-get-transcript-from-([a-z0-9-]+)$/);
-  if (platformMatch) {
-    const platform = getPlatformLabel(lang, platformMatch[1]);
-    if (lang === 'ar') return `كيفية استخراج تفريغ من ${platform}`;
-    if (lang === 'fr') return `comment obtenir une transcription depuis ${platform}`;
-    return `how to get transcript from ${platform}`;
-  }
-
-  const languageMatch = slug.match(/^video-to-text-([a-z0-9-]+)$/);
-  if (languageMatch) {
-    const languageName = getLanguageLabel(lang, languageMatch[1]);
-    if (lang === 'ar') return `تحويل الفيديو إلى نص ${languageName}`;
-    if (lang === 'fr') return `video vers texte ${languageName}`;
-    return `video to text ${languageName}`;
-  }
-
-  const usecaseMatch = slug.match(/^youtube-transcript-for-([a-z0-9-]+)$/);
-  if (usecaseMatch) {
-    const usecase = getUsecaseLabel(lang, usecaseMatch[1]);
-    if (lang === 'ar') return `تفريغ يوتيوب من أجل ${usecase}`;
-    if (lang === 'fr') return `transcription YouTube pour ${usecase}`;
-    return `youtube transcript for ${usecase}`;
-  }
-
-  return '';
+function makeAlternates(routeType, slug) {
+  const alternates = SUPPORTED_LANGS.map((lang) => ({
+    hreflang: lang,
+    href: `${SITE_ORIGIN}${routePath(routeType, lang, slug)}`
+  }));
+  alternates.push({
+    hreflang: 'x-default',
+    href: `${SITE_ORIGIN}${routePath(routeType, DEFAULT_LANG, slug)}`
+  });
+  return alternates;
 }
 
-function keywordForSlug(lang, slug) {
-  const programmatic = detectProgrammaticKeyword(lang, slug);
-  if (programmatic) return programmatic;
-  const raw = slugToReadable(slug);
-  if (lang === 'ar') return `${raw} أداة`;
-  if (lang === 'fr') return `${raw} outil`;
-  return raw;
-}
-
-function metaTitleForRoute(lang, routeType, keyword) {
-  if (routeType === 'landing') {
-    if (lang === 'ar') return `${keyword} | أداة سريعة ومجانية | ${SITE_NAME}`;
-    if (lang === 'fr') return `${toTitleCase(keyword)} | Outil rapide et gratuit | ${SITE_NAME}`;
-    return `${toTitleCase(keyword)} | Fast Free Tool | ${SITE_NAME}`;
-  }
-
-  if (routeType === 'cluster') {
-    if (lang === 'ar') return `${keyword} | مركز مقالات SEO | ${SITE_NAME}`;
-    if (lang === 'fr') return `${toTitleCase(keyword)} | Hub SEO | ${SITE_NAME}`;
-    return `${toTitleCase(keyword)} | SEO Hub | ${SITE_NAME}`;
-  }
-
-  if (lang === 'ar') return `${keyword} | دليل عملي كامل | ${SITE_NAME}`;
-  if (lang === 'fr') return `${toTitleCase(keyword)} | Guide pratique complet | ${SITE_NAME}`;
-  return `${toTitleCase(keyword)} | Complete Practical Guide | ${SITE_NAME}`;
-}
-
-function metaDescriptionForRoute(lang, routeType, keyword) {
-  if (lang === 'ar') {
-    if (routeType === 'cluster') {
-      return `مركز محتوى ${keyword} يربط بين الأدلة والأدوات والمقالات العملية لتحسين الظهور في نتائج البحث.`;
-    }
-    if (routeType === 'landing') {
-      return `استخدم ${keyword} لتحويل فيديوهات يوتيوب إلى نص قابل للنسخ والبحث في ثوانٍ مع خطوات واضحة ونتائج فورية.`;
-    }
-    return `دليل شامل حول ${keyword} مع شرح المشكلة، خطوات التنفيذ، الفوائد، الأسئلة الشائعة، وروابط داخلية قوية.`;
-  }
-
-  if (lang === 'fr') {
-    if (routeType === 'cluster') {
-      return `Hub SEO ${keyword} reliant des guides, pages produit et articles pour une meilleure indexation organique.`;
-    }
-    if (routeType === 'landing') {
-      return `Utilisez ${keyword} pour transformer des videos en texte exploitable en quelques secondes.`;
-    }
-    return `Guide complet sur ${keyword} avec methode pas a pas, avantages, FAQ et maillage interne solide.`;
-  }
-
-  if (routeType === 'cluster') {
-    return `SEO hub for ${keyword} linking high-intent pages and programmatic guides for better indexing and topical authority.`;
-  }
-  if (routeType === 'landing') {
-    return `Use ${keyword} to convert long videos into searchable text, summaries, and practical outputs in seconds.`;
-  }
-  return `Complete guide for ${keyword} with practical steps, transcript benefits, FAQ schema, and strong internal links.`;
-}
-
-function introParagraphs(lang, keyword, routeType) {
+function introParagraphs(lang, topicLabelValue, keyword, routeType) {
   if (lang === 'ar') {
     return [
-      `صفحة ${keyword} موجهة لمن يريد استخراج النص من الفيديو بسرعة وبدون خطوات معقدة. الفكرة الأساسية هي تحويل الكلام داخل الفيديو إلى نص منظم يمكن نسخه والبحث فيه مباشرة.`,
+      `صفحة ${topicLabelValue} تستهدف الباحثين عن ${keyword} مع تجربة عملية واضحة لاستخراج النص من الفيديو بسرعة.`,
       routeType === 'cluster'
-        ? 'في هذا المركز ستجد روابط منظمة لأهم الأدلة والصفحات العملية حتى تصل للمحتوى المناسب بسرعة وتبني مسار تعلم أو إنتاج متكامل.'
-        : 'نحافظ على نفس تجربة المنتج الحالية، لكن نضيف محتوى بحثي منظم يساعد Google على فهم الصفحة وربطها بنيّة الباحث الصحيحة.'
+        ? 'هذه الصفحة تعمل كمركز موضوعي يجمع صفحة المنتج الأساسية وروابط الأدلة المرتبطة بنفس النية البحثية.'
+        : 'المحتوى هنا منظم بنيةً ومصمم لدعم الفهم السريع لمحركات البحث وللزائر في نفس الوقت.'
     ];
   }
 
   if (lang === 'fr') {
     return [
-      `La page ${keyword} cible les recherches a forte intention. Elle aide a convertir une video longue en texte clair, reutilisable et consultable rapidement.`,
+      `La page ${topicLabelValue} cible lintention ${keyword} avec une structure claire et orientee execution.`,
       routeType === 'cluster'
-        ? 'Ce hub organise les meilleurs contenus par theme pour renforcer le maillage interne et l autorite semantique.'
-        : 'Le design reste identique au produit, tandis que la structure SEO est renforcee pour l indexation organique.'
+        ? 'Cette page agit comme hub thematique reliant la page produit canonique et les guides associes.'
+        : 'Le contenu est optimise pour l indexation SEO tout en gardant une experience produit stable.'
     ];
   }
 
   return [
-    `The ${keyword} page is built for high-intent visitors who want fast transcript extraction and clear, reusable text output.`,
+    `${topicLabelValue} targets the search intent around ${keyword} with a practical and conversion-focused structure.`,
     routeType === 'cluster'
-      ? 'This hub organizes related guides and landing pages into one topical node to strengthen internal authority.'
-      : 'The product UI stays unchanged while the page structure is optimized for indexing, crawling depth, and user intent.'
+      ? 'This page serves as a topical hub connecting the canonical landing page and supporting blog guides.'
+      : 'The content is structured for indexing depth while preserving the original product experience.'
   ];
 }
 
 function problemParagraphs(lang) {
   if (lang === 'ar') {
     return [
-      'الاستخراج اليدوي من الفيديو مرهق: توقف وتشغيل مستمر، فقدان للنقاط المهمة، وصعوبة كبيرة في مشاركة المعلومات داخل الفريق.',
-      'عند غياب النص، يصبح من الصعب تحويل المحتوى إلى ملخصات أو مقالات أو ملاحظات دراسة، وهذا يقلل الاستفادة الحقيقية من الفيديو.'
+      'الاستخراج اليدوي يستهلك وقتًا كبيرًا ويجعل إعادة الاستخدام صعبة، خصوصًا عند العمل على عدة فيديوهات.',
+      'بدون نص واضح وقابل للبحث، يقل العائد من الفيديو في الدراسة، البحث، التسويق، وصناعة المحتوى.'
     ];
   }
   if (lang === 'fr') {
     return [
-      'L extraction manuelle est lente: pause, retour arriere, copie fragmentee et perte de contexte important.',
-      'Sans texte propre, il devient difficile de reutiliser le contenu pour la formation, le blogging ou la recherche.'
+      'L extraction manuelle est lente et fragmentee, ce qui complique la reutilisation de la connaissance.',
+      'Sans texte searchable, la valeur des videos reste limitee pour la recherche et la production de contenu.'
     ];
   }
   return [
-    'Manual extraction is inefficient: repeated pausing, timestamp hunting, and fragmented copy-paste behavior that breaks context.',
-    'Without reliable transcript text, teams struggle to summarize, repurpose, and operationalize video knowledge at scale.'
+    'Manual extraction is slow, repetitive, and error-prone when teams process multiple long videos.',
+    'Without clean transcript text, knowledge reuse for research, content, and operations becomes inefficient.'
   ];
 }
 
-function howItWorksParagraphs(lang, keyword) {
+function howParagraphs(lang, keyword) {
   if (lang === 'ar') {
     return [
-      `آلية ${keyword} بسيطة: تلصق رابط الفيديو، تنفذ الاستخراج، ثم تحصل على نص جاهز للاستخدام في الدراسة أو صناعة المحتوى أو البحث.`,
-      'بعد استخراج النص، يمكن تنفيذ معالجة ذكية: تلخيص، تنظيم أفكار، وصياغة مخرجات عملية مع قابلية نسخ ومشاركة مباشرة.'
+      `العمل في ${keyword} يبدأ بنسخ الرابط ثم استخراج النص ثم تحويله إلى مخرجات قابلة للتنفيذ.`,
+      'بعد الحصول على النص، يمكنك بناء ملخصات، ملاحظات، أو مسارات عمل مباشرة بدون إعادة مشاهدة الفيديو كاملًا.'
     ];
   }
   if (lang === 'fr') {
     return [
-      `Le flux ${keyword} est simple: coller l URL, lancer l extraction, puis reutiliser le texte immediatement.`,
-      'Une fois la transcription disponible, vous pouvez resumer, structurer et transformer la video en livrables actionnables.'
+      `Le flux ${keyword} commence par le lien video, puis extraction du texte, puis reutilisation directe.`,
+      'Une transcription propre facilite la synthese, la recherche interne et la production de contenus secondaires.'
     ];
   }
   return [
-    `The ${keyword} workflow is straightforward: paste the video URL, run extraction, then use structured text instantly.`,
-    'Once transcript text is available, you can summarize, reorganize, and convert ideas into outputs for execution.'
+    `The ${keyword} flow starts with a video URL, then transcript extraction, then structured reuse of the output.`,
+    'Once text is available, teams can summarize, annotate, and execute without replaying full timelines.'
   ];
 }
 
 function methodSteps(lang) {
   if (lang === 'ar') {
     return [
-      {
-        title: 'Step 1: انسخ رابط الفيديو',
-        text: 'افتح الفيديو المطلوب ثم انسخ الرابط الكامل من المتصفح.'
-      },
-      {
-        title: 'Step 2: افتح أداة التفريغ',
-        text: 'ادخل إلى صفحة الأداة والصق الرابط في حقل الإدخال.'
-      },
-      {
-        title: 'Step 3: استخرج النص فوراً',
-        text: 'شغّل الاستخراج واحصل على النص الجاهز للنسخ والبحث وإعادة الاستخدام.'
-      }
+      { title: 'Step 1: انسخ رابط الفيديو', text: 'افتح فيديو يوتيوب المستهدف وانسخ الرابط الكامل.' },
+      { title: 'Step 2: افتح أداة التفريغ', text: 'ادخل صفحة الأداة والصق الرابط داخل الحقل.' },
+      { title: 'Step 3: استخرج النص', text: 'شغّل الاستخراج واحصل على نص جاهز للنسخ والبحث والتحليل.' }
     ];
   }
   if (lang === 'fr') {
     return [
-      {
-        title: 'Step 1: Copier le lien video',
-        text: 'Ouvrez la video cible puis copiez son URL complete.'
-      },
-      {
-        title: 'Step 2: Ouvrir l outil',
-        text: 'Accedez a la page outil et collez le lien.'
-      },
-      {
-        title: 'Step 3: Extraire la transcription',
-        text: 'Lancez l extraction pour recuperer un texte reutilisable immediatement.'
-      }
+      { title: 'Step 1: Copier le lien video', text: 'Ouvrez la video cible puis copiez son URL complete.' },
+      { title: 'Step 2: Ouvrir l outil', text: 'Accedez a l outil et collez le lien.' },
+      { title: 'Step 3: Extraire le texte', text: 'Lancez l extraction pour recuperer un texte reutilisable.' }
     ];
   }
   return [
-    {
-      title: 'Step 1: Copy the video URL',
-      text: 'Open the target video and copy the full link.'
-    },
-    {
-      title: 'Step 2: Open the transcript tool',
-      text: 'Visit the tool page and paste the URL into the input field.'
-    },
-    {
-      title: 'Step 3: Extract transcript text',
-      text: 'Run extraction and get text that is searchable, shareable, and reusable.'
-    }
+    { title: 'Step 1: Copy the video URL', text: 'Open the target YouTube video and copy the full URL.' },
+    { title: 'Step 2: Open the transcript tool', text: 'Go to the tool page and paste your URL.' },
+    { title: 'Step 3: Extract transcript text', text: 'Run extraction and get output ready for reuse.' }
   ];
 }
 
 function benefitItems(lang) {
   if (lang === 'ar') {
     return [
-      'البحث السريع داخل النص بدلاً من مراجعة الفيديو بالكامل.',
-      'توفير وقت كبير في المراجعة والتحرير وإنتاج المحتوى.',
-      'تحويل الفيديو إلى ملاحظات دراسة قابلة للمشاركة.',
-      'دعم فرق المحتوى والتسويق بمرجع نصي موحد.',
-      'تسهيل التلخيص، الاقتباس، وإعادة التوظيف.',
-      'تحسين قابلية الأرشفة والرجوع للمعلومة.'
+      'بحث أسرع داخل النص بدلاً من التنقل في الفيديو.',
+      'تسريع إعداد الملخصات والملاحظات والتقارير.',
+      'إعادة توظيف المحتوى في قنوات متعددة.',
+      'تحسين مشاركة المعرفة داخل الفريق.'
     ];
   }
   if (lang === 'fr') {
     return [
       'Recherche instantanee dans le texte plutot que dans la timeline video.',
-      'Gain de temps pour revision, redaction et documentation.',
-      'Transformation des videos en notes exploitables.',
-      'Reference commune pour les equipes contenu et marketing.',
-      'Reutilisation facile en articles, scripts et supports.',
-      'Meilleure conservation des connaissances.'
+      'Preparation plus rapide de syntheses et de notes.',
+      'Reutilisation du contenu sur plusieurs canaux.',
+      'Meilleure circulation de la connaissance en equipe.'
     ];
   }
   return [
-    'Instant text search instead of timeline scrolling.',
-    'Significant time savings for review and production.',
-    'Reusable notes for learning and execution.',
-    'Shared reference layer for teams.',
-    'Easy repurposing into articles and briefs.',
-    'Higher information retention over time.'
+    'Faster discovery via searchable text instead of timeline scanning.',
+    'Quicker production of summaries, notes, and briefs.',
+    'Repurposing support across multiple channels.',
+    'Better knowledge sharing across teams.'
   ];
 }
 
-function caseItems(lang) {
+function caseStudiesList(lang) {
   if (lang === 'ar') {
     return [
-      'الطلاب: تحويل المحاضرات إلى نقاط مراجعة سريعة.',
-      'الباحثون: جمع الاقتباسات والمفاهيم من فيديوهات متعددة.',
-      'صناع المحتوى: إعادة إنتاج الفيديو كمقال أو سكربت.',
-      'المسوقون: استخراج رسائل القيمة من مقابلات ومنتجات.',
-      'فرق الدعم: بناء قاعدة معرفة من فيديوهات الشرح.',
-      'المديرون: مراجعة محتوى تدريبي بسرعة مع قرارات أسرع.'
+      'الطلاب: تحويل الفيديو إلى نقاط مراجعة واضحة.',
+      'الباحثون: استخراج الأفكار والاقتباسات بسرعة.',
+      'صناع المحتوى: تحويل الفيديو إلى محتوى نصي قابل للنشر.',
+      'فرق التسويق: بناء رسائل محتوى من النص المستخرج.'
     ];
   }
   if (lang === 'fr') {
     return [
-      'Etudiants: transformer les cours en notes revisees.',
-      'Chercheurs: collecter idees et citations avec precision.',
-      'Createurs: reutiliser la video en article ou script.',
-      'Marketeurs: extraire messages cles et objections clients.',
-      'Support: construire une base de connaissance searchable.',
-      'Managers: analyser rapidement les contenus de formation.'
+      'Etudiants: transformer la video en notes de revision.',
+      'Chercheurs: extraire idees et citations rapidement.',
+      'Createurs: convertir la video en contenu textuel.',
+      'Marketing: structurer des messages a partir du transcript.'
     ];
   }
   return [
-    'Students: convert lectures into revision notes.',
-    'Researchers: extract quotes and concepts faster.',
-    'Creators: repurpose video into blogs and scripts.',
-    'Marketers: pull messaging angles and proof points.',
-    'Support teams: build searchable knowledge bases.',
-    'Managers: review long training videos quickly.'
+    'Students: convert videos into structured notes.',
+    'Researchers: extract quotes and insights quickly.',
+    'Creators: turn videos into publishable text assets.',
+    'Marketing teams: derive messaging from transcript output.'
   ];
 }
-function buildLongGuideParagraphs(lang, keyword) {
-  const phasesByLang = {
-    en: [
-      'capture spoken context accurately',
-      'clean transcript blocks into usable structure',
-      'map intent, entities, and action points',
-      'repurpose content across channels',
-      'apply quality checks before publishing',
-      'measure impact and iterate the workflow'
-    ],
-    ar: [
-      'التقاط الكلام بدقة مع الحفاظ على السياق',
-      'تنظيف النص وتقسيمه لوحدات سهلة القراءة',
-      'استخراج النوايا والأفكار القابلة للتنفيذ',
-      'إعادة توظيف المحتوى في قنوات مختلفة',
-      'مراجعة الجودة قبل النشر أو المشاركة',
-      'قياس الأثر وتحسين سير العمل باستمرار'
-    ],
-    fr: [
-      'capturer le contexte oral avec precision',
-      'nettoyer la transcription pour un usage direct',
-      'identifier intentions, entites et actions',
-      'reutiliser le contenu sur plusieurs canaux',
-      'controler la qualite avant diffusion',
-      'mesurer les resultats et iterer le process'
-    ]
-  };
 
-  const phases = phasesByLang[lang] || phasesByLang.en;
-  const paragraphs = [];
-
-  phases.forEach((phase, index) => {
-    if (lang === 'ar') {
-      paragraphs.push(
-        `المرحلة ${index + 1} في مسار ${keyword} تبدأ بـ ${phase}. الهدف ليس فقط استخراج الكلمات، بل بناء نص واضح يمكن الرجوع إليه لاحقاً بدون فقدان المعنى. عندما يصبح النص منظمًا، تقدر تكتشف التفاصيل بسرعة وتشاركها مع الفريق بشكل عملي.`
-      );
-      paragraphs.push(
-        `في نفس المرحلة، اعتمد على بنية ثابتة: عنوان الفكرة، نقاط داعمة، وخلاصة قابلة للتنفيذ. هذا الأسلوب يحول الفيديو الطويل إلى وحدات معرفة قصيرة، ويجعل المراجعة أسرع بكثير من المشاهدة المتكررة. النتيجة النهائية هي سير عمل مستقر يمكن تكراره يومياً.`
-      );
-      paragraphs.push(
-        `كلما تطورت هذه المرحلة، تزيد قيمة الصفحة في محركات البحث لأن المحتوى يصبح أعمق وأكثر ارتباطًا بنيّة المستخدم. لهذا نربط بين الدليل، صفحة الأداة، وصفحات المنتج الأخرى بروابط داخلية واضحة. هذا الربط يحسن الفهم الدلالي ويعزز فرص الظهور العضوي.`
-      );
-      return;
-    }
-
-    if (lang === 'fr') {
-      paragraphs.push(
-        `L etape ${index + 1} du flux ${keyword} consiste a ${phase}. L objectif n est pas seulement de recuperer des mots, mais de produire un texte fiable qui garde le sens original. Ce niveau de clarte facilite la recherche d informations et la reutilisation dans des livrables concrets.`
-      );
-      paragraphs.push(
-        `Dans cette etape, une structure stable est essentielle: idee principale, preuves, puis action recommandee. Cette methode transforme une video longue en blocs exploitables et reduit fortement le temps de revision. Elle permet aussi de standardiser la qualite entre plusieurs membres d equipe.`
-      );
-      paragraphs.push(
-        `Plus cette etape est bien executee, plus la page gagne en autorite SEO. Le maillage interne entre guide, outil principal et pages produit cree un contexte semantique solide pour Google. Le resultat est un contenu mieux indexe, plus utile et plus durable dans le temps.`
-      );
-      return;
-    }
-
-    paragraphs.push(
-      `Stage ${index + 1} of a ${keyword} workflow is to ${phase}. The goal is not only extracting raw words, but preserving context with clean structure so the transcript remains reliable under repeated use. This enables faster discovery, cleaner summaries, and stronger decision quality across editorial, learning, and research workflows.`
-    );
-    paragraphs.push(
-      `At this stage, use a repeatable frame: core idea, supporting evidence, and next action. That frame transforms long-form video into operational knowledge blocks instead of passive media. Teams can onboard faster, compare multiple sources consistently, and turn transcript text into assets without rebuilding context each time.`
-    );
-    paragraphs.push(
-      `When this stage is implemented well, SEO value compounds. Internal links connect intent pages, tool pages, and supporting guides into one topical graph. Search engines understand relevance more clearly, while visitors move naturally to deeper content. This is how programmatic SEO scales without breaking user experience or design consistency.`
-    );
-  });
-
-  return paragraphs;
-}
-
-function buildFaqItems(lang, keyword) {
+function detailedGuideParagraphs(lang, topicLabelValue, keyword) {
   if (lang === 'ar') {
     return [
-      {
-        question: `ما هي أداة ${keyword}؟`,
-        answer: 'هي أداة لاستخراج الكلام من الفيديو وتحويله إلى نص منظم قابل للنسخ والبحث.'
-      },
-      {
-        question: 'هل يمكنني نسخ النص الناتج؟',
-        answer: 'نعم، يمكنك نسخ النص وإعادة استخدامه في الدراسة أو المحتوى أو التقارير.'
-      },
-      {
-        question: 'هل الدقة ثابتة في كل الفيديوهات؟',
-        answer: 'الدقة تعتمد على جودة الترجمة أو النص المتاح داخل الفيديو الأصلي.'
-      },
-      {
-        question: 'هل الصفحة مرتبطة مباشرة بالأداة؟',
-        answer: 'نعم، كل صفحة تحتوي زر مباشر للانتقال إلى الأداة الرئيسية.'
-      }
+      `في سيناريو ${topicLabelValue}، الهدف ليس فقط الحصول على النص بل بناء تدفق عمل واضح من الاستخراج إلى التنفيذ.`,
+      `ابدأ دائمًا بتحديد هدفك من ${keyword}: دراسة، بحث، نشر، أو تلخيص. تحديد الهدف يحدد شكل المخرجات المطلوبة.`,
+      'قسّم النص إلى فقرات دلالية قصيرة، ثم أضف عناوين داخلية تسهّل الرجوع لأي فكرة في ثوانٍ.',
+      'بعد ذلك، حوّل الفقرات إلى نقاط قابلة للتنفيذ: ماذا ستفعل؟ من المسؤول؟ وما النتيجة المتوقعة؟',
+      'هذه المنهجية ترفع جودة المحتوى وتقلل تكرار العمل اليدوي في كل دورة إنتاج جديدة.'
     ];
   }
-
   if (lang === 'fr') {
     return [
-      {
-        question: `Qu est-ce que ${keyword} ?`,
-        answer: 'C est un outil qui extrait la parole video et la convertit en texte reutilisable.'
-      },
-      {
-        question: 'Puis-je copier la transcription ?',
-        answer: 'Oui, la transcription peut etre copiee puis reutilisee dans votre workflow.'
-      },
-      {
-        question: 'La precision est-elle toujours identique ?',
-        answer: 'La precision depend de la qualite des sous-titres et de la source video.'
-      },
-      {
-        question: 'Y a-t-il un lien direct vers l outil ?',
-        answer: 'Oui, chaque page inclut un CTA vers la page outil principale.'
-      }
+      `Avec ${topicLabelValue}, l objectif est de passer de l extraction a l execution avec une methode stable.`,
+      `Definissez dabord lintention ${keyword}: etude, recherche, publication ou synthese.`,
+      'Segmentez ensuite le transcript en blocs semantiques courts avec des titres explicites.',
+      'Transformez chaque bloc en action concrete avec responsable, delai et resultat attendu.',
+      'Ce cadre reduit fortement le travail manuel repetitif et augmente la valeur SEO du contenu.'
     ];
   }
-
   return [
-    {
-      question: `What is ${keyword}?`,
-      answer: 'It is a tool-focused workflow to extract spoken video content as reusable text.'
-    },
-    {
-      question: 'Can I copy the generated transcript?',
-      answer: 'Yes. The transcript output can be copied and reused immediately.'
-    },
-    {
-      question: 'Is transcript accuracy always the same?',
-      answer: 'Accuracy depends on source subtitle quality and audio clarity.'
-    },
-    {
-      question: 'Does each page link to the tool?',
-      answer: 'Yes. Every page includes a direct CTA to the main transcript tool.'
-    }
+    `With ${topicLabelValue}, the objective is not just extraction, but a repeatable path from transcript to execution.`,
+    `Define the outcome for ${keyword} first: study notes, research brief, publication draft, or AI workflow.`,
+    'Segment transcript output into semantic blocks with clear headings and lightweight metadata.',
+    'Convert blocks into actions with owners, deadlines, and expected outcomes to operationalize knowledge.',
+    'This framework reduces repetitive manual work and increases long-term SEO value through structured content.'
   ];
 }
 
-function buildFaqSchema(faqItems) {
+function faqItems(lang, keyword) {
+  if (lang === 'ar') {
+    return [
+      { question: `ما هو ${keyword}؟`, answer: 'هو مسار عملي لاستخراج الكلام من فيديو يوتيوب وتحويله إلى نص قابل للاستخدام.' },
+      { question: 'هل يمكن نسخ النص الناتج؟', answer: 'نعم، يمكن نسخ النص واستخدامه في الدراسة أو البحث أو المحتوى.' },
+      { question: 'هل كل الصفحات مرتبطة بالأداة؟', answer: 'نعم، كل صفحة تحتوي رابط مباشر إلى /tool.' }
+    ];
+  }
+  if (lang === 'fr') {
+    return [
+      { question: `Quest-ce que ${keyword} ?`, answer: 'Cest un workflow pour extraire la parole video et la convertir en texte exploitable.' },
+      { question: 'Puis-je copier le transcript genere ?', answer: 'Oui, le texte peut etre copie et reutilise directement.' },
+      { question: 'Toutes les pages pointent-elles vers l outil ?', answer: 'Oui, chaque page inclut un lien direct vers /tool.' }
+    ];
+  }
+  return [
+    { question: `What is ${keyword}?`, answer: 'It is a workflow to extract spoken video content into reusable text.' },
+    { question: 'Can I copy the generated transcript?', answer: 'Yes, transcript output is fully copyable and reusable.' },
+    { question: 'Do all pages link to the tool?', answer: 'Yes, every page includes a direct link to /tool.' }
+  ];
+}
+
+function buildFaqSchema(items) {
   return {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
-    mainEntity: faqItems.map((item) => ({
+    mainEntity: items.map((item) => ({
       '@type': 'Question',
       name: item.question,
       acceptedAnswer: {
@@ -722,210 +586,251 @@ export function getSoftwareApplicationSchema(path = '/') {
   };
 }
 
-function tokenize(slug) {
-  return wordsFromSlug(slug).filter((token) => token && !STOP_TOKENS.has(token));
-}
+function buildRedirectRules() {
+  const rules = [];
+  const seen = new Set();
 
-function similarityScore(sourceSlug, targetSlug) {
-  const sourceTokens = new Set(tokenize(sourceSlug));
-  const targetTokens = new Set(tokenize(targetSlug));
-  if (!sourceTokens.size || !targetTokens.size) return 0;
-
-  let intersection = 0;
-  sourceTokens.forEach((token) => {
-    if (targetTokens.has(token)) intersection += 1;
-  });
-
-  const union = sourceTokens.size + targetTokens.size - intersection;
-  const firstSource = wordsFromSlug(sourceSlug)[0] || '';
-  const firstTarget = wordsFromSlug(targetSlug)[0] || '';
-  const firstTokenBonus = firstSource && firstSource === firstTarget ? 1.5 : 0;
-  return intersection * 4 + intersection / Math.max(union, 1) + firstTokenBonus;
-}
-
-function pickRelatedArticleSlugs(slug, limit = 8) {
-  const scored = BLOG_SLUGS.filter((item) => item !== slug).map((item) => ({
-    slug: item,
-    score: similarityScore(slug, item)
-  }));
-
-  scored.sort((a, b) => {
-    if (b.score !== a.score) return b.score - a.score;
-    return a.slug.localeCompare(b.slug);
-  });
-
-  const selected = scored.slice(0, Math.max(limit, 5)).map((item) => item.slug);
-  return selected.slice(0, limit);
-}
-
-function pickLandingSlugsForRoute(slug) {
-  const tokens = new Set(wordsFromSlug(slug));
-  const picks = [];
-  const push = (value) => {
-    if (LANDING_SLUG_SET.has(value) && !picks.includes(value)) picks.push(value);
+  const push = (source, destination) => {
+    const src = normalizePath(source);
+    const dest = normalizePath(destination);
+    if (!src || !dest || src === dest) return;
+    const key = `${src}->${dest}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    rules.push({ source: src, destination: dest, permanent: true });
   };
 
-  if (tokens.has('api')) push('youtube-transcript-api');
-  if (tokens.has('download')) push('download-youtube-transcript');
-  if (tokens.has('caption') || tokens.has('captions')) push('youtube-caption-extractor');
-  if (tokens.has('subtitle') || tokens.has('subtitles')) push('youtube-subtitle-to-text');
-  if (tokens.has('notes') || tokens.has('students') || tokens.has('research')) push('youtube-video-notes');
-  if (tokens.has('ai') || tokens.has('summary')) push('video-to-text-ai');
-  if (tokens.has('video') || tokens.has('text')) push('youtube-video-to-text');
-  if (tokens.has('free')) push('youtube-transcript-free');
-  if (tokens.has('extract')) push('extract-youtube-transcript');
-
-  push('youtube-transcript-generator');
-  push('youtube-video-to-text');
-
-  return picks.slice(0, 2);
-}
-
-function routePath(routeType, lang, slug) {
-  if (routeType === 'blog') return `/${lang}/blog/${slug}`;
-  return `/${lang}/${slug}`;
-}
-
-function routeAlternates(routeType, slug) {
-  const alternates = SUPPORTED_LANGS.map((lang) => ({
-    hreflang: lang,
-    href: `${SITE_ORIGIN}${routePath(routeType, lang, slug)}`
-  }));
-  alternates.push({
-    hreflang: 'x-default',
-    href: `${SITE_ORIGIN}${routePath(routeType, DEFAULT_LANG, slug)}`
+  Object.entries(MERGE_REDIRECT_GROUPS).forEach(([canonicalSlug, oldSlugs]) => {
+    oldSlugs.forEach((oldSlug) => {
+      SUPPORTED_LANGS.forEach((lang) => {
+        push(`/${lang}/${oldSlug}`, `/${lang}/${canonicalSlug}`);
+        push(`/${lang}/blog/${oldSlug}`, `/${lang}/${canonicalSlug}`);
+      });
+      push(`/${oldSlug}`, `/en/${canonicalSlug}`);
+      push(`/blog/${oldSlug}`, `/en/${canonicalSlug}`);
+    });
   });
-  return alternates;
+
+  OUT_OF_SCOPE_BLOG_SLUGS.forEach((slug) => {
+    SUPPORTED_LANGS.forEach((lang) => {
+      push(`/${lang}/blog/${slug}`, '/en/youtube-transcript-generator');
+      push(`/${lang}/${slug}`, '/en/youtube-transcript-generator');
+    });
+    push(`/blog/${slug}`, '/en/youtube-transcript-generator');
+    push(`/${slug}`, '/en/youtube-transcript-generator');
+  });
+
+  SUPPORTED_LANGS.forEach((lang) => {
+    push(`/${lang}/youtube-transcripts`, `/${lang}/cluster/youtube-transcript-generator`);
+    push(`/${lang}/ai-video-learning`, `/${lang}/cluster/youtube-transcript-ai-summary`);
+  });
+  push('/youtube-transcripts', '/en/cluster/youtube-transcript-generator');
+  push('/ai-video-learning', '/en/cluster/youtube-transcript-ai-summary');
+
+  return rules;
 }
 
-function routeDisplayPath(routeType, lang, slug, useLegacyAlias) {
-  if (!useLegacyAlias) return routePath(routeType, lang, slug);
-  if (routeType === 'blog') return `/blog/${slug}`;
-  return `/${slug}`;
-}
+export const REDIRECT_RULES = Object.freeze(buildRedirectRules());
+const REDIRECT_PATH_MAP = new Map(REDIRECT_RULES.map((rule) => [rule.source, rule.destination]));
 
-function clusterForSlug(slug) {
-  const tokens = new Set(wordsFromSlug(slug));
-  if (tokens.has('summary') || tokens.has('learning') || tokens.has('study') || tokens.has('research')) {
-    return 'ai-video-learning';
+function resolveRedirectPath(pathname) {
+  let current = normalizePath(pathname);
+  const seen = new Set();
+  while (REDIRECT_PATH_MAP.has(current) && !seen.has(current)) {
+    seen.add(current);
+    current = REDIRECT_PATH_MAP.get(current);
   }
-  if (tokens.has('video') || tokens.has('text') || tokens.has('speech') || tokens.has('language')) {
-    return 'video-to-text';
+  return current;
+}
+
+function blogsForTopic(topicId) {
+  return BLOG_DEFINITIONS.filter((blog) => blog.topicId === topicId);
+}
+
+function blogLabel(lang, topic, angle) {
+  const base = topicLabel(lang, topic);
+  const suffix = angleLabel(lang, angle);
+  if (lang === 'ar') return `${base} - ${suffix}`;
+  if (lang === 'fr') return `${base} - ${suffix}`;
+  return `${base} - ${toTitleCase(suffix)}`;
+}
+
+function pickRelatedBlogDefs(topicId, currentBlogSlug = null, limit = 4) {
+  const fromSameTopic = blogsForTopic(topicId).filter((blog) => blog.slug !== currentBlogSlug);
+  const picks = [...fromSameTopic];
+
+  if (picks.length < 3) {
+    const fromOtherTopics = BLOG_DEFINITIONS.filter(
+      (blog) => blog.topicId !== topicId && blog.slug !== currentBlogSlug
+    );
+    for (const blog of fromOtherTopics) {
+      if (picks.find((item) => item.slug === blog.slug)) continue;
+      picks.push(blog);
+      if (picks.length >= 3) break;
+    }
   }
-  return 'youtube-transcripts';
+
+  return picks.slice(0, Math.max(3, Math.min(limit, 5)));
 }
 
-function titleForH1(lang, routeType, keyword) {
-  if (routeType === 'cluster') return keyword;
-  if (lang === 'ar') return `${keyword} في خطوات عملية واضحة`;
-  if (lang === 'fr') return `${toTitleCase(keyword)} en etapes pratiques`;
-  return `${toTitleCase(keyword)} in Practical Steps`;
-}
-
-function makeLinkObjects(lang, routeType, slugs) {
-  return slugs.map((slug) => ({
-    slug,
-    path: routePath(routeType, lang, slug),
-    label: routeType === 'cluster' ? getClusterLabel(lang, slug) : keywordForSlug(lang, slug)
-  }));
-}
-function buildRouteInfo({
-  routeType,
-  lang,
-  slug,
-  useLegacyAlias = false
-}) {
+function buildRouteInfo({ routeType, lang, slug, requestedPath = null, useLegacyAlias = false }) {
   const safeLang = normalizeLang(lang);
-  const copy = COPY[safeLang] || COPY.en;
-  const keyword = routeType === 'cluster' ? getClusterLabel(safeLang, slug) : keywordForSlug(safeLang, slug);
-  const canonicalPath = routePath(routeType, safeLang, slug);
-  const requestedPath = routeDisplayPath(routeType, safeLang, slug, useLegacyAlias);
-  const relatedArticleSlugs = routeType === 'cluster'
-    ? BLOG_SLUGS.filter((item) => clusterForSlug(item) === slug).slice(0, 18)
-    : pickRelatedArticleSlugs(slug, routeType === 'blog' ? 8 : 6);
-  const relatedLandingSlugs = routeType === 'cluster'
-    ? LANDING_SLUGS.slice(0, 3)
-    : pickLandingSlugsForRoute(slug);
-  const faqItems = buildFaqItems(safeLang, keyword);
 
-  const structuredData = [buildFaqSchema(faqItems)];
+  let topic = null;
+  let blogDef = null;
+
+  if (routeType === 'landing') {
+    topic = TOPIC_BY_LANDING_SLUG.get(slug) || null;
+  } else if (routeType === 'cluster') {
+    topic = TOPIC_BY_CLUSTER_SLUG.get(slug) || null;
+  } else {
+    blogDef = BLOG_BY_SLUG.get(slug) || null;
+    topic = blogDef ? TOPIC_BY_ID.get(blogDef.topicId) || null : null;
+  }
+
+  if (!topic) return null;
+
+  const copy = COPY[safeLang] || COPY.en;
+  const keyword = keywordForRoute(safeLang, routeType, topic, blogDef);
+  const canonicalPath = routePath(routeType, safeLang, slug);
+  const primaryLandingPath = routePath('landing', safeLang, topic.landingSlug);
+  const primaryClusterPath = routePath('cluster', safeLang, topic.clusterSlug);
+  const relatedBlogDefs = pickRelatedBlogDefs(topic.id, blogDef?.slug || null, 4);
+  const faq = faqItems(safeLang, keyword);
+
+  const relatedArticles = relatedBlogDefs.map((blog) => {
+    const relatedTopic = TOPIC_BY_ID.get(blog.topicId);
+    return {
+      slug: blog.slug,
+      path: routePath('blog', safeLang, blog.slug),
+      label: blogLabel(safeLang, relatedTopic, blog.angle)
+    };
+  });
+
+  const relatedLandingPages = [
+    {
+      slug: topic.landingSlug,
+      path: primaryLandingPath,
+      label: topicLabel(safeLang, topic)
+    }
+  ];
+
+  const clusterLinks = [
+    {
+      slug: topic.clusterSlug,
+      path: primaryClusterPath,
+      label: `${topicLabel(safeLang, topic)} Hub`
+    }
+  ];
+
+  const structuredData = [buildFaqSchema(faq)];
   if (routeType === 'landing') {
     structuredData.push(getSoftwareApplicationSchema(canonicalPath));
   }
+
+  const h1 = routeType === 'cluster'
+    ? `${topicLabel(safeLang, topic)} SEO Hub`
+    : blogDef
+      ? blogLabel(safeLang, topic, blogDef.angle)
+      : topicLabel(safeLang, topic);
+
+  const metaTitle = routeType === 'cluster'
+    ? `${topicLabel(safeLang, topic)} Hub | ${SITE_NAME}`
+    : `${toTitleCase(keyword)} | ${SITE_NAME}`;
+
+  const metaDescription =
+    safeLang === 'ar'
+      ? `دليل ${keyword} مع شرح عملي وروابط داخلية تقودك مباشرة إلى الأداة وصفحات الموضوع المرتبطة.`
+      : safeLang === 'fr'
+        ? `Guide ${keyword} avec structure pratique, maillage interne et acces direct a l outil.`
+        : `Practical guide for ${keyword} with clear structure, internal linking, and direct access to the tool.`;
 
   return {
     type: routeType,
     lang: safeLang,
     slug,
     dir: safeLang === 'ar' ? 'rtl' : 'ltr',
-    title: metaTitleForRoute(safeLang, routeType, keyword),
-    metaDescription: metaDescriptionForRoute(safeLang, routeType, keyword),
-    h1: titleForH1(safeLang, routeType, keyword),
+    title: metaTitle,
+    metaDescription,
+    h1,
     keyword,
-    requestedPath,
+    requestedPath: requestedPath || canonicalPath,
     canonicalPath,
+    canonicalLandingPath: primaryLandingPath,
+    primaryClusterPath,
     pathForMeta: canonicalPath,
-    alternates: routeAlternates(routeType, slug),
+    alternates: makeAlternates(routeType, slug),
     publishedTime: PUBLISHED_AT_ISO,
     copy,
-    introParagraphs: introParagraphs(safeLang, keyword, routeType),
-    problemParagraphs: routeType === 'cluster' ? introParagraphs(safeLang, keyword, routeType) : problemParagraphs(safeLang),
-    howParagraphs: howItWorksParagraphs(safeLang, keyword),
+    introParagraphs: introParagraphs(safeLang, topicLabel(safeLang, topic), keyword, routeType),
+    problemParagraphs: problemParagraphs(safeLang),
+    howParagraphs: howParagraphs(safeLang, keyword),
     steps: methodSteps(safeLang),
     benefits: benefitItems(safeLang),
-    useCases: caseItems(safeLang),
-    detailedGuide: routeType === 'blog' ? buildLongGuideParagraphs(safeLang, keyword) : buildLongGuideParagraphs(safeLang, keyword).slice(0, 6),
-    faqItems,
-    relatedArticles: makeLinkObjects(safeLang, 'blog', relatedArticleSlugs),
-    relatedLandingPages: makeLinkObjects(safeLang, 'landing', relatedLandingSlugs),
-    clusterLinks: makeLinkObjects(safeLang, 'cluster', CLUSTER_SLUGS),
+    useCases: caseStudiesList(safeLang),
+    detailedGuide: detailedGuideParagraphs(safeLang, topicLabel(safeLang, topic), keyword),
+    faqItems: faq,
+    relatedArticles,
+    relatedLandingPages,
+    clusterLinks,
     toolPath: TOOL_PATH,
     languageHomePath: `/${safeLang}/`,
     structuredData,
     ogType: routeType === 'cluster' ? 'website' : 'article',
-    robots: 'index, follow'
+    robots: 'index, follow',
+    isLegacyAlias: useLegacyAlias,
+    topicId: topic.id
   };
 }
 
 export function getSeoRouteInfo(pathname) {
-  const path = normalizePath(pathname);
+  const originalPath = normalizePath(pathname);
+  const resolvedPath = resolveRedirectPath(originalPath);
+  const useLegacyAlias = resolvedPath !== originalPath;
 
-  const localizedBlogMatch = path.match(/^\/(en|ar|fr)\/blog\/([a-z0-9-]+)$/i);
+  const localizedBlogMatch = resolvedPath.match(/^\/(en|ar|fr)\/blog\/([a-z0-9-]+)$/i);
   if (localizedBlogMatch) {
     const lang = normalizeLang(localizedBlogMatch[1]);
     const slug = String(localizedBlogMatch[2] || '').toLowerCase();
     if (!BLOG_SLUG_SET.has(slug)) return null;
-    return buildRouteInfo({ routeType: 'blog', lang, slug });
+    return buildRouteInfo({ routeType: 'blog', lang, slug, requestedPath: originalPath, useLegacyAlias });
   }
 
-  const legacyBlogMatch = path.match(/^\/blog\/([a-z0-9-]+)$/i);
+  const legacyBlogMatch = resolvedPath.match(/^\/blog\/([a-z0-9-]+)$/i);
   if (legacyBlogMatch) {
     const slug = String(legacyBlogMatch[1] || '').toLowerCase();
     if (!BLOG_SLUG_SET.has(slug)) return null;
-    return buildRouteInfo({ routeType: 'blog', lang: DEFAULT_LANG, slug, useLegacyAlias: true });
+    return buildRouteInfo({ routeType: 'blog', lang: DEFAULT_LANG, slug, requestedPath: originalPath, useLegacyAlias: true });
   }
 
-  const localizedFlatMatch = path.match(/^\/(en|ar|fr)\/([a-z0-9-]+)$/i);
-  if (localizedFlatMatch) {
-    const lang = normalizeLang(localizedFlatMatch[1]);
-    const slug = String(localizedFlatMatch[2] || '').toLowerCase();
-    if (LANDING_SLUG_SET.has(slug)) {
-      return buildRouteInfo({ routeType: 'landing', lang, slug });
-    }
-    if (CLUSTER_SLUG_SET.has(slug)) {
-      return buildRouteInfo({ routeType: 'cluster', lang, slug });
-    }
+  const localizedClusterMatch = resolvedPath.match(/^\/(en|ar|fr)\/cluster\/([a-z0-9-]+)$/i);
+  if (localizedClusterMatch) {
+    const lang = normalizeLang(localizedClusterMatch[1]);
+    const slug = String(localizedClusterMatch[2] || '').toLowerCase();
+    if (!CLUSTER_SLUG_SET.has(slug)) return null;
+    return buildRouteInfo({ routeType: 'cluster', lang, slug, requestedPath: originalPath, useLegacyAlias });
   }
 
-  const legacyFlatMatch = path.match(/^\/([a-z0-9-]+)$/i);
-  if (legacyFlatMatch) {
-    const slug = String(legacyFlatMatch[1] || '').toLowerCase();
-    if (LANDING_SLUG_SET.has(slug)) {
-      return buildRouteInfo({ routeType: 'landing', lang: DEFAULT_LANG, slug, useLegacyAlias: true });
-    }
-    if (CLUSTER_SLUG_SET.has(slug)) {
-      return buildRouteInfo({ routeType: 'cluster', lang: DEFAULT_LANG, slug, useLegacyAlias: true });
-    }
+  const legacyClusterMatch = resolvedPath.match(/^\/cluster\/([a-z0-9-]+)$/i);
+  if (legacyClusterMatch) {
+    const slug = String(legacyClusterMatch[1] || '').toLowerCase();
+    if (!CLUSTER_SLUG_SET.has(slug)) return null;
+    return buildRouteInfo({ routeType: 'cluster', lang: DEFAULT_LANG, slug, requestedPath: originalPath, useLegacyAlias: true });
+  }
+
+  const localizedLandingMatch = resolvedPath.match(/^\/(en|ar|fr)\/([a-z0-9-]+)$/i);
+  if (localizedLandingMatch) {
+    const lang = normalizeLang(localizedLandingMatch[1]);
+    const slug = String(localizedLandingMatch[2] || '').toLowerCase();
+    if (!LANDING_SLUG_SET.has(slug)) return null;
+    return buildRouteInfo({ routeType: 'landing', lang, slug, requestedPath: originalPath, useLegacyAlias });
+  }
+
+  const legacyLandingMatch = resolvedPath.match(/^\/([a-z0-9-]+)$/i);
+  if (legacyLandingMatch) {
+    const slug = String(legacyLandingMatch[1] || '').toLowerCase();
+    if (!LANDING_SLUG_SET.has(slug)) return null;
+    return buildRouteInfo({ routeType: 'landing', lang: DEFAULT_LANG, slug, requestedPath: originalPath, useLegacyAlias: true });
   }
 
   return null;
@@ -936,29 +841,29 @@ export function getBlogRouteInfo(pathname) {
 }
 
 export function getAllCanonicalSeoPaths() {
-  const blogPaths = SUPPORTED_LANGS.flatMap((lang) => BLOG_SLUGS.map((slug) => routePath('blog', lang, slug)));
   const landingPaths = SUPPORTED_LANGS.flatMap((lang) => LANDING_SLUGS.map((slug) => routePath('landing', lang, slug)));
+  const blogPaths = SUPPORTED_LANGS.flatMap((lang) => BLOG_SLUGS.map((slug) => routePath('blog', lang, slug)));
   const clusterPaths = SUPPORTED_LANGS.flatMap((lang) => CLUSTER_SLUGS.map((slug) => routePath('cluster', lang, slug)));
-  return [...blogPaths, ...landingPaths, ...clusterPaths];
+  return [...landingPaths, ...blogPaths, ...clusterPaths];
 }
 
 export function getSitemapEntries() {
   const entries = [];
 
   SUPPORTED_LANGS.forEach((lang) => {
-    BLOG_SLUGS.forEach((slug) => {
-      entries.push({
-        path: routePath('blog', lang, slug),
-        changefreq: 'weekly',
-        priority: '0.78'
-      });
-    });
-
     LANDING_SLUGS.forEach((slug) => {
       entries.push({
         path: routePath('landing', lang, slug),
         changefreq: 'weekly',
-        priority: '0.86'
+        priority: '0.9'
+      });
+    });
+
+    BLOG_SLUGS.forEach((slug) => {
+      entries.push({
+        path: routePath('blog', lang, slug),
+        changefreq: 'weekly',
+        priority: '0.8'
       });
     });
 
@@ -966,7 +871,7 @@ export function getSitemapEntries() {
       entries.push({
         path: routePath('cluster', lang, slug),
         changefreq: 'weekly',
-        priority: '0.82'
+        priority: '0.75'
       });
     });
   });
@@ -981,7 +886,9 @@ export const SEO_CONFIG = Object.freeze({
   DEFAULT_LANG,
   SUPPORTED_LANGS,
   PUBLISHED_AT_ISO,
+  TOPICS,
   LANDING_SLUGS,
   CLUSTER_SLUGS,
-  BLOG_SLUGS
+  BLOG_SLUGS,
+  BLOG_COUNT_PER_TOPIC: 3
 });

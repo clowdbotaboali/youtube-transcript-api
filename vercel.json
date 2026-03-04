@@ -42,6 +42,22 @@
       "destination": "/"
     },
     {
+      "source": "/en/cluster/:slug",
+      "destination": "/"
+    },
+    {
+      "source": "/ar/cluster/:slug",
+      "destination": "/"
+    },
+    {
+      "source": "/fr/cluster/:slug",
+      "destination": "/"
+    },
+    {
+      "source": "/cluster/:slug",
+      "destination": "/"
+    },
+    {
       "source": "/en/:slug",
       "destination": "/"
     },
@@ -51,58 +67,6 @@
     },
     {
       "source": "/fr/:slug",
-      "destination": "/"
-    },
-    {
-      "source": "/youtube-transcript-generator",
-      "destination": "/"
-    },
-    {
-      "source": "/youtube-video-to-text",
-      "destination": "/"
-    },
-    {
-      "source": "/extract-youtube-transcript",
-      "destination": "/"
-    },
-    {
-      "source": "/download-youtube-transcript",
-      "destination": "/"
-    },
-    {
-      "source": "/youtube-transcript-api",
-      "destination": "/"
-    },
-    {
-      "source": "/video-to-text-ai",
-      "destination": "/"
-    },
-    {
-      "source": "/youtube-caption-extractor",
-      "destination": "/"
-    },
-    {
-      "source": "/youtube-subtitle-to-text",
-      "destination": "/"
-    },
-    {
-      "source": "/youtube-transcript-free",
-      "destination": "/"
-    },
-    {
-      "source": "/youtube-video-notes",
-      "destination": "/"
-    },
-    {
-      "source": "/youtube-transcripts",
-      "destination": "/"
-    },
-    {
-      "source": "/video-to-text",
-      "destination": "/"
-    },
-    {
-      "source": "/ai-video-learning",
       "destination": "/"
     },
     {
@@ -147,12 +111,1709 @@
     {
       "source": "/api/(.*)",
       "headers": [
-        { "key": "X-Frame-Options", "value": "DENY" },
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "Referrer-Policy", "value": "no-referrer" },
-        { "key": "Permissions-Policy", "value": "geolocation=(), camera=(), microphone=()" },
-        { "key": "X-Robots-Tag", "value": "noindex, nofollow" }
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "no-referrer"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "geolocation=(), camera=(), microphone=()"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
       ]
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/en/youtube-transcript-tool-online",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/en/blog/youtube-transcript-tool-online",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/ar/youtube-transcript-tool-online",
+      "destination": "/ar/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/ar/blog/youtube-transcript-tool-online",
+      "destination": "/ar/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/fr/youtube-transcript-tool-online",
+      "destination": "/fr/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/fr/blog/youtube-transcript-tool-online",
+      "destination": "/fr/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/youtube-transcript-tool-online",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-transcript-tool-online",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/en/get-youtube-video-transcript",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/en/blog/get-youtube-video-transcript",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/ar/get-youtube-video-transcript",
+      "destination": "/ar/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/ar/blog/get-youtube-video-transcript",
+      "destination": "/ar/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/fr/get-youtube-video-transcript",
+      "destination": "/fr/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/fr/blog/get-youtube-video-transcript",
+      "destination": "/fr/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/get-youtube-video-transcript",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/blog/get-youtube-video-transcript",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/en/youtube-video-to-transcript",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/en/blog/youtube-video-to-transcript",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/ar/youtube-video-to-transcript",
+      "destination": "/ar/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/ar/blog/youtube-video-to-transcript",
+      "destination": "/ar/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/fr/youtube-video-to-transcript",
+      "destination": "/fr/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/fr/blog/youtube-video-to-transcript",
+      "destination": "/fr/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/youtube-video-to-transcript",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-video-to-transcript",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/en/copy-youtube-transcript",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/en/blog/copy-youtube-transcript",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/ar/copy-youtube-transcript",
+      "destination": "/ar/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/ar/blog/copy-youtube-transcript",
+      "destination": "/ar/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/fr/copy-youtube-transcript",
+      "destination": "/fr/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/fr/blog/copy-youtube-transcript",
+      "destination": "/fr/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/copy-youtube-transcript",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/blog/copy-youtube-transcript",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/en/youtube-transcript-copy-paste",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/en/blog/youtube-transcript-copy-paste",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/ar/youtube-transcript-copy-paste",
+      "destination": "/ar/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/ar/blog/youtube-transcript-copy-paste",
+      "destination": "/ar/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/fr/youtube-transcript-copy-paste",
+      "destination": "/fr/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/fr/blog/youtube-transcript-copy-paste",
+      "destination": "/fr/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/youtube-transcript-copy-paste",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-transcript-copy-paste",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/en/youtube-transcript-free",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/en/blog/youtube-transcript-free",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/ar/youtube-transcript-free",
+      "destination": "/ar/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/ar/blog/youtube-transcript-free",
+      "destination": "/ar/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/fr/youtube-transcript-free",
+      "destination": "/fr/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/fr/blog/youtube-transcript-free",
+      "destination": "/fr/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/youtube-transcript-free",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-transcript-free",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/en/download-youtube-transcript",
+      "destination": "/en/extract-youtube-transcript",
+      "permanent": true
+    },
+    {
+      "source": "/en/blog/download-youtube-transcript",
+      "destination": "/en/extract-youtube-transcript",
+      "permanent": true
+    },
+    {
+      "source": "/ar/download-youtube-transcript",
+      "destination": "/ar/extract-youtube-transcript",
+      "permanent": true
+    },
+    {
+      "source": "/ar/blog/download-youtube-transcript",
+      "destination": "/ar/extract-youtube-transcript",
+      "permanent": true
+    },
+    {
+      "source": "/fr/download-youtube-transcript",
+      "destination": "/fr/extract-youtube-transcript",
+      "permanent": true
+    },
+    {
+      "source": "/fr/blog/download-youtube-transcript",
+      "destination": "/fr/extract-youtube-transcript",
+      "permanent": true
+    },
+    {
+      "source": "/download-youtube-transcript",
+      "destination": "/en/extract-youtube-transcript",
+      "permanent": true
+    },
+    {
+      "source": "/blog/download-youtube-transcript",
+      "destination": "/en/extract-youtube-transcript",
+      "permanent": true
+    },
+    {
+      "source": "/en/youtube-transcript-downloader",
+      "destination": "/en/extract-youtube-transcript",
+      "permanent": true
+    },
+    {
+      "source": "/en/blog/youtube-transcript-downloader",
+      "destination": "/en/extract-youtube-transcript",
+      "permanent": true
+    },
+    {
+      "source": "/ar/youtube-transcript-downloader",
+      "destination": "/ar/extract-youtube-transcript",
+      "permanent": true
+    },
+    {
+      "source": "/ar/blog/youtube-transcript-downloader",
+      "destination": "/ar/extract-youtube-transcript",
+      "permanent": true
+    },
+    {
+      "source": "/fr/youtube-transcript-downloader",
+      "destination": "/fr/extract-youtube-transcript",
+      "permanent": true
+    },
+    {
+      "source": "/fr/blog/youtube-transcript-downloader",
+      "destination": "/fr/extract-youtube-transcript",
+      "permanent": true
+    },
+    {
+      "source": "/youtube-transcript-downloader",
+      "destination": "/en/extract-youtube-transcript",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-transcript-downloader",
+      "destination": "/en/extract-youtube-transcript",
+      "permanent": true
+    },
+    {
+      "source": "/en/extract-youtube-captions",
+      "destination": "/en/extract-youtube-transcript",
+      "permanent": true
+    },
+    {
+      "source": "/en/blog/extract-youtube-captions",
+      "destination": "/en/extract-youtube-transcript",
+      "permanent": true
+    },
+    {
+      "source": "/ar/extract-youtube-captions",
+      "destination": "/ar/extract-youtube-transcript",
+      "permanent": true
+    },
+    {
+      "source": "/ar/blog/extract-youtube-captions",
+      "destination": "/ar/extract-youtube-transcript",
+      "permanent": true
+    },
+    {
+      "source": "/fr/extract-youtube-captions",
+      "destination": "/fr/extract-youtube-transcript",
+      "permanent": true
+    },
+    {
+      "source": "/fr/blog/extract-youtube-captions",
+      "destination": "/fr/extract-youtube-transcript",
+      "permanent": true
+    },
+    {
+      "source": "/extract-youtube-captions",
+      "destination": "/en/extract-youtube-transcript",
+      "permanent": true
+    },
+    {
+      "source": "/blog/extract-youtube-captions",
+      "destination": "/en/extract-youtube-transcript",
+      "permanent": true
+    },
+    {
+      "source": "/en/download-youtube-captions-text",
+      "destination": "/en/extract-youtube-transcript",
+      "permanent": true
+    },
+    {
+      "source": "/en/blog/download-youtube-captions-text",
+      "destination": "/en/extract-youtube-transcript",
+      "permanent": true
+    },
+    {
+      "source": "/ar/download-youtube-captions-text",
+      "destination": "/ar/extract-youtube-transcript",
+      "permanent": true
+    },
+    {
+      "source": "/ar/blog/download-youtube-captions-text",
+      "destination": "/ar/extract-youtube-transcript",
+      "permanent": true
+    },
+    {
+      "source": "/fr/download-youtube-captions-text",
+      "destination": "/fr/extract-youtube-transcript",
+      "permanent": true
+    },
+    {
+      "source": "/fr/blog/download-youtube-captions-text",
+      "destination": "/fr/extract-youtube-transcript",
+      "permanent": true
+    },
+    {
+      "source": "/download-youtube-captions-text",
+      "destination": "/en/extract-youtube-transcript",
+      "permanent": true
+    },
+    {
+      "source": "/blog/download-youtube-captions-text",
+      "destination": "/en/extract-youtube-transcript",
+      "permanent": true
+    },
+    {
+      "source": "/en/youtube-caption-extractor",
+      "destination": "/en/extract-youtube-transcript",
+      "permanent": true
+    },
+    {
+      "source": "/en/blog/youtube-caption-extractor",
+      "destination": "/en/extract-youtube-transcript",
+      "permanent": true
+    },
+    {
+      "source": "/ar/youtube-caption-extractor",
+      "destination": "/ar/extract-youtube-transcript",
+      "permanent": true
+    },
+    {
+      "source": "/ar/blog/youtube-caption-extractor",
+      "destination": "/ar/extract-youtube-transcript",
+      "permanent": true
+    },
+    {
+      "source": "/fr/youtube-caption-extractor",
+      "destination": "/fr/extract-youtube-transcript",
+      "permanent": true
+    },
+    {
+      "source": "/fr/blog/youtube-caption-extractor",
+      "destination": "/fr/extract-youtube-transcript",
+      "permanent": true
+    },
+    {
+      "source": "/youtube-caption-extractor",
+      "destination": "/en/extract-youtube-transcript",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-caption-extractor",
+      "destination": "/en/extract-youtube-transcript",
+      "permanent": true
+    },
+    {
+      "source": "/en/youtube-video-caption-extractor",
+      "destination": "/en/extract-youtube-transcript",
+      "permanent": true
+    },
+    {
+      "source": "/en/blog/youtube-video-caption-extractor",
+      "destination": "/en/extract-youtube-transcript",
+      "permanent": true
+    },
+    {
+      "source": "/ar/youtube-video-caption-extractor",
+      "destination": "/ar/extract-youtube-transcript",
+      "permanent": true
+    },
+    {
+      "source": "/ar/blog/youtube-video-caption-extractor",
+      "destination": "/ar/extract-youtube-transcript",
+      "permanent": true
+    },
+    {
+      "source": "/fr/youtube-video-caption-extractor",
+      "destination": "/fr/extract-youtube-transcript",
+      "permanent": true
+    },
+    {
+      "source": "/fr/blog/youtube-video-caption-extractor",
+      "destination": "/fr/extract-youtube-transcript",
+      "permanent": true
+    },
+    {
+      "source": "/youtube-video-caption-extractor",
+      "destination": "/en/extract-youtube-transcript",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-video-caption-extractor",
+      "destination": "/en/extract-youtube-transcript",
+      "permanent": true
+    },
+    {
+      "source": "/en/youtube-subtitle-to-text",
+      "destination": "/en/youtube-subtitles-extractor",
+      "permanent": true
+    },
+    {
+      "source": "/en/blog/youtube-subtitle-to-text",
+      "destination": "/en/youtube-subtitles-extractor",
+      "permanent": true
+    },
+    {
+      "source": "/ar/youtube-subtitle-to-text",
+      "destination": "/ar/youtube-subtitles-extractor",
+      "permanent": true
+    },
+    {
+      "source": "/ar/blog/youtube-subtitle-to-text",
+      "destination": "/ar/youtube-subtitles-extractor",
+      "permanent": true
+    },
+    {
+      "source": "/fr/youtube-subtitle-to-text",
+      "destination": "/fr/youtube-subtitles-extractor",
+      "permanent": true
+    },
+    {
+      "source": "/fr/blog/youtube-subtitle-to-text",
+      "destination": "/fr/youtube-subtitles-extractor",
+      "permanent": true
+    },
+    {
+      "source": "/youtube-subtitle-to-text",
+      "destination": "/en/youtube-subtitles-extractor",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-subtitle-to-text",
+      "destination": "/en/youtube-subtitles-extractor",
+      "permanent": true
+    },
+    {
+      "source": "/en/youtube-closed-captions-to-text",
+      "destination": "/en/youtube-subtitles-extractor",
+      "permanent": true
+    },
+    {
+      "source": "/en/blog/youtube-closed-captions-to-text",
+      "destination": "/en/youtube-subtitles-extractor",
+      "permanent": true
+    },
+    {
+      "source": "/ar/youtube-closed-captions-to-text",
+      "destination": "/ar/youtube-subtitles-extractor",
+      "permanent": true
+    },
+    {
+      "source": "/ar/blog/youtube-closed-captions-to-text",
+      "destination": "/ar/youtube-subtitles-extractor",
+      "permanent": true
+    },
+    {
+      "source": "/fr/youtube-closed-captions-to-text",
+      "destination": "/fr/youtube-subtitles-extractor",
+      "permanent": true
+    },
+    {
+      "source": "/fr/blog/youtube-closed-captions-to-text",
+      "destination": "/fr/youtube-subtitles-extractor",
+      "permanent": true
+    },
+    {
+      "source": "/youtube-closed-captions-to-text",
+      "destination": "/en/youtube-subtitles-extractor",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-closed-captions-to-text",
+      "destination": "/en/youtube-subtitles-extractor",
+      "permanent": true
+    },
+    {
+      "source": "/en/youtube-caption-text-generator",
+      "destination": "/en/youtube-subtitles-extractor",
+      "permanent": true
+    },
+    {
+      "source": "/en/blog/youtube-caption-text-generator",
+      "destination": "/en/youtube-subtitles-extractor",
+      "permanent": true
+    },
+    {
+      "source": "/ar/youtube-caption-text-generator",
+      "destination": "/ar/youtube-subtitles-extractor",
+      "permanent": true
+    },
+    {
+      "source": "/ar/blog/youtube-caption-text-generator",
+      "destination": "/ar/youtube-subtitles-extractor",
+      "permanent": true
+    },
+    {
+      "source": "/fr/youtube-caption-text-generator",
+      "destination": "/fr/youtube-subtitles-extractor",
+      "permanent": true
+    },
+    {
+      "source": "/fr/blog/youtube-caption-text-generator",
+      "destination": "/fr/youtube-subtitles-extractor",
+      "permanent": true
+    },
+    {
+      "source": "/youtube-caption-text-generator",
+      "destination": "/en/youtube-subtitles-extractor",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-caption-text-generator",
+      "destination": "/en/youtube-subtitles-extractor",
+      "permanent": true
+    },
+    {
+      "source": "/en/youtube-subtitles-to-article",
+      "destination": "/en/youtube-subtitles-extractor",
+      "permanent": true
+    },
+    {
+      "source": "/en/blog/youtube-subtitles-to-article",
+      "destination": "/en/youtube-subtitles-extractor",
+      "permanent": true
+    },
+    {
+      "source": "/ar/youtube-subtitles-to-article",
+      "destination": "/ar/youtube-subtitles-extractor",
+      "permanent": true
+    },
+    {
+      "source": "/ar/blog/youtube-subtitles-to-article",
+      "destination": "/ar/youtube-subtitles-extractor",
+      "permanent": true
+    },
+    {
+      "source": "/fr/youtube-subtitles-to-article",
+      "destination": "/fr/youtube-subtitles-extractor",
+      "permanent": true
+    },
+    {
+      "source": "/fr/blog/youtube-subtitles-to-article",
+      "destination": "/fr/youtube-subtitles-extractor",
+      "permanent": true
+    },
+    {
+      "source": "/youtube-subtitles-to-article",
+      "destination": "/en/youtube-subtitles-extractor",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-subtitles-to-article",
+      "destination": "/en/youtube-subtitles-extractor",
+      "permanent": true
+    },
+    {
+      "source": "/en/youtube-video-to-text",
+      "destination": "/en/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/en/blog/youtube-video-to-text",
+      "destination": "/en/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/ar/youtube-video-to-text",
+      "destination": "/ar/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/ar/blog/youtube-video-to-text",
+      "destination": "/ar/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/fr/youtube-video-to-text",
+      "destination": "/fr/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/fr/blog/youtube-video-to-text",
+      "destination": "/fr/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/youtube-video-to-text",
+      "destination": "/en/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-video-to-text",
+      "destination": "/en/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/en/youtube-transcript-to-text",
+      "destination": "/en/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/en/blog/youtube-transcript-to-text",
+      "destination": "/en/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/ar/youtube-transcript-to-text",
+      "destination": "/ar/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/ar/blog/youtube-transcript-to-text",
+      "destination": "/ar/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/fr/youtube-transcript-to-text",
+      "destination": "/fr/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/fr/blog/youtube-transcript-to-text",
+      "destination": "/fr/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/youtube-transcript-to-text",
+      "destination": "/en/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-transcript-to-text",
+      "destination": "/en/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/en/youtube-video-text-extraction",
+      "destination": "/en/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/en/blog/youtube-video-text-extraction",
+      "destination": "/en/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/ar/youtube-video-text-extraction",
+      "destination": "/ar/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/ar/blog/youtube-video-text-extraction",
+      "destination": "/ar/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/fr/youtube-video-text-extraction",
+      "destination": "/fr/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/fr/blog/youtube-video-text-extraction",
+      "destination": "/fr/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/youtube-video-text-extraction",
+      "destination": "/en/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-video-text-extraction",
+      "destination": "/en/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/en/convert-youtube-speech-to-text",
+      "destination": "/en/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/en/blog/convert-youtube-speech-to-text",
+      "destination": "/en/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/ar/convert-youtube-speech-to-text",
+      "destination": "/ar/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/ar/blog/convert-youtube-speech-to-text",
+      "destination": "/ar/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/fr/convert-youtube-speech-to-text",
+      "destination": "/fr/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/fr/blog/convert-youtube-speech-to-text",
+      "destination": "/fr/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/convert-youtube-speech-to-text",
+      "destination": "/en/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/blog/convert-youtube-speech-to-text",
+      "destination": "/en/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/en/youtube-audio-to-text-online",
+      "destination": "/en/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/en/blog/youtube-audio-to-text-online",
+      "destination": "/en/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/ar/youtube-audio-to-text-online",
+      "destination": "/ar/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/ar/blog/youtube-audio-to-text-online",
+      "destination": "/ar/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/fr/youtube-audio-to-text-online",
+      "destination": "/fr/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/fr/blog/youtube-audio-to-text-online",
+      "destination": "/fr/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/youtube-audio-to-text-online",
+      "destination": "/en/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-audio-to-text-online",
+      "destination": "/en/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/en/video-to-text-ai",
+      "destination": "/en/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/en/blog/video-to-text-ai",
+      "destination": "/en/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/ar/video-to-text-ai",
+      "destination": "/ar/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/ar/blog/video-to-text-ai",
+      "destination": "/ar/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/fr/video-to-text-ai",
+      "destination": "/fr/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/fr/blog/video-to-text-ai",
+      "destination": "/fr/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/video-to-text-ai",
+      "destination": "/en/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/blog/video-to-text-ai",
+      "destination": "/en/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/en/video-to-text-arabic",
+      "destination": "/en/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/en/blog/video-to-text-arabic",
+      "destination": "/en/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/ar/video-to-text-arabic",
+      "destination": "/ar/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/ar/blog/video-to-text-arabic",
+      "destination": "/ar/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/fr/video-to-text-arabic",
+      "destination": "/fr/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/fr/blog/video-to-text-arabic",
+      "destination": "/fr/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/video-to-text-arabic",
+      "destination": "/en/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/blog/video-to-text-arabic",
+      "destination": "/en/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/en/video-to-text-french",
+      "destination": "/en/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/en/blog/video-to-text-french",
+      "destination": "/en/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/ar/video-to-text-french",
+      "destination": "/ar/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/ar/blog/video-to-text-french",
+      "destination": "/ar/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/fr/video-to-text-french",
+      "destination": "/fr/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/fr/blog/video-to-text-french",
+      "destination": "/fr/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/video-to-text-french",
+      "destination": "/en/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/blog/video-to-text-french",
+      "destination": "/en/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/en/video-to-text-spanish",
+      "destination": "/en/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/en/blog/video-to-text-spanish",
+      "destination": "/en/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/ar/video-to-text-spanish",
+      "destination": "/ar/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/ar/blog/video-to-text-spanish",
+      "destination": "/ar/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/fr/video-to-text-spanish",
+      "destination": "/fr/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/fr/blog/video-to-text-spanish",
+      "destination": "/fr/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/video-to-text-spanish",
+      "destination": "/en/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/blog/video-to-text-spanish",
+      "destination": "/en/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/en/video-to-text-german",
+      "destination": "/en/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/en/blog/video-to-text-german",
+      "destination": "/en/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/ar/video-to-text-german",
+      "destination": "/ar/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/ar/blog/video-to-text-german",
+      "destination": "/ar/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/fr/video-to-text-german",
+      "destination": "/fr/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/fr/blog/video-to-text-german",
+      "destination": "/fr/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/video-to-text-german",
+      "destination": "/en/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/blog/video-to-text-german",
+      "destination": "/en/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/en/video-to-text-italian",
+      "destination": "/en/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/en/blog/video-to-text-italian",
+      "destination": "/en/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/ar/video-to-text-italian",
+      "destination": "/ar/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/ar/blog/video-to-text-italian",
+      "destination": "/ar/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/fr/video-to-text-italian",
+      "destination": "/fr/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/fr/blog/video-to-text-italian",
+      "destination": "/fr/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/video-to-text-italian",
+      "destination": "/en/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/blog/video-to-text-italian",
+      "destination": "/en/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/en/video-to-text-portuguese",
+      "destination": "/en/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/en/blog/video-to-text-portuguese",
+      "destination": "/en/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/ar/video-to-text-portuguese",
+      "destination": "/ar/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/ar/blog/video-to-text-portuguese",
+      "destination": "/ar/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/fr/video-to-text-portuguese",
+      "destination": "/fr/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/fr/blog/video-to-text-portuguese",
+      "destination": "/fr/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/video-to-text-portuguese",
+      "destination": "/en/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/blog/video-to-text-portuguese",
+      "destination": "/en/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/en/youtube-transcript-for-notes",
+      "destination": "/en/youtube-video-notes",
+      "permanent": true
+    },
+    {
+      "source": "/en/blog/youtube-transcript-for-notes",
+      "destination": "/en/youtube-video-notes",
+      "permanent": true
+    },
+    {
+      "source": "/ar/youtube-transcript-for-notes",
+      "destination": "/ar/youtube-video-notes",
+      "permanent": true
+    },
+    {
+      "source": "/ar/blog/youtube-transcript-for-notes",
+      "destination": "/ar/youtube-video-notes",
+      "permanent": true
+    },
+    {
+      "source": "/fr/youtube-transcript-for-notes",
+      "destination": "/fr/youtube-video-notes",
+      "permanent": true
+    },
+    {
+      "source": "/fr/blog/youtube-transcript-for-notes",
+      "destination": "/fr/youtube-video-notes",
+      "permanent": true
+    },
+    {
+      "source": "/youtube-transcript-for-notes",
+      "destination": "/en/youtube-video-notes",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-transcript-for-notes",
+      "destination": "/en/youtube-video-notes",
+      "permanent": true
+    },
+    {
+      "source": "/en/youtube-transcript-for-study",
+      "destination": "/en/youtube-video-notes",
+      "permanent": true
+    },
+    {
+      "source": "/en/blog/youtube-transcript-for-study",
+      "destination": "/en/youtube-video-notes",
+      "permanent": true
+    },
+    {
+      "source": "/ar/youtube-transcript-for-study",
+      "destination": "/ar/youtube-video-notes",
+      "permanent": true
+    },
+    {
+      "source": "/ar/blog/youtube-transcript-for-study",
+      "destination": "/ar/youtube-video-notes",
+      "permanent": true
+    },
+    {
+      "source": "/fr/youtube-transcript-for-study",
+      "destination": "/fr/youtube-video-notes",
+      "permanent": true
+    },
+    {
+      "source": "/fr/blog/youtube-transcript-for-study",
+      "destination": "/fr/youtube-video-notes",
+      "permanent": true
+    },
+    {
+      "source": "/youtube-transcript-for-study",
+      "destination": "/en/youtube-video-notes",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-transcript-for-study",
+      "destination": "/en/youtube-video-notes",
+      "permanent": true
+    },
+    {
+      "source": "/en/youtube-transcript-for-students",
+      "destination": "/en/youtube-video-notes",
+      "permanent": true
+    },
+    {
+      "source": "/en/blog/youtube-transcript-for-students",
+      "destination": "/en/youtube-video-notes",
+      "permanent": true
+    },
+    {
+      "source": "/ar/youtube-transcript-for-students",
+      "destination": "/ar/youtube-video-notes",
+      "permanent": true
+    },
+    {
+      "source": "/ar/blog/youtube-transcript-for-students",
+      "destination": "/ar/youtube-video-notes",
+      "permanent": true
+    },
+    {
+      "source": "/fr/youtube-transcript-for-students",
+      "destination": "/fr/youtube-video-notes",
+      "permanent": true
+    },
+    {
+      "source": "/fr/blog/youtube-transcript-for-students",
+      "destination": "/fr/youtube-video-notes",
+      "permanent": true
+    },
+    {
+      "source": "/youtube-transcript-for-students",
+      "destination": "/en/youtube-video-notes",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-transcript-for-students",
+      "destination": "/en/youtube-video-notes",
+      "permanent": true
+    },
+    {
+      "source": "/en/summarize-youtube-transcript",
+      "destination": "/en/youtube-transcript-ai-summary",
+      "permanent": true
+    },
+    {
+      "source": "/en/blog/summarize-youtube-transcript",
+      "destination": "/en/youtube-transcript-ai-summary",
+      "permanent": true
+    },
+    {
+      "source": "/ar/summarize-youtube-transcript",
+      "destination": "/ar/youtube-transcript-ai-summary",
+      "permanent": true
+    },
+    {
+      "source": "/ar/blog/summarize-youtube-transcript",
+      "destination": "/ar/youtube-transcript-ai-summary",
+      "permanent": true
+    },
+    {
+      "source": "/fr/summarize-youtube-transcript",
+      "destination": "/fr/youtube-transcript-ai-summary",
+      "permanent": true
+    },
+    {
+      "source": "/fr/blog/summarize-youtube-transcript",
+      "destination": "/fr/youtube-transcript-ai-summary",
+      "permanent": true
+    },
+    {
+      "source": "/summarize-youtube-transcript",
+      "destination": "/en/youtube-transcript-ai-summary",
+      "permanent": true
+    },
+    {
+      "source": "/blog/summarize-youtube-transcript",
+      "destination": "/en/youtube-transcript-ai-summary",
+      "permanent": true
+    },
+    {
+      "source": "/en/youtube-video-summary-generator",
+      "destination": "/en/youtube-transcript-ai-summary",
+      "permanent": true
+    },
+    {
+      "source": "/en/blog/youtube-video-summary-generator",
+      "destination": "/en/youtube-transcript-ai-summary",
+      "permanent": true
+    },
+    {
+      "source": "/ar/youtube-video-summary-generator",
+      "destination": "/ar/youtube-transcript-ai-summary",
+      "permanent": true
+    },
+    {
+      "source": "/ar/blog/youtube-video-summary-generator",
+      "destination": "/ar/youtube-transcript-ai-summary",
+      "permanent": true
+    },
+    {
+      "source": "/fr/youtube-video-summary-generator",
+      "destination": "/fr/youtube-transcript-ai-summary",
+      "permanent": true
+    },
+    {
+      "source": "/fr/blog/youtube-video-summary-generator",
+      "destination": "/fr/youtube-transcript-ai-summary",
+      "permanent": true
+    },
+    {
+      "source": "/youtube-video-summary-generator",
+      "destination": "/en/youtube-transcript-ai-summary",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-video-summary-generator",
+      "destination": "/en/youtube-transcript-ai-summary",
+      "permanent": true
+    },
+    {
+      "source": "/en/youtube-content-repurposing-text",
+      "destination": "/en/youtube-transcript-for-seo",
+      "permanent": true
+    },
+    {
+      "source": "/en/blog/youtube-content-repurposing-text",
+      "destination": "/en/youtube-transcript-for-seo",
+      "permanent": true
+    },
+    {
+      "source": "/ar/youtube-content-repurposing-text",
+      "destination": "/ar/youtube-transcript-for-seo",
+      "permanent": true
+    },
+    {
+      "source": "/ar/blog/youtube-content-repurposing-text",
+      "destination": "/ar/youtube-transcript-for-seo",
+      "permanent": true
+    },
+    {
+      "source": "/fr/youtube-content-repurposing-text",
+      "destination": "/fr/youtube-transcript-for-seo",
+      "permanent": true
+    },
+    {
+      "source": "/fr/blog/youtube-content-repurposing-text",
+      "destination": "/fr/youtube-transcript-for-seo",
+      "permanent": true
+    },
+    {
+      "source": "/youtube-content-repurposing-text",
+      "destination": "/en/youtube-transcript-for-seo",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-content-repurposing-text",
+      "destination": "/en/youtube-transcript-for-seo",
+      "permanent": true
+    },
+    {
+      "source": "/en/youtube-transcript-for-blogging",
+      "destination": "/en/youtube-transcript-for-seo",
+      "permanent": true
+    },
+    {
+      "source": "/en/blog/youtube-transcript-for-blogging",
+      "destination": "/en/youtube-transcript-for-seo",
+      "permanent": true
+    },
+    {
+      "source": "/ar/youtube-transcript-for-blogging",
+      "destination": "/ar/youtube-transcript-for-seo",
+      "permanent": true
+    },
+    {
+      "source": "/ar/blog/youtube-transcript-for-blogging",
+      "destination": "/ar/youtube-transcript-for-seo",
+      "permanent": true
+    },
+    {
+      "source": "/fr/youtube-transcript-for-blogging",
+      "destination": "/fr/youtube-transcript-for-seo",
+      "permanent": true
+    },
+    {
+      "source": "/fr/blog/youtube-transcript-for-blogging",
+      "destination": "/fr/youtube-transcript-for-seo",
+      "permanent": true
+    },
+    {
+      "source": "/youtube-transcript-for-blogging",
+      "destination": "/en/youtube-transcript-for-seo",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-transcript-for-blogging",
+      "destination": "/en/youtube-transcript-for-seo",
+      "permanent": true
+    },
+    {
+      "source": "/en/youtube-transcript-for-marketers",
+      "destination": "/en/youtube-transcript-for-seo",
+      "permanent": true
+    },
+    {
+      "source": "/en/blog/youtube-transcript-for-marketers",
+      "destination": "/en/youtube-transcript-for-seo",
+      "permanent": true
+    },
+    {
+      "source": "/ar/youtube-transcript-for-marketers",
+      "destination": "/ar/youtube-transcript-for-seo",
+      "permanent": true
+    },
+    {
+      "source": "/ar/blog/youtube-transcript-for-marketers",
+      "destination": "/ar/youtube-transcript-for-seo",
+      "permanent": true
+    },
+    {
+      "source": "/fr/youtube-transcript-for-marketers",
+      "destination": "/fr/youtube-transcript-for-seo",
+      "permanent": true
+    },
+    {
+      "source": "/fr/blog/youtube-transcript-for-marketers",
+      "destination": "/fr/youtube-transcript-for-seo",
+      "permanent": true
+    },
+    {
+      "source": "/youtube-transcript-for-marketers",
+      "destination": "/en/youtube-transcript-for-seo",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-transcript-for-marketers",
+      "destination": "/en/youtube-transcript-for-seo",
+      "permanent": true
+    },
+    {
+      "source": "/en/blog/how-to-get-transcript-from-vimeo",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/en/how-to-get-transcript-from-vimeo",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/ar/blog/how-to-get-transcript-from-vimeo",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/ar/how-to-get-transcript-from-vimeo",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/fr/blog/how-to-get-transcript-from-vimeo",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/fr/how-to-get-transcript-from-vimeo",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/blog/how-to-get-transcript-from-vimeo",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/how-to-get-transcript-from-vimeo",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/en/blog/how-to-get-transcript-from-ted",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/en/how-to-get-transcript-from-ted",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/ar/blog/how-to-get-transcript-from-ted",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/ar/how-to-get-transcript-from-ted",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/fr/blog/how-to-get-transcript-from-ted",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/fr/how-to-get-transcript-from-ted",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/blog/how-to-get-transcript-from-ted",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/how-to-get-transcript-from-ted",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/en/blog/how-to-get-transcript-from-udemy",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/en/how-to-get-transcript-from-udemy",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/ar/blog/how-to-get-transcript-from-udemy",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/ar/how-to-get-transcript-from-udemy",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/fr/blog/how-to-get-transcript-from-udemy",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/fr/how-to-get-transcript-from-udemy",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/blog/how-to-get-transcript-from-udemy",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/how-to-get-transcript-from-udemy",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/en/blog/how-to-get-transcript-from-coursera",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/en/how-to-get-transcript-from-coursera",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/ar/blog/how-to-get-transcript-from-coursera",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/ar/how-to-get-transcript-from-coursera",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/fr/blog/how-to-get-transcript-from-coursera",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/fr/how-to-get-transcript-from-coursera",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/blog/how-to-get-transcript-from-coursera",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/how-to-get-transcript-from-coursera",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/en/blog/how-to-get-transcript-from-tiktok",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/en/how-to-get-transcript-from-tiktok",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/ar/blog/how-to-get-transcript-from-tiktok",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/ar/how-to-get-transcript-from-tiktok",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/fr/blog/how-to-get-transcript-from-tiktok",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/fr/how-to-get-transcript-from-tiktok",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/blog/how-to-get-transcript-from-tiktok",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/how-to-get-transcript-from-tiktok",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/en/youtube-transcripts",
+      "destination": "/en/cluster/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/en/ai-video-learning",
+      "destination": "/en/cluster/youtube-transcript-ai-summary",
+      "permanent": true
+    },
+    {
+      "source": "/ar/youtube-transcripts",
+      "destination": "/ar/cluster/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/ar/ai-video-learning",
+      "destination": "/ar/cluster/youtube-transcript-ai-summary",
+      "permanent": true
+    },
+    {
+      "source": "/fr/youtube-transcripts",
+      "destination": "/fr/cluster/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/fr/ai-video-learning",
+      "destination": "/fr/cluster/youtube-transcript-ai-summary",
+      "permanent": true
+    },
+    {
+      "source": "/youtube-transcripts",
+      "destination": "/en/cluster/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/ai-video-learning",
+      "destination": "/en/cluster/youtube-transcript-ai-summary",
+      "permanent": true
     }
   ]
 }
