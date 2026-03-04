@@ -27,7 +27,7 @@ import ContactPage from './pages/ContactPage';
 import PricingPage from './pages/PricingPage';
 import AdminPage from './pages/AdminPage';
 import BlogArticlePage, { getBlogRouteInfo } from './pages/BlogArticlePage';
-import { getSoftwareApplicationSchema } from './seo/seoCatalog';
+import { SEO_CONFIG, getSoftwareApplicationSchema } from './seo/seoCatalog';
 import { supabase, SUPABASE_CONFIGURED } from './utils/supabase';
 import defaultApiUrl from './config';
 import { getAuthHeaders } from './utils/authHeaders';
@@ -89,6 +89,13 @@ const getLangFromPath = (pathValue) => {
   if (next === LANG.ar || next === LANG.fr) return next;
   return LANG.en;
 };
+
+const getHomeAlternates = () => [
+  { hreflang: 'en', href: `${SEO_CONFIG.SITE_ORIGIN}/en` },
+  { hreflang: 'ar', href: `${SEO_CONFIG.SITE_ORIGIN}/ar` },
+  { hreflang: 'fr', href: `${SEO_CONFIG.SITE_ORIGIN}/fr` },
+  { hreflang: 'x-default', href: `${SEO_CONFIG.SITE_ORIGIN}/en` }
+];
 
 const clearEdgeAuthCookie = () => {
   if (!hasWindow) return;
@@ -259,11 +266,14 @@ function App() {
   const user = session?.user ?? null;
   const blogRouteInfo = useMemo(() => getBlogRouteInfo(currentPath), [currentPath]);
   const isStaticRoute = STATIC_ROUTES.has(currentPath) || Boolean(blogRouteInfo);
-  const schemaPath = currentPath === '/tool' ? '/tool' : '/';
+  const isLocalizedHome = /^\/(en|ar|fr)$/i.test(currentPath);
+  const isHomePath = currentPath === '/' || isLocalizedHome;
+  const schemaPath = currentPath === '/tool' ? '/tool' : isHomePath ? currentPath : '/';
+  const rootAlternates = useMemo(() => (isHomePath ? getHomeAlternates() : []), [isHomePath]);
   const softwareSchema = useMemo(() => {
-    if (currentPath !== '/' && currentPath !== '/tool') return null;
+    if (currentPath !== '/tool' && !isHomePath) return null;
     return getSoftwareApplicationSchema(schemaPath);
-  }, [currentPath, schemaPath]);
+  }, [currentPath, isHomePath, schemaPath]);
 
   useEffect(() => {
     if (!hasWindow) return;
@@ -1128,7 +1138,9 @@ function App() {
         <SeoMeta
           title="Preparing Session | Transcripta AI"
           description="Initializing authenticated session for Transcripta AI."
-          path="/"
+          path={schemaPath}
+          alternates={rootAlternates}
+          canonicalOrigin={SEO_CONFIG.SITE_ORIGIN}
         />
         <div className="flex-1 bg-slate-950 text-slate-100 flex items-center justify-center">
           <div className="flex items-center gap-2 text-sm">
@@ -1148,6 +1160,8 @@ function App() {
         title="Transcripta AI | Knowledge Extraction & Execution Engine"
         description="Transform long YouTube videos into structured knowledge, execution plans, and implementation-ready outputs."
         path={schemaPath}
+        alternates={rootAlternates}
+        canonicalOrigin={SEO_CONFIG.SITE_ORIGIN}
         structuredData={softwareSchema}
       />
         <div className="flex-1">
@@ -1186,6 +1200,8 @@ function App() {
         title="Client Workspace | Transcripta AI"
         description="Authenticated workspace for knowledge extraction, AI processing, and execution-ready outputs from long videos."
         path={schemaPath}
+        alternates={rootAlternates}
+        canonicalOrigin={SEO_CONFIG.SITE_ORIGIN}
         structuredData={softwareSchema}
       />
       <ToastStack items={toasts} onDismiss={dismissToast} />

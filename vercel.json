@@ -536,46 +536,6 @@
       "permanent": true
     },
     {
-      "source": "/en/youtube-caption-extractor",
-      "destination": "/en/extract-youtube-transcript",
-      "permanent": true
-    },
-    {
-      "source": "/en/blog/youtube-caption-extractor",
-      "destination": "/en/extract-youtube-transcript",
-      "permanent": true
-    },
-    {
-      "source": "/ar/youtube-caption-extractor",
-      "destination": "/ar/extract-youtube-transcript",
-      "permanent": true
-    },
-    {
-      "source": "/ar/blog/youtube-caption-extractor",
-      "destination": "/ar/extract-youtube-transcript",
-      "permanent": true
-    },
-    {
-      "source": "/fr/youtube-caption-extractor",
-      "destination": "/fr/extract-youtube-transcript",
-      "permanent": true
-    },
-    {
-      "source": "/fr/blog/youtube-caption-extractor",
-      "destination": "/fr/extract-youtube-transcript",
-      "permanent": true
-    },
-    {
-      "source": "/youtube-caption-extractor",
-      "destination": "/en/extract-youtube-transcript",
-      "permanent": true
-    },
-    {
-      "source": "/blog/youtube-caption-extractor",
-      "destination": "/en/extract-youtube-transcript",
-      "permanent": true
-    },
-    {
       "source": "/en/youtube-video-caption-extractor",
       "destination": "/en/extract-youtube-transcript",
       "permanent": true
@@ -976,46 +936,6 @@
       "permanent": true
     },
     {
-      "source": "/en/video-to-text-ai",
-      "destination": "/en/video-to-text",
-      "permanent": true
-    },
-    {
-      "source": "/en/blog/video-to-text-ai",
-      "destination": "/en/video-to-text",
-      "permanent": true
-    },
-    {
-      "source": "/ar/video-to-text-ai",
-      "destination": "/ar/video-to-text",
-      "permanent": true
-    },
-    {
-      "source": "/ar/blog/video-to-text-ai",
-      "destination": "/ar/video-to-text",
-      "permanent": true
-    },
-    {
-      "source": "/fr/video-to-text-ai",
-      "destination": "/fr/video-to-text",
-      "permanent": true
-    },
-    {
-      "source": "/fr/blog/video-to-text-ai",
-      "destination": "/fr/video-to-text",
-      "permanent": true
-    },
-    {
-      "source": "/video-to-text-ai",
-      "destination": "/en/video-to-text",
-      "permanent": true
-    },
-    {
-      "source": "/blog/video-to-text-ai",
-      "destination": "/en/video-to-text",
-      "permanent": true
-    },
-    {
       "source": "/en/video-to-text-arabic",
       "destination": "/en/video-to-text",
       "permanent": true
@@ -1332,46 +1252,6 @@
     },
     {
       "source": "/blog/youtube-transcript-for-study",
-      "destination": "/en/youtube-video-notes",
-      "permanent": true
-    },
-    {
-      "source": "/en/youtube-transcript-for-students",
-      "destination": "/en/youtube-video-notes",
-      "permanent": true
-    },
-    {
-      "source": "/en/blog/youtube-transcript-for-students",
-      "destination": "/en/youtube-video-notes",
-      "permanent": true
-    },
-    {
-      "source": "/ar/youtube-transcript-for-students",
-      "destination": "/ar/youtube-video-notes",
-      "permanent": true
-    },
-    {
-      "source": "/ar/blog/youtube-transcript-for-students",
-      "destination": "/ar/youtube-video-notes",
-      "permanent": true
-    },
-    {
-      "source": "/fr/youtube-transcript-for-students",
-      "destination": "/fr/youtube-video-notes",
-      "permanent": true
-    },
-    {
-      "source": "/fr/blog/youtube-transcript-for-students",
-      "destination": "/fr/youtube-video-notes",
-      "permanent": true
-    },
-    {
-      "source": "/youtube-transcript-for-students",
-      "destination": "/en/youtube-video-notes",
-      "permanent": true
-    },
-    {
-      "source": "/blog/youtube-transcript-for-students",
       "destination": "/en/youtube-video-notes",
       "permanent": true
     },
@@ -1803,6 +1683,556 @@
     {
       "source": "/fr/ai-video-learning",
       "destination": "/fr/cluster/youtube-transcript-ai-summary",
+      "permanent": true
+    },
+    {
+      "source": "/youtube-transcript-generator",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/extract-youtube-transcript",
+      "destination": "/en/extract-youtube-transcript",
+      "permanent": true
+    },
+    {
+      "source": "/youtube-subtitles-extractor",
+      "destination": "/en/youtube-subtitles-extractor",
+      "permanent": true
+    },
+    {
+      "source": "/video-to-text",
+      "destination": "/en/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/youtube-video-notes",
+      "destination": "/en/youtube-video-notes",
+      "permanent": true
+    },
+    {
+      "source": "/youtube-transcript-ai-summary",
+      "destination": "/en/youtube-transcript-ai-summary",
+      "permanent": true
+    },
+    {
+      "source": "/youtube-transcript-for-seo",
+      "destination": "/en/youtube-transcript-for-seo",
+      "permanent": true
+    },
+    {
+      "source": "/youtube-transcript",
+      "destination": "/en/youtube-transcript",
+      "permanent": true
+    },
+    {
+      "source": "/video-to-text-ai",
+      "destination": "/en/video-to-text-ai",
+      "permanent": true
+    },
+    {
+      "source": "/youtube-caption-extractor",
+      "destination": "/en/youtube-caption-extractor",
+      "permanent": true
+    },
+    {
+      "source": "/extract-video-transcript",
+      "destination": "/en/extract-video-transcript",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-transcript-generator-how-to",
+      "destination": "/en/blog/youtube-transcript-generator-how-to",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-transcript-generator-for-research",
+      "destination": "/en/blog/youtube-transcript-generator-for-research",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-transcript-generator-copy-paste-guide",
+      "destination": "/en/blog/youtube-transcript-generator-copy-paste-guide",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-transcript-generator-for-students",
+      "destination": "/en/blog/youtube-transcript-generator-for-students",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-transcript-generator-for-content-creators",
+      "destination": "/en/blog/youtube-transcript-generator-for-content-creators",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-transcript-generator-ai-workflow",
+      "destination": "/en/blog/youtube-transcript-generator-ai-workflow",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-transcript-generator-seo-workflow",
+      "destination": "/en/blog/youtube-transcript-generator-seo-workflow",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-transcript-generator-notes-workflow",
+      "destination": "/en/blog/youtube-transcript-generator-notes-workflow",
+      "permanent": true
+    },
+    {
+      "source": "/blog/extract-youtube-transcript-how-to",
+      "destination": "/en/blog/extract-youtube-transcript-how-to",
+      "permanent": true
+    },
+    {
+      "source": "/blog/extract-youtube-transcript-download-guide",
+      "destination": "/en/blog/extract-youtube-transcript-download-guide",
+      "permanent": true
+    },
+    {
+      "source": "/blog/extract-youtube-transcript-captions-workflow",
+      "destination": "/en/blog/extract-youtube-transcript-captions-workflow",
+      "permanent": true
+    },
+    {
+      "source": "/blog/extract-youtube-transcript-for-research",
+      "destination": "/en/blog/extract-youtube-transcript-for-research",
+      "permanent": true
+    },
+    {
+      "source": "/blog/extract-youtube-transcript-for-students",
+      "destination": "/en/blog/extract-youtube-transcript-for-students",
+      "permanent": true
+    },
+    {
+      "source": "/blog/extract-youtube-transcript-copy-paste-guide",
+      "destination": "/en/blog/extract-youtube-transcript-copy-paste-guide",
+      "permanent": true
+    },
+    {
+      "source": "/blog/extract-youtube-transcript-ai-workflow",
+      "destination": "/en/blog/extract-youtube-transcript-ai-workflow",
+      "permanent": true
+    },
+    {
+      "source": "/blog/extract-youtube-transcript-seo-workflow",
+      "destination": "/en/blog/extract-youtube-transcript-seo-workflow",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-subtitles-extractor-how-to",
+      "destination": "/en/blog/youtube-subtitles-extractor-how-to",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-subtitles-extractor-subtitle-to-text-guide",
+      "destination": "/en/blog/youtube-subtitles-extractor-subtitle-to-text-guide",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-subtitles-extractor-article-workflow",
+      "destination": "/en/blog/youtube-subtitles-extractor-article-workflow",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-subtitles-extractor-for-research",
+      "destination": "/en/blog/youtube-subtitles-extractor-for-research",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-subtitles-extractor-for-content-creators",
+      "destination": "/en/blog/youtube-subtitles-extractor-for-content-creators",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-subtitles-extractor-copy-paste-guide",
+      "destination": "/en/blog/youtube-subtitles-extractor-copy-paste-guide",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-subtitles-extractor-ai-workflow",
+      "destination": "/en/blog/youtube-subtitles-extractor-ai-workflow",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-subtitles-extractor-seo-workflow",
+      "destination": "/en/blog/youtube-subtitles-extractor-seo-workflow",
+      "permanent": true
+    },
+    {
+      "source": "/blog/video-to-text-how-to",
+      "destination": "/en/blog/video-to-text-how-to",
+      "permanent": true
+    },
+    {
+      "source": "/blog/video-to-text-speech-to-text-workflow",
+      "destination": "/en/blog/video-to-text-speech-to-text-workflow",
+      "permanent": true
+    },
+    {
+      "source": "/blog/video-to-text-ai-workflow",
+      "destination": "/en/blog/video-to-text-ai-workflow",
+      "permanent": true
+    },
+    {
+      "source": "/blog/video-to-text-for-students",
+      "destination": "/en/blog/video-to-text-for-students",
+      "permanent": true
+    },
+    {
+      "source": "/blog/video-to-text-for-research",
+      "destination": "/en/blog/video-to-text-for-research",
+      "permanent": true
+    },
+    {
+      "source": "/blog/video-to-text-for-content-creators",
+      "destination": "/en/blog/video-to-text-for-content-creators",
+      "permanent": true
+    },
+    {
+      "source": "/blog/video-to-text-copy-paste-guide",
+      "destination": "/en/blog/video-to-text-copy-paste-guide",
+      "permanent": true
+    },
+    {
+      "source": "/blog/video-to-text-seo-workflow",
+      "destination": "/en/blog/video-to-text-seo-workflow",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-video-notes-for-students",
+      "destination": "/en/blog/youtube-video-notes-for-students",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-video-notes-for-study",
+      "destination": "/en/blog/youtube-video-notes-for-study",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-video-notes-for-research",
+      "destination": "/en/blog/youtube-video-notes-for-research",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-video-notes-how-to",
+      "destination": "/en/blog/youtube-video-notes-how-to",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-video-notes-for-content-creators",
+      "destination": "/en/blog/youtube-video-notes-for-content-creators",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-video-notes-ai-workflow",
+      "destination": "/en/blog/youtube-video-notes-ai-workflow",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-video-notes-copy-paste-guide",
+      "destination": "/en/blog/youtube-video-notes-copy-paste-guide",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-video-notes-notes-workflow",
+      "destination": "/en/blog/youtube-video-notes-notes-workflow",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-transcript-ai-summary-ai-workflow",
+      "destination": "/en/blog/youtube-transcript-ai-summary-ai-workflow",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-transcript-ai-summary-summarize-guide",
+      "destination": "/en/blog/youtube-transcript-ai-summary-summarize-guide",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-transcript-ai-summary-research-brief",
+      "destination": "/en/blog/youtube-transcript-ai-summary-research-brief",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-transcript-ai-summary-how-to",
+      "destination": "/en/blog/youtube-transcript-ai-summary-how-to",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-transcript-ai-summary-for-students",
+      "destination": "/en/blog/youtube-transcript-ai-summary-for-students",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-transcript-ai-summary-for-research",
+      "destination": "/en/blog/youtube-transcript-ai-summary-for-research",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-transcript-ai-summary-copy-paste-guide",
+      "destination": "/en/blog/youtube-transcript-ai-summary-copy-paste-guide",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-transcript-ai-summary-notes-workflow",
+      "destination": "/en/blog/youtube-transcript-ai-summary-notes-workflow",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-transcript-for-seo-for-content-creators",
+      "destination": "/en/blog/youtube-transcript-for-seo-for-content-creators",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-transcript-for-seo-copy-paste-guide",
+      "destination": "/en/blog/youtube-transcript-for-seo-copy-paste-guide",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-transcript-for-seo-ai-workflow",
+      "destination": "/en/blog/youtube-transcript-for-seo-ai-workflow",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-transcript-for-seo-how-to",
+      "destination": "/en/blog/youtube-transcript-for-seo-how-to",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-transcript-for-seo-for-research",
+      "destination": "/en/blog/youtube-transcript-for-seo-for-research",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-transcript-for-seo-for-students",
+      "destination": "/en/blog/youtube-transcript-for-seo-for-students",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-transcript-for-seo-seo-workflow",
+      "destination": "/en/blog/youtube-transcript-for-seo-seo-workflow",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-transcript-for-seo-notes-workflow",
+      "destination": "/en/blog/youtube-transcript-for-seo-notes-workflow",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-transcript-how-to",
+      "destination": "/en/blog/youtube-transcript-how-to",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-transcript-for-students",
+      "destination": "/en/blog/youtube-transcript-for-students",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-transcript-for-research",
+      "destination": "/en/blog/youtube-transcript-for-research",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-transcript-for-content-creators",
+      "destination": "/en/blog/youtube-transcript-for-content-creators",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-transcript-ai-workflow",
+      "destination": "/en/blog/youtube-transcript-ai-workflow",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-transcript-copy-paste-guide",
+      "destination": "/en/blog/youtube-transcript-copy-paste-guide",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-transcript-seo-workflow",
+      "destination": "/en/blog/youtube-transcript-seo-workflow",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-transcript-notes-workflow",
+      "destination": "/en/blog/youtube-transcript-notes-workflow",
+      "permanent": true
+    },
+    {
+      "source": "/blog/video-to-text-ai-how-to",
+      "destination": "/en/blog/video-to-text-ai-how-to",
+      "permanent": true
+    },
+    {
+      "source": "/blog/video-to-text-ai-for-students",
+      "destination": "/en/blog/video-to-text-ai-for-students",
+      "permanent": true
+    },
+    {
+      "source": "/blog/video-to-text-ai-for-research",
+      "destination": "/en/blog/video-to-text-ai-for-research",
+      "permanent": true
+    },
+    {
+      "source": "/blog/video-to-text-ai-for-content-creators",
+      "destination": "/en/blog/video-to-text-ai-for-content-creators",
+      "permanent": true
+    },
+    {
+      "source": "/blog/video-to-text-ai-ai-workflow",
+      "destination": "/en/blog/video-to-text-ai-ai-workflow",
+      "permanent": true
+    },
+    {
+      "source": "/blog/video-to-text-ai-copy-paste-guide",
+      "destination": "/en/blog/video-to-text-ai-copy-paste-guide",
+      "permanent": true
+    },
+    {
+      "source": "/blog/video-to-text-ai-seo-workflow",
+      "destination": "/en/blog/video-to-text-ai-seo-workflow",
+      "permanent": true
+    },
+    {
+      "source": "/blog/video-to-text-ai-notes-workflow",
+      "destination": "/en/blog/video-to-text-ai-notes-workflow",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-caption-extractor-how-to",
+      "destination": "/en/blog/youtube-caption-extractor-how-to",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-caption-extractor-for-students",
+      "destination": "/en/blog/youtube-caption-extractor-for-students",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-caption-extractor-for-research",
+      "destination": "/en/blog/youtube-caption-extractor-for-research",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-caption-extractor-for-content-creators",
+      "destination": "/en/blog/youtube-caption-extractor-for-content-creators",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-caption-extractor-ai-workflow",
+      "destination": "/en/blog/youtube-caption-extractor-ai-workflow",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-caption-extractor-copy-paste-guide",
+      "destination": "/en/blog/youtube-caption-extractor-copy-paste-guide",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-caption-extractor-seo-workflow",
+      "destination": "/en/blog/youtube-caption-extractor-seo-workflow",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-caption-extractor-notes-workflow",
+      "destination": "/en/blog/youtube-caption-extractor-notes-workflow",
+      "permanent": true
+    },
+    {
+      "source": "/blog/extract-video-transcript-how-to",
+      "destination": "/en/blog/extract-video-transcript-how-to",
+      "permanent": true
+    },
+    {
+      "source": "/blog/extract-video-transcript-for-students",
+      "destination": "/en/blog/extract-video-transcript-for-students",
+      "permanent": true
+    },
+    {
+      "source": "/blog/extract-video-transcript-for-research",
+      "destination": "/en/blog/extract-video-transcript-for-research",
+      "permanent": true
+    },
+    {
+      "source": "/blog/extract-video-transcript-for-content-creators",
+      "destination": "/en/blog/extract-video-transcript-for-content-creators",
+      "permanent": true
+    },
+    {
+      "source": "/blog/extract-video-transcript-ai-workflow",
+      "destination": "/en/blog/extract-video-transcript-ai-workflow",
+      "permanent": true
+    },
+    {
+      "source": "/blog/extract-video-transcript-copy-paste-guide",
+      "destination": "/en/blog/extract-video-transcript-copy-paste-guide",
+      "permanent": true
+    },
+    {
+      "source": "/blog/extract-video-transcript-seo-workflow",
+      "destination": "/en/blog/extract-video-transcript-seo-workflow",
+      "permanent": true
+    },
+    {
+      "source": "/blog/extract-video-transcript-notes-workflow",
+      "destination": "/en/blog/extract-video-transcript-notes-workflow",
+      "permanent": true
+    },
+    {
+      "source": "/cluster/youtube-transcript-generator",
+      "destination": "/en/cluster/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/cluster/extract-youtube-transcript",
+      "destination": "/en/cluster/extract-youtube-transcript",
+      "permanent": true
+    },
+    {
+      "source": "/cluster/youtube-subtitles-extractor",
+      "destination": "/en/cluster/youtube-subtitles-extractor",
+      "permanent": true
+    },
+    {
+      "source": "/cluster/video-to-text",
+      "destination": "/en/cluster/video-to-text",
+      "permanent": true
+    },
+    {
+      "source": "/cluster/youtube-video-notes",
+      "destination": "/en/cluster/youtube-video-notes",
+      "permanent": true
+    },
+    {
+      "source": "/cluster/youtube-transcript-ai-summary",
+      "destination": "/en/cluster/youtube-transcript-ai-summary",
+      "permanent": true
+    },
+    {
+      "source": "/cluster/youtube-transcript-for-seo",
+      "destination": "/en/cluster/youtube-transcript-for-seo",
+      "permanent": true
+    },
+    {
+      "source": "/cluster/youtube-transcript",
+      "destination": "/en/cluster/youtube-transcript",
+      "permanent": true
+    },
+    {
+      "source": "/cluster/video-to-text-ai",
+      "destination": "/en/cluster/video-to-text-ai",
+      "permanent": true
+    },
+    {
+      "source": "/cluster/youtube-caption-extractor",
+      "destination": "/en/cluster/youtube-caption-extractor",
+      "permanent": true
+    },
+    {
+      "source": "/cluster/extract-video-transcript",
+      "destination": "/en/cluster/extract-video-transcript",
       "permanent": true
     },
     {

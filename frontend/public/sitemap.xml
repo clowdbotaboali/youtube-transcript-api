@@ -103,6 +103,30 @@
     <priority>0.9</priority>
   </url>
   <url>
+    <loc>https://transcripta.tech/en/youtube-transcript</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/video-to-text-ai</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/youtube-caption-extractor</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/extract-video-transcript</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
     <loc>https://transcripta.tech/en/blog/youtube-transcript-generator-how-to</loc>
     <lastmod>2026-03-05</lastmod>
     <changefreq>weekly</changefreq>
@@ -116,6 +140,36 @@
   </url>
   <url>
     <loc>https://transcripta.tech/en/blog/youtube-transcript-generator-copy-paste-guide</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/youtube-transcript-generator-for-students</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/youtube-transcript-generator-for-content-creators</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/youtube-transcript-generator-ai-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/youtube-transcript-generator-seo-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/youtube-transcript-generator-notes-workflow</loc>
     <lastmod>2026-03-05</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
@@ -139,6 +193,36 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://transcripta.tech/en/blog/extract-youtube-transcript-for-research</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/extract-youtube-transcript-for-students</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/extract-youtube-transcript-copy-paste-guide</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/extract-youtube-transcript-ai-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/extract-youtube-transcript-seo-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://transcripta.tech/en/blog/youtube-subtitles-extractor-how-to</loc>
     <lastmod>2026-03-05</lastmod>
     <changefreq>weekly</changefreq>
@@ -152,6 +236,36 @@
   </url>
   <url>
     <loc>https://transcripta.tech/en/blog/youtube-subtitles-extractor-article-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/youtube-subtitles-extractor-for-research</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/youtube-subtitles-extractor-for-content-creators</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/youtube-subtitles-extractor-copy-paste-guide</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/youtube-subtitles-extractor-ai-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/youtube-subtitles-extractor-seo-workflow</loc>
     <lastmod>2026-03-05</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
@@ -175,6 +289,36 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://transcripta.tech/en/blog/video-to-text-for-students</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/video-to-text-for-research</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/video-to-text-for-content-creators</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/video-to-text-copy-paste-guide</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/video-to-text-seo-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://transcripta.tech/en/blog/youtube-video-notes-for-students</loc>
     <lastmod>2026-03-05</lastmod>
     <changefreq>weekly</changefreq>
@@ -188,6 +332,36 @@
   </url>
   <url>
     <loc>https://transcripta.tech/en/blog/youtube-video-notes-for-research</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/youtube-video-notes-how-to</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/youtube-video-notes-for-content-creators</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/youtube-video-notes-ai-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/youtube-video-notes-copy-paste-guide</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/youtube-video-notes-notes-workflow</loc>
     <lastmod>2026-03-05</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
@@ -211,6 +385,36 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://transcripta.tech/en/blog/youtube-transcript-ai-summary-how-to</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/youtube-transcript-ai-summary-for-students</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/youtube-transcript-ai-summary-for-research</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/youtube-transcript-ai-summary-copy-paste-guide</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/youtube-transcript-ai-summary-notes-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://transcripta.tech/en/blog/youtube-transcript-for-seo-for-content-creators</loc>
     <lastmod>2026-03-05</lastmod>
     <changefreq>weekly</changefreq>
@@ -224,6 +428,228 @@
   </url>
   <url>
     <loc>https://transcripta.tech/en/blog/youtube-transcript-for-seo-ai-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/youtube-transcript-for-seo-how-to</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/youtube-transcript-for-seo-for-research</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/youtube-transcript-for-seo-for-students</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/youtube-transcript-for-seo-seo-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/youtube-transcript-for-seo-notes-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/youtube-transcript-how-to</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/youtube-transcript-for-students</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/youtube-transcript-for-research</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/youtube-transcript-for-content-creators</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/youtube-transcript-ai-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/youtube-transcript-copy-paste-guide</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/youtube-transcript-seo-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/youtube-transcript-notes-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/video-to-text-ai-how-to</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/video-to-text-ai-for-students</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/video-to-text-ai-for-research</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/video-to-text-ai-for-content-creators</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/video-to-text-ai-ai-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/video-to-text-ai-copy-paste-guide</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/video-to-text-ai-seo-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/video-to-text-ai-notes-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/youtube-caption-extractor-how-to</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/youtube-caption-extractor-for-students</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/youtube-caption-extractor-for-research</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/youtube-caption-extractor-for-content-creators</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/youtube-caption-extractor-ai-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/youtube-caption-extractor-copy-paste-guide</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/youtube-caption-extractor-seo-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/youtube-caption-extractor-notes-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/extract-video-transcript-how-to</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/extract-video-transcript-for-students</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/extract-video-transcript-for-research</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/extract-video-transcript-for-content-creators</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/extract-video-transcript-ai-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/extract-video-transcript-copy-paste-guide</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/extract-video-transcript-seo-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/blog/extract-video-transcript-notes-workflow</loc>
     <lastmod>2026-03-05</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
@@ -271,6 +697,30 @@
     <priority>0.75</priority>
   </url>
   <url>
+    <loc>https://transcripta.tech/en/cluster/youtube-transcript</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/cluster/video-to-text-ai</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/cluster/youtube-caption-extractor</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/en/cluster/extract-video-transcript</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
     <loc>https://transcripta.tech/ar/youtube-transcript-generator</loc>
     <lastmod>2026-03-05</lastmod>
     <changefreq>weekly</changefreq>
@@ -313,6 +763,30 @@
     <priority>0.9</priority>
   </url>
   <url>
+    <loc>https://transcripta.tech/ar/youtube-transcript</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/video-to-text-ai</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/youtube-caption-extractor</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/extract-video-transcript</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
     <loc>https://transcripta.tech/ar/blog/youtube-transcript-generator-how-to</loc>
     <lastmod>2026-03-05</lastmod>
     <changefreq>weekly</changefreq>
@@ -326,6 +800,36 @@
   </url>
   <url>
     <loc>https://transcripta.tech/ar/blog/youtube-transcript-generator-copy-paste-guide</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/youtube-transcript-generator-for-students</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/youtube-transcript-generator-for-content-creators</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/youtube-transcript-generator-ai-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/youtube-transcript-generator-seo-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/youtube-transcript-generator-notes-workflow</loc>
     <lastmod>2026-03-05</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
@@ -349,6 +853,36 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://transcripta.tech/ar/blog/extract-youtube-transcript-for-research</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/extract-youtube-transcript-for-students</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/extract-youtube-transcript-copy-paste-guide</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/extract-youtube-transcript-ai-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/extract-youtube-transcript-seo-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://transcripta.tech/ar/blog/youtube-subtitles-extractor-how-to</loc>
     <lastmod>2026-03-05</lastmod>
     <changefreq>weekly</changefreq>
@@ -362,6 +896,36 @@
   </url>
   <url>
     <loc>https://transcripta.tech/ar/blog/youtube-subtitles-extractor-article-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/youtube-subtitles-extractor-for-research</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/youtube-subtitles-extractor-for-content-creators</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/youtube-subtitles-extractor-copy-paste-guide</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/youtube-subtitles-extractor-ai-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/youtube-subtitles-extractor-seo-workflow</loc>
     <lastmod>2026-03-05</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
@@ -385,6 +949,36 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://transcripta.tech/ar/blog/video-to-text-for-students</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/video-to-text-for-research</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/video-to-text-for-content-creators</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/video-to-text-copy-paste-guide</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/video-to-text-seo-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://transcripta.tech/ar/blog/youtube-video-notes-for-students</loc>
     <lastmod>2026-03-05</lastmod>
     <changefreq>weekly</changefreq>
@@ -398,6 +992,36 @@
   </url>
   <url>
     <loc>https://transcripta.tech/ar/blog/youtube-video-notes-for-research</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/youtube-video-notes-how-to</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/youtube-video-notes-for-content-creators</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/youtube-video-notes-ai-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/youtube-video-notes-copy-paste-guide</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/youtube-video-notes-notes-workflow</loc>
     <lastmod>2026-03-05</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
@@ -421,6 +1045,36 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://transcripta.tech/ar/blog/youtube-transcript-ai-summary-how-to</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/youtube-transcript-ai-summary-for-students</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/youtube-transcript-ai-summary-for-research</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/youtube-transcript-ai-summary-copy-paste-guide</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/youtube-transcript-ai-summary-notes-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://transcripta.tech/ar/blog/youtube-transcript-for-seo-for-content-creators</loc>
     <lastmod>2026-03-05</lastmod>
     <changefreq>weekly</changefreq>
@@ -434,6 +1088,228 @@
   </url>
   <url>
     <loc>https://transcripta.tech/ar/blog/youtube-transcript-for-seo-ai-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/youtube-transcript-for-seo-how-to</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/youtube-transcript-for-seo-for-research</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/youtube-transcript-for-seo-for-students</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/youtube-transcript-for-seo-seo-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/youtube-transcript-for-seo-notes-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/youtube-transcript-how-to</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/youtube-transcript-for-students</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/youtube-transcript-for-research</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/youtube-transcript-for-content-creators</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/youtube-transcript-ai-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/youtube-transcript-copy-paste-guide</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/youtube-transcript-seo-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/youtube-transcript-notes-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/video-to-text-ai-how-to</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/video-to-text-ai-for-students</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/video-to-text-ai-for-research</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/video-to-text-ai-for-content-creators</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/video-to-text-ai-ai-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/video-to-text-ai-copy-paste-guide</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/video-to-text-ai-seo-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/video-to-text-ai-notes-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/youtube-caption-extractor-how-to</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/youtube-caption-extractor-for-students</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/youtube-caption-extractor-for-research</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/youtube-caption-extractor-for-content-creators</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/youtube-caption-extractor-ai-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/youtube-caption-extractor-copy-paste-guide</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/youtube-caption-extractor-seo-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/youtube-caption-extractor-notes-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/extract-video-transcript-how-to</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/extract-video-transcript-for-students</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/extract-video-transcript-for-research</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/extract-video-transcript-for-content-creators</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/extract-video-transcript-ai-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/extract-video-transcript-copy-paste-guide</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/extract-video-transcript-seo-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/blog/extract-video-transcript-notes-workflow</loc>
     <lastmod>2026-03-05</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
@@ -481,6 +1357,30 @@
     <priority>0.75</priority>
   </url>
   <url>
+    <loc>https://transcripta.tech/ar/cluster/youtube-transcript</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/cluster/video-to-text-ai</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/cluster/youtube-caption-extractor</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/ar/cluster/extract-video-transcript</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
     <loc>https://transcripta.tech/fr/youtube-transcript-generator</loc>
     <lastmod>2026-03-05</lastmod>
     <changefreq>weekly</changefreq>
@@ -523,6 +1423,30 @@
     <priority>0.9</priority>
   </url>
   <url>
+    <loc>https://transcripta.tech/fr/youtube-transcript</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/video-to-text-ai</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/youtube-caption-extractor</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/extract-video-transcript</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
     <loc>https://transcripta.tech/fr/blog/youtube-transcript-generator-how-to</loc>
     <lastmod>2026-03-05</lastmod>
     <changefreq>weekly</changefreq>
@@ -536,6 +1460,36 @@
   </url>
   <url>
     <loc>https://transcripta.tech/fr/blog/youtube-transcript-generator-copy-paste-guide</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/youtube-transcript-generator-for-students</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/youtube-transcript-generator-for-content-creators</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/youtube-transcript-generator-ai-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/youtube-transcript-generator-seo-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/youtube-transcript-generator-notes-workflow</loc>
     <lastmod>2026-03-05</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
@@ -559,6 +1513,36 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://transcripta.tech/fr/blog/extract-youtube-transcript-for-research</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/extract-youtube-transcript-for-students</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/extract-youtube-transcript-copy-paste-guide</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/extract-youtube-transcript-ai-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/extract-youtube-transcript-seo-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://transcripta.tech/fr/blog/youtube-subtitles-extractor-how-to</loc>
     <lastmod>2026-03-05</lastmod>
     <changefreq>weekly</changefreq>
@@ -572,6 +1556,36 @@
   </url>
   <url>
     <loc>https://transcripta.tech/fr/blog/youtube-subtitles-extractor-article-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/youtube-subtitles-extractor-for-research</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/youtube-subtitles-extractor-for-content-creators</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/youtube-subtitles-extractor-copy-paste-guide</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/youtube-subtitles-extractor-ai-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/youtube-subtitles-extractor-seo-workflow</loc>
     <lastmod>2026-03-05</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
@@ -595,6 +1609,36 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://transcripta.tech/fr/blog/video-to-text-for-students</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/video-to-text-for-research</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/video-to-text-for-content-creators</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/video-to-text-copy-paste-guide</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/video-to-text-seo-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://transcripta.tech/fr/blog/youtube-video-notes-for-students</loc>
     <lastmod>2026-03-05</lastmod>
     <changefreq>weekly</changefreq>
@@ -608,6 +1652,36 @@
   </url>
   <url>
     <loc>https://transcripta.tech/fr/blog/youtube-video-notes-for-research</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/youtube-video-notes-how-to</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/youtube-video-notes-for-content-creators</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/youtube-video-notes-ai-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/youtube-video-notes-copy-paste-guide</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/youtube-video-notes-notes-workflow</loc>
     <lastmod>2026-03-05</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
@@ -631,6 +1705,36 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://transcripta.tech/fr/blog/youtube-transcript-ai-summary-how-to</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/youtube-transcript-ai-summary-for-students</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/youtube-transcript-ai-summary-for-research</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/youtube-transcript-ai-summary-copy-paste-guide</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/youtube-transcript-ai-summary-notes-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://transcripta.tech/fr/blog/youtube-transcript-for-seo-for-content-creators</loc>
     <lastmod>2026-03-05</lastmod>
     <changefreq>weekly</changefreq>
@@ -644,6 +1748,228 @@
   </url>
   <url>
     <loc>https://transcripta.tech/fr/blog/youtube-transcript-for-seo-ai-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/youtube-transcript-for-seo-how-to</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/youtube-transcript-for-seo-for-research</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/youtube-transcript-for-seo-for-students</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/youtube-transcript-for-seo-seo-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/youtube-transcript-for-seo-notes-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/youtube-transcript-how-to</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/youtube-transcript-for-students</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/youtube-transcript-for-research</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/youtube-transcript-for-content-creators</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/youtube-transcript-ai-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/youtube-transcript-copy-paste-guide</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/youtube-transcript-seo-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/youtube-transcript-notes-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/video-to-text-ai-how-to</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/video-to-text-ai-for-students</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/video-to-text-ai-for-research</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/video-to-text-ai-for-content-creators</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/video-to-text-ai-ai-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/video-to-text-ai-copy-paste-guide</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/video-to-text-ai-seo-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/video-to-text-ai-notes-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/youtube-caption-extractor-how-to</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/youtube-caption-extractor-for-students</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/youtube-caption-extractor-for-research</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/youtube-caption-extractor-for-content-creators</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/youtube-caption-extractor-ai-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/youtube-caption-extractor-copy-paste-guide</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/youtube-caption-extractor-seo-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/youtube-caption-extractor-notes-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/extract-video-transcript-how-to</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/extract-video-transcript-for-students</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/extract-video-transcript-for-research</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/extract-video-transcript-for-content-creators</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/extract-video-transcript-ai-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/extract-video-transcript-copy-paste-guide</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/extract-video-transcript-seo-workflow</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/blog/extract-video-transcript-notes-workflow</loc>
     <lastmod>2026-03-05</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
@@ -686,6 +2012,30 @@
   </url>
   <url>
     <loc>https://transcripta.tech/fr/cluster/youtube-transcript-for-seo</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/cluster/youtube-transcript</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/cluster/video-to-text-ai</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/cluster/youtube-caption-extractor</loc>
+    <lastmod>2026-03-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>https://transcripta.tech/fr/cluster/extract-video-transcript</loc>
     <lastmod>2026-03-05</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.75</priority>
