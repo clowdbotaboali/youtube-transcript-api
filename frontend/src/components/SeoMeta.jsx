@@ -1,6 +1,8 @@
 import { useEffect, useMemo } from 'react';
 
-const DEFAULT_SOCIAL_IMAGE = 'https://www.transcripta.tech/logo.png';
+const DEFAULT_SOCIAL_IMAGE = 'https://www.transcripta.tech/preview-image.png';
+const DEFAULT_SOCIAL_IMAGE_WIDTH = '1200';
+const DEFAULT_SOCIAL_IMAGE_HEIGHT = '630';
 
 function upsertMeta(selector, attrs, content) {
   let el = document.head.querySelector(selector);
@@ -83,6 +85,8 @@ function SeoMeta({
   publishedTime = '',
   structuredData = null,
   ogImage = DEFAULT_SOCIAL_IMAGE,
+  ogImageWidth = DEFAULT_SOCIAL_IMAGE_WIDTH,
+  ogImageHeight = DEFAULT_SOCIAL_IMAGE_HEIGHT,
   twitterImage = '',
   twitterCard = 'summary_large_image'
 }) {
@@ -93,6 +97,8 @@ function SeoMeta({
   }, [structuredData]);
   const structuredDataKey = stableStringify(structuredDataList);
   const normalizedOgImage = String(ogImage || DEFAULT_SOCIAL_IMAGE).trim() || DEFAULT_SOCIAL_IMAGE;
+  const normalizedOgImageWidth = String(ogImageWidth || DEFAULT_SOCIAL_IMAGE_WIDTH).trim() || DEFAULT_SOCIAL_IMAGE_WIDTH;
+  const normalizedOgImageHeight = String(ogImageHeight || DEFAULT_SOCIAL_IMAGE_HEIGHT).trim() || DEFAULT_SOCIAL_IMAGE_HEIGHT;
   const normalizedTwitterImage = String(twitterImage || normalizedOgImage).trim() || normalizedOgImage;
 
   useEffect(() => {
@@ -110,6 +116,8 @@ function SeoMeta({
     upsertMeta('meta[property="og:type"]', { property: 'og:type' }, ogType);
     upsertMeta('meta[property="og:image"]', { property: 'og:image' }, normalizedOgImage);
     upsertMeta('meta[property="og:image:secure_url"]', { property: 'og:image:secure_url' }, normalizedOgImage);
+    upsertMeta('meta[property="og:image:width"]', { property: 'og:image:width' }, normalizedOgImageWidth);
+    upsertMeta('meta[property="og:image:height"]', { property: 'og:image:height' }, normalizedOgImageHeight);
     upsertMeta('meta[name="twitter:title"]', { name: 'twitter:title' }, title);
     upsertMeta('meta[name="twitter:description"]', { name: 'twitter:description' }, description);
     upsertMeta('meta[name="twitter:card"]', { name: 'twitter:card' }, twitterCard);
@@ -143,6 +151,8 @@ function SeoMeta({
     publishedTime,
     structuredDataKey,
     normalizedOgImage,
+    normalizedOgImageWidth,
+    normalizedOgImageHeight,
     normalizedTwitterImage,
     twitterCard,
     alternates,
