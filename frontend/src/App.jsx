@@ -27,6 +27,7 @@ import ContactPage from './pages/ContactPage';
 import PricingPage from './pages/PricingPage';
 import AdminPage from './pages/AdminPage';
 import BlogArticlePage, { getBlogRouteInfo } from './pages/BlogArticlePage';
+import TranscriptSeoPage from './pages/TranscriptSeoPage';
 import { SEO_CONFIG, getSoftwareApplicationSchema } from './seo/seoCatalog';
 import { supabase, SUPABASE_CONFIGURED } from './utils/supabase';
 import defaultApiUrl from './config';
@@ -88,6 +89,12 @@ const getLangFromPath = (pathValue) => {
   const next = String(match[1] || '').toLowerCase();
   if (next === LANG.ar || next === LANG.fr) return next;
   return LANG.en;
+};
+
+const getTranscriptSlugFromPath = (pathValue) => {
+  const match = normalizePathname(pathValue).match(/^\/transcript\/([a-z0-9-]+)$/i);
+  if (!match) return '';
+  return String(match[1] || '').trim().toLowerCase();
 };
 
 const getHomeAlternates = () => [
@@ -265,10 +272,17 @@ function App() {
 
   const user = session?.user ?? null;
   const blogRouteInfo = useMemo(() => getBlogRouteInfo(currentPath), [currentPath]);
-  const isStaticRoute = STATIC_ROUTES.has(currentPath) || Boolean(blogRouteInfo);
+  const transcriptSeoSlug = useMemo(() => getTranscriptSlugFromPath(currentPath), [currentPath]);
+  const isStaticRoute = STATIC_ROUTES.has(currentPath) || Boolean(blogRouteInfo) || Boolean(transcriptSeoSlug);
   const isLocalizedHome = /^\/(en|ar|fr)$/i.test(currentPath);
   const isHomePath = currentPath === '/' || isLocalizedHome;
-  const schemaPath = currentPath === '/tool' ? '/tool' : isHomePath ? currentPath : '/';
+  const schemaPath = currentPath === '/tool'
+    ? '/tool'
+    : isHomePath
+      ? currentPath
+      : transcriptSeoSlug
+        ? `/transcript/${transcriptSeoSlug}`
+        : '/';
   const rootAlternates = useMemo(() => (isHomePath ? getHomeAlternates() : []), [isHomePath]);
   const softwareSchema = useMemo(() => {
     if (currentPath !== '/tool' && !isHomePath) return null;
@@ -1094,6 +1108,7 @@ function App() {
     if (currentPath === '/pricing') return <PricingPage lang={lang} theme={theme} />;
     if (currentPath === '/admin') return <AdminPage apiUrl={apiUrl} lang={lang} theme={theme} />;
     if (blogRouteInfo) return <BlogArticlePage routeInfo={blogRouteInfo} theme={theme} />;
+    if (transcriptSeoSlug) return <TranscriptSeoPage slug={transcriptSeoSlug} apiUrl={apiUrl} theme={theme} />;
     return null;
   };
 

@@ -1,11 +1,12 @@
-import { readdir, unlink, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createClient } from '@supabase/supabase-js';
 import { SEO_CONFIG, getSitemapEntries } from '../src/seo/seoCatalog.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const publicDir = path.resolve(__dirname, '../public');
+const publicDir = path.resolve(__dirname, '../../scripts/.cache');
 
 const MAX_URLS_PER_FILE = 45000;
 const now = new Date();
@@ -24,6 +25,32 @@ const staticEntries = [
   { path: '/refund-policy', changefreq: 'yearly', priority: '0.3' }
 ];
 
+async function loadTranscriptSitemapEntries() {
+  const supabaseUrl = String(process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.VITE_SUPABASE_URL || '').trim();
+  const supabaseServiceKey = String(process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || '').trim();
+  if (!supabaseUrl || !supabaseServiceKey) return [];
+
+  try {
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const { data, error } = await supabase
+      .from('seo_transcript_pages')
+      .select('slug, updated_at, created_at')
+      .order('updated_at', { ascending: false })
+      .limit(42000);
+    if (error) return [];
+
+    const rows = Array.isArray(data) ? data : [];
+    return rows.map((row) => ({
+      path: `/transcript/${String(row.slug || '').trim()}`,
+      changefreq: 'daily',
+      priority: '0.8',
+      lastmod: new Date(row.updated_at || row.created_at || Date.now()).toISOString().slice(0, 10)
+    }));
+  } catch {
+    return [];
+  }
+}
+
 function normalizePath(pathname) {
   const raw = String(pathname || '/').trim();
   if (!raw) return '/';
@@ -34,10 +61,11 @@ function normalizePath(pathname) {
 
 function toXmlUrl(entry) {
   const normalizedPath = normalizePath(entry.path);
+  const lastmod = String(entry.lastmod || today).trim() || today;
   return [
     '  <url>',
     `    <loc>${SEO_CONFIG.SITE_ORIGIN}${normalizedPath}</loc>`,
-    `    <lastmod>${today}</lastmod>`,
+    `    <lastmod>${lastmod}</lastmod>`,
     `    <changefreq>${entry.changefreq}</changefreq>`,
     `    <priority>${entry.priority}</priority>`,
     '  </url>'
@@ -74,6 +102,7 @@ function uniqueEntries(entries) {
 }
 
 async function cleanupOldSitemapChunks() {
+  await mkdir(publicDir, { recursive: true });
   const names = await readdir(publicDir);
   const chunkFiles = names.filter((name) => /^sitemap-\d+\.xml$/i.test(name));
   await Promise.all(chunkFiles.map((file) => unlink(path.join(publicDir, file))));
@@ -83,11 +112,12 @@ async function main() {
   await cleanupOldSitemapChunks();
 
   const dynamicEntries = getSitemapEntries();
-  const allEntries = uniqueEntries([...staticEntries, ...dynamicEntries]);
+  const transcriptEntries = await loadTranscriptSitemapEntries();
+  const allEntries = uniqueEntries([...staticEntries, ...dynamicEntries, ...transcriptEntries]);
 
   if (allEntries.length <= MAX_URLS_PER_FILE) {
     const xml = toUrlsetXml(allEntries);
-    await writeFile(path.join(publicDir, 'sitemap.xml'), xml, 'utf8');
+    await writeFile(path.join(publicDir, 'sitemap.build.xml'), xml, 'utf8');
     return;
   }
 
@@ -101,7 +131,7 @@ async function main() {
   }
 
   const indexXml = toSitemapIndexXml(chunkFiles);
-  await writeFile(path.join(publicDir, 'sitemap.xml'), indexXml, 'utf8');
+  await writeFile(path.join(publicDir, 'sitemap.build.xml'), indexXml, 'utf8');
 }
 
 main().catch((error) => {

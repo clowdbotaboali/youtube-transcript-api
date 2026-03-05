@@ -3,7 +3,7 @@ import path from 'node:path';
 
 const INDEXNOW_ENDPOINT = 'https://api.indexnow.org/indexnow';
 const HOST = 'transcripta.tech';
-const SITEMAP_PATH = path.resolve(process.cwd(), 'frontend', 'public', 'sitemap.xml');
+const SITEMAP_PATH = path.resolve(process.cwd(), 'scripts', '.cache', 'sitemap.build.xml');
 const REPORT_DIR = path.resolve(process.cwd(), 'scripts', '.cache');
 const STATE_PATH = path.resolve(REPORT_DIR, 'indexnow-state.json');
 const URL_HEALTH_REPORT_PATH = path.resolve(REPORT_DIR, 'url-health-report.json');
@@ -126,4 +126,3 @@ main().catch((error) => {
   console.error('[seo:indexnow] failed:', error);
   process.exitCode = 1;
 });
-

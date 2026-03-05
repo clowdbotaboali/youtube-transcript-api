@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import ytdl from '@distube/ytdl-core';
 import crypto from 'crypto';
 import nodemailer from 'nodemailer';
+import { getSitemapEntries as getFrontendSitemapEntries, SEO_CONFIG as FRONTEND_SEO_CONFIG } from '../frontend/src/seo/seoCatalog.js';
 
 let groqClient = null;
 
@@ -130,6 +131,42 @@ const DEFAULT_ALLOWED_ORIGINS = [
   'https://transcripta.tech',
   'https://www.transcripta.tech',
 ];
+const SITE_ORIGIN = String(FRONTEND_SEO_CONFIG?.SITE_ORIGIN || 'https://transcripta.tech').replace(/\/+$/, '');
+const SEO_TRANSCRIPT_TABLE = 'seo_transcript_pages';
+const SEO_TRANSCRIPT_ROUTE_PREFIX = '/transcript';
+const SEO_TRANSCRIPT_CATEGORIES = Object.freeze(['Education', 'Podcasts', 'Tutorials', 'Languages']);
+const SEO_TRANSCRIPT_MAX_KEYWORDS = 12;
+const SEO_TRANSCRIPT_MAX_TAKEAWAYS = 6;
+const SEO_TRANSCRIPT_RELATED_LIMIT = 6;
+const SEO_TRANSCRIPT_SUMMARY_CHAR_LIMIT = 320;
+const FRONTEND_SITEMAP_ENTRIES = Object.freeze(
+  Array.isArray(getFrontendSitemapEntries?.()) ? getFrontendSitemapEntries() : []
+);
+const STATIC_SITEMAP_ENTRIES = Object.freeze([
+  { path: '/', changefreq: 'weekly', priority: '1.0' },
+  { path: '/en', changefreq: 'weekly', priority: '0.9' },
+  { path: '/ar', changefreq: 'weekly', priority: '0.9' },
+  { path: '/fr', changefreq: 'weekly', priority: '0.9' },
+  { path: '/tool', changefreq: 'weekly', priority: '0.95' },
+  { path: '/pricing', changefreq: 'monthly', priority: '0.7' },
+  { path: '/contact', changefreq: 'monthly', priority: '0.5' },
+  { path: '/privacy-policy', changefreq: 'yearly', priority: '0.3' },
+  { path: '/terms', changefreq: 'yearly', priority: '0.3' },
+  { path: '/refund-policy', changefreq: 'yearly', priority: '0.3' }
+]);
+const SEO_STOPWORDS = new Set([
+  'a', 'about', 'after', 'again', 'all', 'also', 'an', 'and', 'any', 'are', 'as', 'at',
+  'be', 'because', 'been', 'before', 'being', 'below', 'between', 'both', 'but', 'by',
+  'can', 'could', 'did', 'do', 'does', 'doing', 'down', 'during', 'each', 'few', 'for',
+  'from', 'further', 'had', 'has', 'have', 'having', 'he', 'her', 'here', 'hers', 'him',
+  'his', 'how', 'i', 'if', 'in', 'into', 'is', 'it', 'its', 'itself', 'just', 'more',
+  'most', 'my', 'no', 'nor', 'not', 'now', 'of', 'off', 'on', 'once', 'only', 'or',
+  'other', 'our', 'out', 'over', 'own', 'same', 'she', 'should', 'so', 'some', 'such',
+  'than', 'that', 'the', 'their', 'them', 'then', 'there', 'these', 'they', 'this',
+  'those', 'through', 'to', 'too', 'under', 'until', 'up', 'very', 'was', 'we', 'were',
+  'what', 'when', 'where', 'which', 'while', 'who', 'why', 'will', 'with', 'you', 'your',
+  'youtube', 'video', 'videos', 'watch', 'channel', 'subscribe'
+]);
 const STATUS_DEFAULT_ERROR_CODE = {
   400: 'INVALID_INPUT',
   401: 'UNAUTHENTICATED',
@@ -3927,6 +3964,962 @@ function isMissingRelationError(error) {
   );
 }
 
+function normalizeSitePath(pathname) {
+  const raw = String(pathname || '/').trim();
+  if (!raw) return '/';
+  const withLeadingSlash = raw.startsWith('/') ? raw : `/${raw}`;
+  if (withLeadingSlash === '/') return '/';
+  return withLeadingSlash.replace(/\/+$/, '');
+}
+
+function escapeXmlValue(value) {
+  return String(value || '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&apos;');
+}
+
+function toIsoDate(value, fallback = new Date().toISOString().slice(0, 10)) {
+  const date = new Date(value || '');
+  if (!Number.isFinite(date.getTime())) return fallback;
+  return date.toISOString().slice(0, 10);
+}
+
+function uniqueSitemapEntries(entries = []) {
+  const seen = new Set();
+  const output = [];
+  for (const entry of entries) {
+    const path = normalizeSitePath(entry?.path || '/');
+    if (!path || seen.has(path)) continue;
+    seen.add(path);
+    output.push({
+      path,
+      changefreq: String(entry?.changefreq || 'weekly').trim() || 'weekly',
+      priority: String(entry?.priority || '0.7').trim() || '0.7',
+      lastmod: toIsoDate(entry?.lastmod)
+    });
+  }
+  return output;
+}
+
+function buildSitemapXml(entries = []) {
+  const lines = ['<?xml version="1.0" encoding="UTF-8"?>', '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'];
+  for (const entry of uniqueSitemapEntries(entries)) {
+    lines.push('  <url>');
+    lines.push(`    <loc>${escapeXmlValue(`${SITE_ORIGIN}${entry.path}`)}</loc>`);
+    lines.push(`    <lastmod>${entry.lastmod}</lastmod>`);
+    lines.push(`    <changefreq>${escapeXmlValue(entry.changefreq)}</changefreq>`);
+    lines.push(`    <priority>${escapeXmlValue(entry.priority)}</priority>`);
+    lines.push('  </url>');
+  }
+  lines.push('</urlset>');
+  return `${lines.join('\n')}\n`;
+}
+
+function normalizeSeoCategory(value) {
+  const candidate = String(value || '').trim();
+  return SEO_TRANSCRIPT_CATEGORIES.includes(candidate) ? candidate : '';
+}
+
+function truncateAtWordBoundary(value, maxChars = 160) {
+  const text = String(value || '').replace(/\s+/g, ' ').trim();
+  if (!text) return '';
+  if (text.length <= maxChars) return text;
+  const clipped = text.slice(0, maxChars);
+  const cut = clipped.lastIndexOf(' ');
+  const safe = cut > Math.floor(maxChars * 0.6) ? clipped.slice(0, cut) : clipped;
+  return safe.replace(/[^\p{L}\p{N})\]]+$/gu, '').trim();
+}
+
+function slugifySeoTitle(value, fallback = 'transcript') {
+  const raw = String(value || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
+  const slug = raw
+    .toLowerCase()
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9\s-]/g, ' ')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return slug || fallback;
+}
+
+function tokenizeForSeo(value) {
+  return (String(value || '').toLowerCase().match(/[\p{L}\p{N}]+/gu) || [])
+    .map((token) => token.trim())
+    .filter(Boolean);
+}
+
+function normalizeSeoKeywords(value, maxItems = SEO_TRANSCRIPT_MAX_KEYWORDS) {
+  const source = Array.isArray(value)
+    ? value
+    : String(value || '')
+      .split(/[,\n]/)
+      .map((item) => item.trim());
+  const output = [];
+  const seen = new Set();
+  for (const item of source) {
+    const keyword = String(item || '').replace(/\s+/g, ' ').trim();
+    if (!keyword) continue;
+    const key = keyword.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    output.push(key);
+    if (output.length >= maxItems) break;
+  }
+  return output;
+}
+
+function extractSeoKeywordsFromContent(title, transcript) {
+  const titleTokens = tokenizeForSeo(title).filter((token) => token.length >= 3 && !SEO_STOPWORDS.has(token));
+  const transcriptTokens = tokenizeForSeo(transcript)
+    .filter((token) => token.length >= 3 && !SEO_STOPWORDS.has(token))
+    .slice(0, 6000);
+
+  const counts = new Map();
+  for (const token of transcriptTokens) {
+    counts.set(token, (counts.get(token) || 0) + 1);
+  }
+  for (const token of titleTokens) {
+    counts.set(token, (counts.get(token) || 0) + 3);
+  }
+
+  const ranked = Array.from(counts.entries())
+    .sort((a, b) => {
+      if (b[1] !== a[1]) return b[1] - a[1];
+      return a[0].localeCompare(b[0]);
+    })
+    .map((item) => item[0]);
+
+  const output = [];
+  const seen = new Set();
+  for (const token of [...titleTokens, ...ranked]) {
+    const key = token.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    output.push(token);
+    if (output.length >= SEO_TRANSCRIPT_MAX_KEYWORDS) break;
+  }
+  return output;
+}
+
+function inferSeoCategory(title, transcript, keywords = []) {
+  const text = `${title || ''} ${transcript || ''} ${Array.isArray(keywords) ? keywords.join(' ') : ''}`.toLowerCase();
+  const score = {
+    Education: 0,
+    Podcasts: 0,
+    Tutorials: 0,
+    Languages: 0
+  };
+
+  const hints = {
+    Education: ['lesson', 'lecture', 'course', 'exam', 'study', 'student', 'school', 'university', 'class', 'training'],
+    Podcasts: ['podcast', 'episode', 'host', 'guest', 'show', 'interview', 'conversation'],
+    Tutorials: ['tutorial', 'how to', 'step by step', 'guide', 'walkthrough', 'setup', 'install', 'build'],
+    Languages: ['english', 'arabic', 'french', 'spanish', 'german', 'ielts', 'toefl', 'grammar', 'vocabulary', 'pronunciation', 'listening']
+  };
+
+  for (const [category, terms] of Object.entries(hints)) {
+    for (const term of terms) {
+      if (!term) continue;
+      if (text.includes(term)) score[category] += 2;
+    }
+  }
+
+  const sorted = Object.entries(score).sort((a, b) => b[1] - a[1]);
+  if (sorted[0]?.[1] > 0) return sorted[0][0];
+  return 'Education';
+}
+
+function splitTranscriptSentences(value) {
+  return String(value || '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\s+/g, ' ')
+    .split(/(?<=[.!?])\s+|\n+/)
+    .map((line) => line.trim())
+    .filter((line) => line.length >= 40);
+}
+
+function buildFallbackSeoSummary(title, transcript, keywords = []) {
+  const sentences = splitTranscriptSentences(transcript);
+  if (sentences.length === 0) {
+    return truncateAtWordBoundary(`Read the full transcript and summary for ${title || 'this YouTube video'} on Transcripta AI.`, SEO_TRANSCRIPT_SUMMARY_CHAR_LIMIT);
+  }
+
+  const keywordSet = new Set(
+    normalizeSeoKeywords(keywords, SEO_TRANSCRIPT_MAX_KEYWORDS)
+      .map((item) => item.toLowerCase())
+  );
+
+  const ranked = sentences
+    .map((sentence, index) => {
+      let score = Math.max(10 - index, 1);
+      for (const keyword of keywordSet) {
+        if (keyword && sentence.toLowerCase().includes(keyword)) score += 3;
+      }
+      return { sentence, score };
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 3)
+    .map((item) => item.sentence);
+
+  const summary = ranked.join(' ');
+  return truncateAtWordBoundary(summary, SEO_TRANSCRIPT_SUMMARY_CHAR_LIMIT);
+}
+
+function normalizeTakeaways(rawValue, maxItems = SEO_TRANSCRIPT_MAX_TAKEAWAYS) {
+  const source = Array.isArray(rawValue)
+    ? rawValue
+    : String(rawValue || '')
+      .split(/\r?\n/)
+      .map((line) => line.replace(/^\s*(?:[-*]|\d+[.)-])\s+/, '').trim());
+  const output = [];
+  const seen = new Set();
+  for (const item of source) {
+    const value = truncateAtWordBoundary(item, 150);
+    if (!value || value.length < 12) continue;
+    const key = value.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    output.push(value);
+    if (output.length >= maxItems) break;
+  }
+  return output;
+}
+
+function buildFallbackSeoTakeaways(transcript, keywords = [], fallbackSummary = '') {
+  const sentences = splitTranscriptSentences(transcript).slice(0, 20);
+  const keywordSet = new Set(normalizeSeoKeywords(keywords).map((item) => item.toLowerCase()));
+  const picks = [];
+
+  for (const sentence of sentences) {
+    let score = 1;
+    for (const keyword of keywordSet) {
+      if (keyword && sentence.toLowerCase().includes(keyword)) score += 2;
+    }
+    if (score >= 2) {
+      picks.push(sentence);
+    }
+    if (picks.length >= SEO_TRANSCRIPT_MAX_TAKEAWAYS) break;
+  }
+
+  const normalized = normalizeTakeaways(picks, SEO_TRANSCRIPT_MAX_TAKEAWAYS);
+  if (normalized.length > 0) return normalized;
+
+  const fallback = normalizeTakeaways(fallbackSummary, SEO_TRANSCRIPT_MAX_TAKEAWAYS);
+  if (fallback.length > 0) return fallback;
+
+  return normalizeTakeaways(sentences.slice(0, 3), SEO_TRANSCRIPT_MAX_TAKEAWAYS);
+}
+
+function extractFirstJsonObject(value) {
+  const text = String(value || '');
+  const start = text.indexOf('{');
+  if (start < 0) return '';
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (let i = start; i < text.length; i += 1) {
+    const char = text[i];
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (char === '\\') {
+        escaped = true;
+      } else if (char === '"') {
+        inString = false;
+      }
+      continue;
+    }
+    if (char === '"') {
+      inString = true;
+      continue;
+    }
+    if (char === '{') {
+      depth += 1;
+      continue;
+    }
+    if (char === '}') {
+      depth -= 1;
+      if (depth === 0) {
+        return text.slice(start, i + 1);
+      }
+    }
+  }
+  return '';
+}
+
+function buildSeoTranscriptTitle(title) {
+  const cleanTitle = sanitizeVideoTitle(title, 'YouTube Transcript');
+  return truncateAtWordBoundary(`${cleanTitle} Transcript, Summary & Key Takeaways | Transcripta AI`, 78);
+}
+
+function buildSeoTranscriptDescription(title, summary, keywords = []) {
+  const keywordText = normalizeSeoKeywords(keywords, 4).join(', ');
+  const intro = `Read the full transcript for ${sanitizeVideoTitle(title, 'this video')}.`;
+  const summaryPart = summary ? `${summary}.` : '';
+  const keywordPart = keywordText ? ` Topics: ${keywordText}.` : '';
+  const combined = `${intro} ${summaryPart}${keywordPart} Generated by Transcripta AI.`;
+  return truncateAtWordBoundary(combined, 165);
+}
+
+function buildSeoTranscriptPath(slug) {
+  return `${SEO_TRANSCRIPT_ROUTE_PREFIX}/${String(slug || '').trim()}`;
+}
+
+function buildSeoTranscriptCanonical(slug) {
+  return `${SITE_ORIGIN}${buildSeoTranscriptPath(slug)}`;
+}
+
+function normalizeTranscriptTextForSeo(value) {
+  return String(value || '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+async function generateSeoSummaryAndTakeaways(supabase, { title, transcript, category, keywords }) {
+  const fallbackSummary = buildFallbackSeoSummary(title, transcript, keywords);
+  const fallbackTakeaways = buildFallbackSeoTakeaways(transcript, keywords, fallbackSummary);
+  const { text: transcriptForModel } = trimForModel(transcript, 9000);
+  if (!transcriptForModel) {
+    return { summary: fallbackSummary, takeaways: fallbackTakeaways, usedAi: false };
+  }
+
+  try {
+    const completion = await withTimeout(
+      createMultiProviderChatCompletion({
+        supabase,
+        messages: [
+          {
+            role: 'system',
+            content:
+              'You write concise SEO content from transcripts. Return strict JSON with this exact structure: ' +
+              '{"summary":"string","takeaways":["string"]}. ' +
+              'Rules: summary max 70 words, takeaways 3-6 bullets, each takeaway max 22 words, plain English.'
+          },
+          {
+            role: 'user',
+            content: [
+              `Title: ${title || 'Untitled video'}`,
+              `Category: ${category || 'Education'}`,
+              `Keywords: ${normalizeSeoKeywords(keywords).join(', ') || 'n/a'}`,
+              `Transcript:\n${transcriptForModel}`
+            ].join('\n\n')
+          }
+        ],
+        temperature: 0.2,
+        maxTokens: 420
+      }),
+      14000,
+      'SEO AI summary generation'
+    );
+
+    const raw = String(completion?.choices?.[0]?.message?.content || '').trim();
+    const jsonText = extractFirstJsonObject(raw);
+    const parsed = parseJsonSafe(jsonText, null);
+    if (parsed && typeof parsed === 'object') {
+      const summary = truncateAtWordBoundary(parsed.summary || '', SEO_TRANSCRIPT_SUMMARY_CHAR_LIMIT);
+      const takeaways = normalizeTakeaways(parsed.takeaways || [], SEO_TRANSCRIPT_MAX_TAKEAWAYS);
+      if (summary && takeaways.length > 0) {
+        return {
+          summary,
+          takeaways,
+          usedAi: true
+        };
+      }
+      if (summary) {
+        return {
+          summary,
+          takeaways: fallbackTakeaways,
+          usedAi: true
+        };
+      }
+    }
+  } catch {
+    // fallback below
+  }
+
+  return { summary: fallbackSummary, takeaways: fallbackTakeaways, usedAi: false };
+}
+
+async function findSeoPageByVideoId(supabase, videoId) {
+  const { data, error } = await supabase
+    .from(SEO_TRANSCRIPT_TABLE)
+    .select('id, slug, youtube_video_id, summary, key_takeaways, keywords, category')
+    .eq('youtube_video_id', videoId)
+    .limit(1);
+  if (error) throw error;
+  return Array.isArray(data) && data.length > 0 ? data[0] : null;
+}
+
+async function ensureUniqueSeoSlug(supabase, desiredSlug, videoId, existingRow = null) {
+  let slug = slugifySeoTitle(desiredSlug, `transcript-${videoId.toLowerCase()}`);
+  const suffixBase = videoId.toLowerCase().slice(-4);
+  for (let attempt = 0; attempt < 40; attempt += 1) {
+    const { data, error } = await supabase
+      .from(SEO_TRANSCRIPT_TABLE)
+      .select('id, youtube_video_id')
+      .eq('slug', slug)
+      .limit(1);
+    if (error) throw error;
+    const row = Array.isArray(data) && data.length > 0 ? data[0] : null;
+    if (!row) return slug;
+    if (existingRow?.id && row.id === existingRow.id) return slug;
+    if (String(row.youtube_video_id || '').trim() === videoId) return slug;
+    slug = `${slugifySeoTitle(desiredSlug, `transcript-${videoId.toLowerCase()}`)}-${suffixBase}${attempt ? `-${attempt + 1}` : ''}`;
+  }
+  return `${slugifySeoTitle(desiredSlug, `transcript-${videoId.toLowerCase()}`)}-${suffixBase}-${Date.now().toString(36).slice(-4)}`;
+}
+
+function scoreRelatedSeoRow(row, baseKeywords = [], baseCategory = '') {
+  const rowKeywords = normalizeSeoKeywords(row?.keywords || []);
+  const overlap = rowKeywords.filter((keyword) => baseKeywords.includes(keyword)).length;
+  let score = overlap * 5;
+  if (String(row?.category || '') === baseCategory) score += 3;
+  const updatedAt = new Date(row?.updated_at || row?.created_at || '').getTime();
+  if (Number.isFinite(updatedAt)) score += Math.max(0, 2 - Math.floor((Date.now() - updatedAt) / (1000 * 60 * 60 * 24 * 14)));
+  return score;
+}
+
+async function getRelatedSeoTranscriptPages(supabase, baseRow, limit = SEO_TRANSCRIPT_RELATED_LIMIT) {
+  const slug = String(baseRow?.slug || '').trim();
+  if (!slug) return [];
+  const baseKeywords = normalizeSeoKeywords(baseRow?.keywords || []).map((item) => item.toLowerCase());
+  const category = normalizeSeoCategory(baseRow?.category || '') || 'Education';
+  const selectedFields = 'slug, title, category, keywords, updated_at, created_at';
+  const candidates = new Map();
+
+  const pushRows = (rows = []) => {
+    for (const row of rows) {
+      const rowSlug = String(row?.slug || '').trim();
+      if (!rowSlug || rowSlug === slug || candidates.has(rowSlug)) continue;
+      candidates.set(rowSlug, row);
+    }
+  };
+
+  const collect = async (queryBuilder) => {
+    const { data, error } = await queryBuilder;
+    if (error) throw error;
+    pushRows(Array.isArray(data) ? data : []);
+  };
+
+  await collect(
+    supabase
+      .from(SEO_TRANSCRIPT_TABLE)
+      .select(selectedFields)
+      .neq('slug', slug)
+      .eq('category', category)
+      .order('updated_at', { ascending: false })
+      .limit(30)
+  );
+
+  if (candidates.size < limit) {
+    let overlapQuery = supabase
+      .from(SEO_TRANSCRIPT_TABLE)
+      .select(selectedFields)
+      .neq('slug', slug)
+      .order('updated_at', { ascending: false })
+      .limit(60);
+    if (baseKeywords.length > 0) {
+      overlapQuery = overlapQuery.overlaps('keywords', baseKeywords.slice(0, SEO_TRANSCRIPT_MAX_KEYWORDS));
+    }
+    await collect(overlapQuery);
+  }
+
+  const scored = Array.from(candidates.values())
+    .map((row) => ({
+      ...row,
+      score: scoreRelatedSeoRow(row, baseKeywords, category)
+    }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit);
+
+  return scored.map((row) => ({
+    slug: String(row.slug || '').trim(),
+    title: sanitizeVideoTitle(row.title, 'Transcript'),
+    category: normalizeSeoCategory(row.category) || 'Education',
+    path: buildSeoTranscriptPath(row.slug)
+  }));
+}
+
+function buildSeoTranscriptArticleSchema(page) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: page.h1Title,
+    description: page.description,
+    articleSection: page.category,
+    keywords: page.keywords.join(', '),
+    mainEntityOfPage: page.canonical,
+    url: page.canonical,
+    datePublished: page.publishedAt,
+    dateModified: page.updatedAt,
+    author: {
+      '@type': 'Organization',
+      name: 'Transcripta AI'
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: 'Transcripta AI',
+      logo: {
+        '@type': 'ImageObject',
+        url: `${SITE_ORIGIN}/logo.png`
+      }
+    },
+    isAccessibleForFree: true
+  };
+}
+
+function buildSeoTranscriptBreadcrumbSchema(page) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: SITE_ORIGIN
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: 'Transcript Tool',
+        item: `${SITE_ORIGIN}/tool`
+      },
+      {
+        '@type': 'ListItem',
+        position: 3,
+        name: page.h1Title,
+        item: page.canonical
+      }
+    ]
+  };
+}
+
+function toPublicSeoTranscriptPage(row, related = []) {
+  const slug = String(row?.slug || '').trim();
+  const title = sanitizeVideoTitle(row?.title || '', slug || 'Transcript');
+  const keywords = normalizeSeoKeywords(row?.keywords || []);
+  const summary = truncateAtWordBoundary(row?.summary || '', SEO_TRANSCRIPT_SUMMARY_CHAR_LIMIT) || buildFallbackSeoSummary(title, row?.transcript || '', keywords);
+  const takeaways = normalizeTakeaways(row?.key_takeaways || [], SEO_TRANSCRIPT_MAX_TAKEAWAYS);
+  const description = truncateAtWordBoundary(
+    row?.meta_description || buildSeoTranscriptDescription(title, summary, keywords),
+    165
+  );
+  const canonical = String(row?.canonical || '').trim() || buildSeoTranscriptCanonical(slug);
+  const h1Title = sanitizeVideoTitle(row?.h1_title || title, title);
+  const page = {
+    id: row?.id || null,
+    slug,
+    path: buildSeoTranscriptPath(slug),
+    youtubeUrl: String(row?.youtube_url || '').trim(),
+    youtubeVideoId: String(row?.youtube_video_id || '').trim(),
+    title,
+    h1Title,
+    transcript: normalizeTranscriptTextForSeo(row?.transcript || ''),
+    summary,
+    keyTakeaways: takeaways.length > 0 ? takeaways : buildFallbackSeoTakeaways(row?.transcript || '', keywords, summary),
+    category: normalizeSeoCategory(row?.category) || 'Education',
+    keywords,
+    seoTitle: truncateAtWordBoundary(row?.seo_title || buildSeoTranscriptTitle(title), 78),
+    description,
+    canonical,
+    robots: 'index, follow',
+    publishedAt: row?.created_at || new Date().toISOString(),
+    updatedAt: row?.updated_at || row?.created_at || new Date().toISOString(),
+    relatedPages: Array.isArray(related) ? related.slice(0, SEO_TRANSCRIPT_RELATED_LIMIT) : [],
+    cta: {
+      href: '/tool',
+      label: 'Try the free transcript tool'
+    }
+  };
+  page.structuredData = [buildSeoTranscriptArticleSchema(page), buildSeoTranscriptBreadcrumbSchema(page)];
+  return page;
+}
+
+function toSeoTranscriptParagraphs(value) {
+  const text = normalizeTranscriptTextForSeo(value);
+  if (!text) return [];
+
+  const paragraphBlocks = text
+    .split(/\n{2,}/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (paragraphBlocks.length >= 3) return paragraphBlocks.slice(0, 90);
+
+  const sentences = text
+    .replace(/\s+/g, ' ')
+    .split(/(?<=[.!?])\s+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+  if (sentences.length >= 3) {
+    const blocks = [];
+    for (let i = 0; i < sentences.length; i += 3) {
+      blocks.push(sentences.slice(i, i + 3).join(' '));
+      if (blocks.length >= 90) break;
+    }
+    return blocks;
+  }
+
+  const words = text.replace(/\s+/g, ' ').split(' ').filter(Boolean);
+  if (words.length <= 90) return [words.join(' ')];
+
+  const blocks = [];
+  for (let i = 0; i < words.length; i += 75) {
+    blocks.push(words.slice(i, i + 75).join(' '));
+    if (blocks.length >= 90) break;
+  }
+  return blocks;
+}
+
+function toJsonLdScriptContent(value) {
+  try {
+    return JSON.stringify(value)
+      .replace(/</g, '\\u003c')
+      .replace(/>/g, '\\u003e');
+  } catch {
+    return '';
+  }
+}
+
+function renderSeoTranscriptHtml(page) {
+  const seoTitle = escapeHtml(page?.seoTitle || 'Transcript | Transcripta AI');
+  const description = escapeHtml(page?.description || 'Read full transcript and summary on Transcripta AI.');
+  const h1Title = escapeHtml(page?.h1Title || page?.title || 'Transcript');
+  const category = escapeHtml(page?.category || 'Education');
+  const canonical = escapeHtml(page?.canonical || `${SITE_ORIGIN}${buildSeoTranscriptPath(page?.slug || '')}`);
+  const robots = escapeHtml(page?.robots || 'index, follow');
+  const keywords = Array.isArray(page?.keywords) ? page.keywords.filter(Boolean).join(', ') : '';
+  const keywordsMeta = keywords ? `<meta name="keywords" content="${escapeHtml(keywords)}" />` : '';
+  const publishedAt = escapeHtml(page?.publishedAt || '');
+  const updatedAt = escapeHtml(page?.updatedAt || page?.publishedAt || '');
+  const youtubeUrl = String(page?.youtubeUrl || '').trim();
+  const youtubeLink = youtubeUrl
+    ? `<p><a class="source-link" href="${escapeHtml(youtubeUrl)}" rel="noopener noreferrer">View original YouTube video</a></p>`
+    : '';
+
+  const summary = escapeHtml(page?.summary || '');
+  const takeaways = Array.isArray(page?.keyTakeaways) ? page.keyTakeaways : [];
+  const takeawaysHtml = takeaways.length > 0
+    ? `<ul>${takeaways.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>`
+    : '<p>No key takeaways available.</p>';
+
+  const transcriptParagraphs = toSeoTranscriptParagraphs(page?.transcript || '');
+  const transcriptHtml = transcriptParagraphs.length > 0
+    ? transcriptParagraphs.map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join('\n')
+    : '<p>Transcript unavailable.</p>';
+
+  const relatedPages = Array.isArray(page?.relatedPages) ? page.relatedPages : [];
+  const relatedHtml = relatedPages.length > 0
+    ? `<ul>${relatedPages.map((item) => {
+      const path = buildSeoTranscriptPath(item?.slug || '');
+      const href = escapeHtml(path);
+      const title = escapeHtml(item?.title || item?.slug || 'Related transcript');
+      return `<li><a href="${href}">${title}</a></li>`;
+    }).join('')}</ul>`
+    : '<p>No related pages yet.</p>';
+
+  const jsonLdItems = Array.isArray(page?.structuredData)
+    ? page.structuredData.filter(Boolean)
+    : page?.structuredData
+      ? [page.structuredData]
+      : [];
+  const jsonLdHtml = jsonLdItems
+    .map((item) => toJsonLdScriptContent(item))
+    .filter(Boolean)
+    .map((content) => `<script type="application/ld+json">${content}</script>`)
+    .join('\n');
+
+  const ctaHref = escapeHtml(String(page?.cta?.href || '/tool').trim() || '/tool');
+  const ctaLabel = escapeHtml(String(page?.cta?.label || 'Open Transcripta AI').trim() || 'Open Transcripta AI');
+
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>${seoTitle}</title>
+    <meta name="description" content="${description}" />
+    ${keywordsMeta}
+    <meta name="robots" content="${robots}" />
+    <link rel="canonical" href="${canonical}" />
+    <meta property="og:title" content="${seoTitle}" />
+    <meta property="og:description" content="${description}" />
+    <meta property="og:type" content="article" />
+    <meta property="og:url" content="${canonical}" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="${seoTitle}" />
+    <meta name="twitter:description" content="${description}" />
+    ${publishedAt ? `<meta property="article:published_time" content="${publishedAt}" />` : ''}
+    ${updatedAt ? `<meta property="article:modified_time" content="${updatedAt}" />` : ''}
+    ${jsonLdHtml}
+    <style>
+      :root { color-scheme: light; }
+      * { box-sizing: border-box; }
+      body { margin: 0; font-family: "Segoe UI", Arial, sans-serif; background: #f8fafc; color: #0f172a; line-height: 1.7; }
+      .wrap { max-width: 960px; margin: 0 auto; padding: 32px 18px 56px; }
+      .card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 22px; margin-bottom: 18px; }
+      h1, h2 { line-height: 1.25; margin: 0 0 12px; }
+      h1 { font-size: clamp(1.8rem, 3.2vw, 2.5rem); }
+      h2 { font-size: clamp(1.3rem, 2.1vw, 1.7rem); }
+      p { margin: 0 0 12px; }
+      ul { margin: 0; padding-inline-start: 22px; }
+      li { margin-bottom: 8px; }
+      .muted { color: #475569; font-size: 0.95rem; }
+      .badge { display: inline-block; margin-bottom: 10px; font-size: 0.78rem; letter-spacing: 0.06em; text-transform: uppercase; color: #0e7490; font-weight: 700; }
+      .cta-box { border-color: #bae6fd; background: #ecfeff; }
+      .cta-btn { display: inline-block; margin-top: 8px; padding: 10px 16px; border-radius: 10px; font-weight: 700; text-decoration: none; background: #0f172a; color: #ffffff; }
+      .source-link, a { color: #0e7490; }
+      a:hover { color: #155e75; }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <article class="card">
+        <p class="badge">${category}</p>
+        <h1>${h1Title}</h1>
+        <p class="muted">${description}</p>
+        ${youtubeLink}
+      </article>
+
+      <section class="card">
+        <h2>AI Summary</h2>
+        <p>${summary || 'Summary unavailable.'}</p>
+      </section>
+
+      <section class="card">
+        <h2>Key Takeaways</h2>
+        ${takeawaysHtml}
+      </section>
+
+      <section class="card">
+        <h2>Full Transcript</h2>
+        ${transcriptHtml}
+      </section>
+
+      <section class="card">
+        <h2>Related Transcript Pages</h2>
+        ${relatedHtml}
+      </section>
+
+      <section class="card cta-box">
+        <h2>Extract Your Own Transcript</h2>
+        <p>Turn any YouTube video into a transcript, summary, and actionable insights in seconds.</p>
+        <a class="cta-btn" href="${ctaHref}">${ctaLabel}</a>
+      </section>
+    </main>
+  </body>
+</html>`;
+}
+
+function renderSeoTranscriptErrorHtml({
+  slug = '',
+  title = 'Transcript Page Not Found',
+  message = 'This transcript page is not available.',
+  status = 404
+} = {}) {
+  const safeTitle = escapeHtml(String(title || '').trim() || 'Transcript Page');
+  const safeMessage = escapeHtml(String(message || '').trim() || 'Unable to load transcript page.');
+  const canonical = escapeHtml(`${SITE_ORIGIN}${buildSeoTranscriptPath(slug)}`);
+  const statusLabel = Number(status || 404);
+
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>${safeTitle} | Transcripta AI</title>
+    <meta name="description" content="${safeMessage}" />
+    <meta name="robots" content="noindex, nofollow" />
+    <link rel="canonical" href="${canonical}" />
+    <style>
+      body { margin: 0; font-family: "Segoe UI", Arial, sans-serif; background: #f8fafc; color: #0f172a; }
+      .wrap { max-width: 760px; margin: 0 auto; padding: 48px 18px; }
+      .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 24px; }
+      h1 { margin: 0 0 10px; font-size: 1.8rem; }
+      p { margin: 0 0 12px; color: #475569; line-height: 1.7; }
+      a { color: #0e7490; }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <section class="card">
+        <h1>${safeTitle}</h1>
+        <p>${safeMessage}</p>
+        <p>Status code: ${statusLabel}</p>
+        <a href="/tool">Go to the main tool</a>
+      </section>
+    </main>
+  </body>
+</html>`;
+}
+
+async function upsertSeoTranscriptPage(supabase, payload = {}) {
+  const transcript = normalizeTranscriptTextForSeo(payload.transcript || '');
+  if (!transcript || transcript.length < 20) return null;
+
+  const parsedVideo = parseYouTubeInput(payload.youtubeUrl || payload.videoId || payload.youtube_video_id || '');
+  if (!parsedVideo.ok) return null;
+  const videoId = parsedVideo.videoId;
+  const youtubeUrl = String(payload.youtubeUrl || payload.youtube_url || parsedVideo.canonicalUrl).trim() || parsedVideo.canonicalUrl;
+  const title = sanitizeVideoTitle(payload.title || payload.videoTitle || '', videoId);
+
+  const existing = await findSeoPageByVideoId(supabase, videoId);
+  const slug = existing?.slug
+    ? String(existing.slug).trim()
+    : await ensureUniqueSeoSlug(supabase, slugifySeoTitle(title, `transcript-${videoId.toLowerCase()}`), videoId, existing);
+
+  const rawKeywords = normalizeSeoKeywords(payload.keywords || []);
+  const computedKeywords = extractSeoKeywordsFromContent(title, transcript);
+  const mergedKeywords = normalizeSeoKeywords(
+    [...rawKeywords, ...computedKeywords, ...normalizeSeoKeywords(existing?.keywords || [])],
+    SEO_TRANSCRIPT_MAX_KEYWORDS
+  );
+
+  const category =
+    normalizeSeoCategory(payload.category) ||
+    normalizeSeoCategory(existing?.category) ||
+    inferSeoCategory(title, transcript, mergedKeywords);
+  const providedSummary = truncateAtWordBoundary(payload.summary || '', SEO_TRANSCRIPT_SUMMARY_CHAR_LIMIT);
+  const providedTakeaways = normalizeTakeaways(payload.keyTakeaways || payload.key_takeaways || [], SEO_TRANSCRIPT_MAX_TAKEAWAYS);
+
+  const existingSummary = truncateAtWordBoundary(existing?.summary || '', SEO_TRANSCRIPT_SUMMARY_CHAR_LIMIT);
+  const existingTakeaways = normalizeTakeaways(existing?.key_takeaways || [], SEO_TRANSCRIPT_MAX_TAKEAWAYS);
+
+  let summary = providedSummary || existingSummary;
+  let keyTakeaways = providedTakeaways.length > 0 ? providedTakeaways : existingTakeaways;
+  if (!summary || keyTakeaways.length === 0) {
+    const generated = await generateSeoSummaryAndTakeaways(supabase, {
+      title,
+      transcript,
+      category,
+      keywords: mergedKeywords
+    });
+    if (!summary) summary = generated.summary;
+    if (keyTakeaways.length === 0) keyTakeaways = generated.takeaways;
+  }
+
+  if (!summary) {
+    summary = buildFallbackSeoSummary(title, transcript, mergedKeywords);
+  }
+  if (keyTakeaways.length === 0) {
+    keyTakeaways = buildFallbackSeoTakeaways(transcript, mergedKeywords, summary);
+  }
+
+  const rowPayload = {
+    youtube_video_id: videoId,
+    youtube_url: youtubeUrl,
+    title,
+    slug,
+    transcript,
+    summary,
+    key_takeaways: keyTakeaways,
+    category,
+    keywords: mergedKeywords,
+    seo_title: truncateAtWordBoundary(payload.seoTitle || buildSeoTranscriptTitle(title), 78),
+    meta_description: truncateAtWordBoundary(
+      payload.metaDescription || buildSeoTranscriptDescription(title, summary, mergedKeywords),
+      165
+    ),
+    h1_title: sanitizeVideoTitle(payload.h1Title || title, title),
+    canonical: buildSeoTranscriptCanonical(slug),
+    source_user_id: payload.userId || null,
+    source_processing_type: String(payload.processingType || '').trim() || null,
+    updated_at: new Date().toISOString()
+  };
+
+  const writeResult = existing?.id
+    ? await supabase
+      .from(SEO_TRANSCRIPT_TABLE)
+      .update(rowPayload)
+      .eq('id', existing.id)
+      .select('*')
+      .single()
+    : await supabase
+      .from(SEO_TRANSCRIPT_TABLE)
+      .insert([rowPayload])
+      .select('*')
+      .single();
+
+  if (writeResult.error) throw writeResult.error;
+  return writeResult.data || null;
+}
+
+async function safeUpsertSeoTranscriptPage(supabase, payload = {}) {
+  if (!supabase) return null;
+  try {
+    return await upsertSeoTranscriptPage(supabase, payload);
+  } catch (error) {
+    if (isMissingRelationError(error)) {
+      console.warn('[seo-transcript] table is missing; run migration to enable transcript SEO pages.');
+      return null;
+    }
+    console.warn(`[seo-transcript] failed to upsert SEO page: ${String(error?.message || error || 'unknown error')}`);
+    return null;
+  }
+}
+
+async function getSeoTranscriptPageBySlug(supabase, slug) {
+  const normalizedSlug = slugifySeoTitle(slug || '');
+  if (!normalizedSlug) return null;
+  const { data, error } = await supabase
+    .from(SEO_TRANSCRIPT_TABLE)
+    .select('*')
+    .eq('slug', normalizedSlug)
+    .limit(1);
+  if (error) throw error;
+  const row = Array.isArray(data) && data.length > 0 ? data[0] : null;
+  if (!row) return null;
+  const related = await getRelatedSeoTranscriptPages(supabase, row, SEO_TRANSCRIPT_RELATED_LIMIT);
+  return toPublicSeoTranscriptPage(row, related);
+}
+
+async function getSeoTranscriptSitemapEntries(supabase) {
+  const { data, error } = await supabase
+    .from(SEO_TRANSCRIPT_TABLE)
+    .select('slug, updated_at, created_at')
+    .order('updated_at', { ascending: false })
+    .limit(42000);
+  if (error) throw error;
+  const rows = Array.isArray(data) ? data : [];
+  return rows.map((row) => ({
+    path: buildSeoTranscriptPath(row.slug),
+    changefreq: 'daily',
+    priority: '0.8',
+    lastmod: toIsoDate(row.updated_at || row.created_at)
+  }));
+}
+
+async function buildRuntimeSitemapXml(supabase) {
+  const baseEntries = [...STATIC_SITEMAP_ENTRIES, ...FRONTEND_SITEMAP_ENTRIES];
+  let transcriptEntries = [];
+  try {
+    transcriptEntries = await getSeoTranscriptSitemapEntries(supabase);
+  } catch (error) {
+    if (!isMissingRelationError(error)) {
+      console.warn(`[sitemap] failed to load transcript sitemap entries: ${String(error?.message || error || 'unknown')}`);
+    }
+  }
+  return buildSitemapXml([...baseEntries, ...transcriptEntries]);
+}
+
+function extractSummaryFromAiResult(processingType, aiResult) {
+  const resultText = String(aiResult || '').replace(/\s+/g, ' ').trim();
+  if (!resultText) return '';
+  const normalizedType = String(processingType || '').trim().toLowerCase();
+  if (normalizedType.startsWith('summary')) {
+    return truncateAtWordBoundary(resultText, SEO_TRANSCRIPT_SUMMARY_CHAR_LIMIT);
+  }
+  return '';
+}
+
+function extractTakeawaysFromAiResult(aiResult) {
+  return normalizeTakeaways(String(aiResult || ''), SEO_TRANSCRIPT_MAX_TAKEAWAYS);
+}
+
 async function logApiRequestSafe(supabase, payload) {
   if (!supabase || !payload || typeof payload !== 'object') return;
   try {
@@ -4578,7 +5571,12 @@ export default async function handler(req, res) {
     return;
   }
 
-  if (!ENV_VALIDATION.valid && pathname.startsWith('/api/') && pathname !== '/api/settings/status') {
+  if (
+    !ENV_VALIDATION.valid &&
+    pathname.startsWith('/api/') &&
+    pathname !== '/api/settings/status' &&
+    pathname !== '/api/sitemap.xml'
+  ) {
     return sendError(res, 500, 'SERVER_MISCONFIGURED', 'Server environment is not configured correctly', {
       missing: ENV_VALIDATION.missingRequired
     });
@@ -4602,6 +5600,103 @@ export default async function handler(req, res) {
   try {
     if (pathname === '/api/settings/status') {
       return res.json({ success: true, managedInBackend: true });
+    }
+
+    if ((pathname === '/sitemap.xml' || pathname === '/api/sitemap.xml') && req.method === 'GET') {
+      const supabase = getSupabase();
+      const xml = await buildRuntimeSitemapXml(supabase);
+      res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+      return res.status(200).send(xml);
+    }
+
+    const transcriptHtmlMatch = pathname.match(/^\/api\/transcript\/([a-z0-9-]+)$/i);
+    if (transcriptHtmlMatch && req.method === 'GET') {
+      const slug = String(transcriptHtmlMatch[1] || '').trim().toLowerCase();
+      if (!slug || slug === 'extract') {
+        const notFoundHtml = renderSeoTranscriptErrorHtml({
+          slug,
+          title: 'Transcript Page Not Found',
+          message: 'This transcript page is not available.',
+          status: 404
+        });
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        return res.status(404).send(notFoundHtml);
+      }
+
+      const supabase = getSupabase();
+      if (!supabase) {
+        const unavailableHtml = renderSeoTranscriptErrorHtml({
+          slug,
+          title: 'Transcript Pages Temporarily Unavailable',
+          message: 'The server is not configured correctly yet.',
+          status: 503
+        });
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        return res.status(503).send(unavailableHtml);
+      }
+
+      let page = null;
+      try {
+        page = await getSeoTranscriptPageBySlug(supabase, slug);
+      } catch (error) {
+        if (isMissingRelationError(error)) {
+          const notReadyHtml = renderSeoTranscriptErrorHtml({
+            slug,
+            title: 'Transcript Pages Not Ready',
+            message: 'SEO transcript pages are not configured yet.',
+            status: 503
+          });
+          res.setHeader('Content-Type', 'text/html; charset=utf-8');
+          return res.status(503).send(notReadyHtml);
+        }
+        throw error;
+      }
+
+      if (!page) {
+        const notFoundHtml = renderSeoTranscriptErrorHtml({
+          slug,
+          title: 'Transcript Page Not Found',
+          message: 'This transcript page is not available.',
+          status: 404
+        });
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        return res.status(404).send(notFoundHtml);
+      }
+
+      const html = renderSeoTranscriptHtml(page);
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=900, stale-while-revalidate=3600');
+      return res.status(200).send(html);
+    }
+
+    const publicTranscriptMatch = pathname.match(/^\/api\/public\/transcript\/([a-z0-9-]+)$/i);
+    if (publicTranscriptMatch && req.method === 'GET') {
+      const slug = String(publicTranscriptMatch[1] || '').trim().toLowerCase();
+      if (!slug || slug === 'extract') {
+        return sendError(res, 404, 'NOT_FOUND', 'Transcript page not found');
+      }
+
+      const supabase = getSupabase();
+      if (!supabase) {
+        return sendError(res, 500, 'SERVER_MISCONFIGURED', 'Server environment is not configured correctly');
+      }
+
+      let page = null;
+      try {
+        page = await getSeoTranscriptPageBySlug(supabase, slug);
+      } catch (error) {
+        if (isMissingRelationError(error)) {
+          return sendError(res, 503, 'SEO_TRANSCRIPTS_NOT_READY', 'SEO transcript pages are not configured yet');
+        }
+        throw error;
+      }
+      if (!page) {
+        return sendError(res, 404, 'NOT_FOUND', 'Transcript page not found');
+      }
+      return res.json({
+        success: true,
+        data: page
+      });
     }
 
     if (pathname === '/api/public/transcript/extract' && req.method === 'POST') {
@@ -4719,19 +5814,29 @@ export default async function handler(req, res) {
         method
       };
 
+      const guestVideoTitle = sanitizeVideoTitle(extractMeta.title || extractMeta.videoTitle || '', videoId);
+      const guestSeoPage = await safeUpsertSeoTranscriptPage(supabase, {
+        videoId,
+        youtubeUrl: parsedVideo.canonicalUrl,
+        title: guestVideoTitle,
+        transcript,
+        processingType: 'guest_extract'
+      });
       markGuestExtractUsed(guestStatus.token);
 
       return res.json({
         success: true,
         guest: true,
         videoId,
-        videoTitle: sanitizeVideoTitle(extractMeta.title || extractMeta.videoTitle || '', videoId),
+        videoTitle: guestVideoTitle,
         transcript,
         wordCount: transcript.split(/\s+/).length,
         method,
         thumbnailUrl: extractMeta.thumbnailUrl || buildYouTubeThumbnailUrl(videoId),
         descriptionLinks: Array.isArray(extractMeta.descriptionLinks) ? extractMeta.descriptionLinks.slice(0, 20) : [],
         descriptionInstructions: Array.isArray(extractMeta.descriptionInstructions) ? extractMeta.descriptionInstructions.slice(0, 10) : [],
+        seoPath: guestSeoPage?.path || '',
+        seoSlug: guestSeoPage?.slug || '',
         guestRemaining: Math.max(guestStatus.remaining - 1, 0)
       });
     }
@@ -5836,17 +6941,28 @@ export default async function handler(req, res) {
               .eq('user_id', user.id);
           }
           console.info(`[cache] transcript user-hit video=${videoId} user=${user.id}`);
+          const cachedVideoTitle = sanitizeVideoTitle(cachedExtract.video_title, videoId);
+          const seoPageFromCache = await safeUpsertSeoTranscriptPage(supabase, {
+            userId: user.id,
+            videoId,
+            youtubeUrl: parsedVideo.canonicalUrl,
+            title: cachedVideoTitle,
+            transcript: cachedExtract.transcript,
+            processingType: EXTRACT_TYPE
+          });
           const quota = await getQuotaSnapshot();
           return res.json({
             success: true,
             videoId,
-            videoTitle: sanitizeVideoTitle(cachedExtract.video_title, videoId),
+            videoTitle: cachedVideoTitle,
             transcript: cachedExtract.transcript,
             wordCount: cachedExtract.transcript.trim().split(/\s+/).length,
             method: hydratedMeta.method || cachedMeta.method || 'cached',
             thumbnailUrl: hydratedMeta.thumbnailUrl || defaultExtractMeta.thumbnailUrl,
             descriptionLinks: hydratedMeta.descriptionLinks || [],
             descriptionInstructions: hydratedMeta.descriptionInstructions || [],
+            seoPath: seoPageFromCache?.path || '',
+            seoSlug: seoPageFromCache?.slug || '',
             creditsLeft,
             chargedForNewVideo: false,
             monthlyQuota: quota.monthlyQuota,
@@ -6005,6 +7121,14 @@ export default async function handler(req, res) {
 
       await saveExtractionRecord(supabase, user.id, videoId, transcript.trim(), method, resolvedVideoTitle, extractMeta);
       setCachedTranscriptInMemory(videoId, transcript.trim(), method, extractMeta.transcriptKeyId || activeTranscriptKeyId);
+      const seoPage = await safeUpsertSeoTranscriptPage(supabase, {
+        userId: user.id,
+        videoId,
+        youtubeUrl: parsedVideo.canonicalUrl,
+        title: resolvedVideoTitle,
+        transcript: transcript.trim(),
+        processingType: EXTRACT_TYPE
+      });
 
       return res.json({
         success: true,
@@ -6016,6 +7140,8 @@ export default async function handler(req, res) {
         thumbnailUrl: extractMeta.thumbnailUrl || buildYouTubeThumbnailUrl(videoId),
         descriptionLinks: extractMeta.descriptionLinks || [],
         descriptionInstructions: extractMeta.descriptionInstructions || [],
+        seoPath: seoPage?.path || '',
+        seoSlug: seoPage?.slug || '',
         creditsLeft,
         chargedForNewVideo,
         subscriptionTier: subscription.tier,
@@ -6161,6 +7287,8 @@ export default async function handler(req, res) {
         await getPreferredVideoTitleForUser(supabase, user.id, canonicalVideoId, canonicalVideoId)
       );
       const finalAi = result ?? aiResult ?? null;
+      const seoSummary = extractSummaryFromAiResult(normalizedType, finalAi);
+      const seoTakeaways = extractTakeawaysFromAiResult(finalAi);
       const { data: existingRows, error: existingError } = await supabase
         .from('transcripts_history')
         .select('id, user_id, video_id, processing_type, ai_result, transcript, created_at')
@@ -6173,7 +7301,23 @@ export default async function handler(req, res) {
       if (existingError) throw existingError;
       const existing = Array.isArray(existingRows) ? existingRows[0] : null;
       if (existing && String(existing.ai_result || '') === String(finalAi || '')) {
-        return res.json({ success: true, data: existing, deduplicated: true });
+        const dedupedSeoPage = await safeUpsertSeoTranscriptPage(supabase, {
+          userId: user.id,
+          videoId: canonicalVideoId,
+          youtubeUrl: parsedHistoryVideo.canonicalUrl,
+          title: preferredTitle,
+          transcript,
+          processingType: normalizedType,
+          summary: seoSummary,
+          keyTakeaways: seoTakeaways
+        });
+        return res.json({
+          success: true,
+          data: existing,
+          deduplicated: true,
+          seoPath: dedupedSeoPage?.path || '',
+          seoSlug: dedupedSeoPage?.slug || ''
+        });
       }
 
       const { data, error } = await supabase
@@ -6192,7 +7336,22 @@ export default async function handler(req, res) {
         .single();
 
       if (error) throw error;
-      return res.json({ success: true, data });
+      const savedSeoPage = await safeUpsertSeoTranscriptPage(supabase, {
+        userId: user.id,
+        videoId: canonicalVideoId,
+        youtubeUrl: parsedHistoryVideo.canonicalUrl,
+        title: preferredTitle,
+        transcript,
+        processingType: normalizedType,
+        summary: seoSummary,
+        keyTakeaways: seoTakeaways
+      });
+      return res.json({
+        success: true,
+        data,
+        seoPath: savedSeoPage?.path || '',
+        seoSlug: savedSeoPage?.slug || ''
+      });
     }
 
     if (pathname.match(/^\/api\/history\/[^/]+\/title$/) && req.method === 'PATCH') {

@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { SEO_CONFIG, REDIRECT_RULES, getAllCanonicalSeoPaths, getSeoRouteInfo } from '../src/seo/seoCatalog.js';
 
-const sitemapPath = new URL('../public/sitemap.xml', import.meta.url);
+const sitemapPath = new URL('../../scripts/.cache/sitemap.build.xml', import.meta.url);
 
 function normalizePath(pathname) {
   const raw = String(pathname || '/').trim();
@@ -78,4 +78,3 @@ main().catch((error) => {
   console.error('[sitemap] validation failed:', error);
   process.exitCode = 1;
 });
-

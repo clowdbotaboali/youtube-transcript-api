@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
-const SITEMAP_PATH = path.resolve(process.cwd(), 'frontend', 'public', 'sitemap.xml');
+const SITEMAP_PATH = path.resolve(process.cwd(), 'scripts', '.cache', 'sitemap.build.xml');
 const REPORT_DIR = path.resolve(process.cwd(), 'scripts', '.cache');
 const REPORT_PATH = path.resolve(REPORT_DIR, 'url-health-report.json');
 const CONCURRENCY = Number(process.env.URL_CHECK_CONCURRENCY || 12);

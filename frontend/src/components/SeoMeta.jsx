@@ -77,6 +77,7 @@ function stableStringify(value) {
 function SeoMeta({
   title,
   description,
+  keywords = '',
   path = '/',
   robots = '',
   ogType = 'website',
@@ -106,6 +107,11 @@ function SeoMeta({
     document.title = title;
 
     upsertMeta('meta[name="description"]', { name: 'description' }, description);
+    if (keywords) {
+      upsertMeta('meta[name="keywords"]', { name: 'keywords' }, keywords);
+    } else {
+      removeNode('meta[name="keywords"]');
+    }
     if (robots) {
       upsertMeta('meta[name="robots"]', { name: 'robots' }, robots);
     } else {
@@ -143,6 +149,7 @@ function SeoMeta({
   }, [
     title,
     description,
+    keywords,
     path,
     robots,
     ogType,
