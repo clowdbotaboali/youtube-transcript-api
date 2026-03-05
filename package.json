@@ -5,6 +5,7 @@
   "scripts": {
     "build": "npm run seo:deploy",
     "build:frontend": "npm --prefix frontend install && npm --prefix frontend run build:compile",
+    "transcript:batch": "node scripts/batch-transcript-extract.mjs",
     "seo:generate-sitemap": "node scripts/generate-sitemap.mjs",
     "seo:validate-sitemap": "npm --prefix frontend run seo:validate-sitemap",
     "seo:ping-search-engines": "node scripts/ping-search-engines.mjs",
