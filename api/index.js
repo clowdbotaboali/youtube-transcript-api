@@ -4499,6 +4499,36 @@ function buildSeoTranscriptBreadcrumbSchema(page) {
   };
 }
 
+function buildSeoTranscriptVideoSchema(page) {
+  const videoId = String(page?.youtubeVideoId || '').trim();
+  if (!videoId) return null;
+  const youtubeUrl = String(page?.youtubeUrl || `https://www.youtube.com/watch?v=${videoId}`).trim();
+  const embedUrl = `https://www.youtube.com/embed/${videoId}`;
+  const thumbnailUrl = `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'VideoObject',
+    name: page.h1Title,
+    description: page.description,
+    thumbnailUrl,
+    uploadDate: page.publishedAt,
+    datePublished: page.publishedAt,
+    dateModified: page.updatedAt,
+    embedUrl,
+    contentUrl: youtubeUrl,
+    mainEntityOfPage: page.canonical,
+    publisher: {
+      '@type': 'Organization',
+      name: 'Transcripta AI'
+    },
+    potentialAction: {
+      '@type': 'WatchAction',
+      target: [youtubeUrl]
+    }
+  };
+}
+
 function toPublicSeoTranscriptPage(row, related = []) {
   const slug = String(row?.slug || '').trim();
   const title = sanitizeVideoTitle(row?.title || '', slug || 'Transcript');
@@ -4536,7 +4566,10 @@ function toPublicSeoTranscriptPage(row, related = []) {
       label: 'Try the free transcript tool'
     }
   };
-  page.structuredData = [buildSeoTranscriptArticleSchema(page), buildSeoTranscriptBreadcrumbSchema(page)];
+  const structuredData = [buildSeoTranscriptArticleSchema(page), buildSeoTranscriptBreadcrumbSchema(page)];
+  const videoSchema = buildSeoTranscriptVideoSchema(page);
+  if (videoSchema) structuredData.push(videoSchema);
+  page.structuredData = structuredData;
   return page;
 }
 
