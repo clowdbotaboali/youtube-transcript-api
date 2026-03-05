@@ -6,18 +6,125 @@ const DELAY_MS = Number(process.env.TRANSCRIPTA_BATCH_DELAY_MS || 3000);
 
 const VIDEO_QUEUE = [
   {
-    label: 'Steve Jobs Stanford',
-    url: 'https://www.youtube.com/watch?v=UF8uR6Z6KLc'
+    label: 'TED | Simon Sinek - How Great Leaders Inspire Action',
+    url: 'https://www.youtube.com/watch?v=qp0HIF3SfI4'
   },
   {
-    label: 'TED Talk',
-    url: 'https://www.youtube.com/watch?v=H14bBuluwB8'
+    label: 'TED | Brene Brown - The Power of Vulnerability',
+    url: 'https://www.youtube.com/watch?v=iCvmsMzlF7o'
   },
   {
-    label: 'Y Combinator',
-    url: 'https://www.youtube.com/watch?v=rP8bAvqi-EM'
+    label: 'TED | Amy Cuddy - Your Body Language May Shape Who You Are',
+    url: 'https://www.youtube.com/watch?v=Ks-_Mh1QhMc'
+  },
+  {
+    label: 'TED | Tim Urban - Inside the Mind of a Master Procrastinator',
+    url: 'https://www.youtube.com/watch?v=arj7oStGLkU'
+  },
+  {
+    label: 'TED | Sir Ken Robinson - Do Schools Kill Creativity?',
+    url: 'https://www.youtube.com/watch?v=iG9CE55wbtY'
+  },
+  {
+    label: 'TED | Susan Cain - The Power of Introverts',
+    url: 'https://www.youtube.com/watch?v=c0KYU2j0TM4'
+  },
+  {
+    label: 'YC | The Powerful Alternative To Fine-Tuning',
+    url: 'https://www.youtube.com/watch?v=UPGB-hsAoVY'
+  },
+  {
+    label: 'YC | The AI Agent Economy Is Here',
+    url: 'https://www.youtube.com/watch?v=Q8wVMdwhlh4'
+  },
+  {
+    label: 'YC | Inside Claude Code With Its Creator Boris Cherny',
+    url: 'https://www.youtube.com/watch?v=PQU9o_5rHC4'
+  },
+  {
+    label: 'YC | The New Way To Build A Startup',
+    url: 'https://www.youtube.com/watch?v=rWUWfj_PqmM'
+  },
+  {
+    label: 'YC | OpenClaw Creator: Why 80% Of Apps Will Disappear',
+    url: 'https://www.youtube.com/watch?v=4uzGDAoNOZc'
+  },
+  {
+    label: 'Startup School | How to Get and Evaluate Startup Ideas',
+    url: 'https://www.youtube.com/watch?v=Th8JoIan4dg'
+  },
+  {
+    label: 'Arabic Edu | Nafham - Pre-IGCSE vs IGCSE',
+    url: 'https://www.youtube.com/watch?v=x3DCiLwnZvo'
+  },
+  {
+    label: 'Arabic Edu | Nafham - When to Switch Systems?',
+    url: 'https://www.youtube.com/watch?v=fpNZMXmiLGk'
+  },
+  {
+    label: 'Arabic Edu | Khan Academy Arabic - Finding an Idea in the Mail',
+    url: 'https://www.youtube.com/watch?v=c79MFGAaD70'
+  },
+  {
+    label: 'Arabic Edu | Khan Academy Arabic - Sutton Hoo Ship Burial',
+    url: 'https://www.youtube.com/watch?v=msSxZnyS3Bg'
+  },
+  {
+    label: 'Arabic Edu | Droos Online - Rest and Responsibility',
+    url: 'https://www.youtube.com/watch?v=v68RcDZzBrg'
+  },
+  {
+    label: 'Arabic Edu | Droos Online Podcast - Identity',
+    url: 'https://www.youtube.com/watch?v=1Gqw1QVpiXw'
+  },
+  {
+    label: 'Programming | freeCodeCamp - Learn Python Full Course',
+    url: 'https://www.youtube.com/watch?v=rfscVS0vtbw'
+  },
+  {
+    label: 'Programming | Programming with Mosh - Python Full Course',
+    url: 'https://www.youtube.com/watch?v=_uQrJ0TkZlc'
+  },
+  {
+    label: 'Programming | freeCodeCamp - Python for Beginners (1 Hour)',
+    url: 'https://www.youtube.com/watch?v=kqtD5dpn9C8'
+  },
+  {
+    label: 'Programming | freeCodeCamp - Intro to Programming & CS',
+    url: 'https://www.youtube.com/watch?v=zOjov-2OZ0E'
+  },
+  {
+    label: 'Programming | Mosh - JavaScript Course for Beginners',
+    url: 'https://www.youtube.com/watch?v=W6NZfCO5SIk'
+  },
+  {
+    label: 'Programming | freeCodeCamp - Git and GitHub Crash Course',
+    url: 'https://www.youtube.com/watch?v=RGOj5yH7evk'
+  },
+  {
+    label: 'Marketing | Neil Patel - B2B Client Acquisition',
+    url: 'https://www.youtube.com/watch?v=vzYQQR8omqo'
+  },
+  {
+    label: 'Marketing | Ahrefs - How to Pick an SEO Niche',
+    url: 'https://www.youtube.com/watch?v=PTe1TAuTXHI'
+  },
+  {
+    label: 'Marketing | Semrush - Toolkits Overview',
+    url: 'https://www.youtube.com/watch?v=TNwsfWTb1Hw'
+  },
+  {
+    label: 'Business | Simplilearn - User Research Full Course',
+    url: 'https://www.youtube.com/watch?v=xkXaPOb9Qxo'
+  },
+  {
+    label: 'Business | Wharton - Adam Grant (Improv & Decision-Making)',
+    url: 'https://www.youtube.com/watch?v=OhknYa7sOhE'
+  },
+  {
+    label: 'Business | Harvard Business Review - McKinsey and AI',
+    url: 'https://www.youtube.com/watch?v=hSpem_oGAf0'
   }
-  // Add more items here when needed.
 ];
 
 function sleep(ms) {
