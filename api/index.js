@@ -5609,7 +5609,7 @@ export default async function handler(req, res) {
       return res.status(200).send(xml);
     }
 
-    const transcriptHtmlMatch = pathname.match(/^\/api\/transcript\/([a-z0-9-]+)$/i);
+    const transcriptHtmlMatch = pathname.match(/^\/(?:api\/)?transcript\/([a-z0-9-]+)$/i);
     if (transcriptHtmlMatch && req.method === 'GET') {
       const slug = String(transcriptHtmlMatch[1] || '').trim().toLowerCase();
       if (!slug || slug === 'extract') {

@@ -11,7 +11,7 @@
     },
     {
       "source": "/sitemap.xml",
-      "destination": "/api/sitemap.xml"
+      "destination": "/api/index.js"
     },
     {
       "source": "/tool",
@@ -19,7 +19,7 @@
     },
     {
       "source": "/transcript/:slug",
-      "destination": "/api/transcript/:slug"
+      "destination": "/api/index.js"
     },
     {
       "source": "/en",
