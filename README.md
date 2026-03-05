@@ -66,6 +66,11 @@ Optional:
 - `AUTH_EMAIL_FROM_NAME`
 - `AUTH_EMAIL_FROM_ADDRESS`
 - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` (required for custom sender address)
+- `SMTP_SECURE` (`true/false`, default `false` unless port `465`)
+- `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` (new signup Telegram alerts)
+- `ADMIN_NOTIFY_EMAIL` (admin mailbox for signup alerts; fallback: `ADMIN_EMAIL`)
+- `ADMIN_NOTIFY_FROM_NAME`
+- `ADMIN_NOTIFY_FROM_EMAIL`
 
 ### Frontend (`frontend`)
 - `VITE_SUPABASE_URL`

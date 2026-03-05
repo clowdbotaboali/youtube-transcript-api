@@ -2,6 +2,7 @@ import { Groq } from 'groq-sdk';
 import { createClient } from '@supabase/supabase-js';
 import ytdl from '@distube/ytdl-core';
 import crypto from 'crypto';
+import nodemailer from 'nodemailer';
 
 let groqClient = null;
 
@@ -54,6 +55,9 @@ const OAUTH_REDIRECT_DEFAULT_PATH = '/auth/callback?next=/dashboard';
 const TURNSTILE_VERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
 const ADMIN_DEFAULT_USERNAME = 'admin';
 const ADMIN_DEFAULT_EMAIL = String(process.env.ADMIN_EMAIL || 'admin@localhost.local').trim().toLowerCase();
+const ADMIN_NOTIFY_DEFAULT_FROM_NAME = 'Transcripta AI';
+const SIGNUP_NOTIFY_TIMEOUT_MS = 10000;
+const SMTP_DEFAULT_PORT = 587;
 const ADMIN_PASSWORD_FROM_ENV = Boolean(String(process.env.ADMIN_PASSWORD || '').trim());
 const ADMIN_PASSWORD_FALLBACK_SOURCE = String(process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || '').trim();
 const ADMIN_DEFAULT_PASSWORD = ADMIN_PASSWORD_FROM_ENV
@@ -181,6 +185,7 @@ let rateLimitOwnerUserIdCache = {
   value: '',
   expiresAt: 0
 };
+let adminNotificationTransporter = null;
 
 function validateEnvironment() {
   const missingRequired = [];
@@ -194,6 +199,19 @@ function validateEnvironment() {
   if (!ADMIN_TOKEN_SECRET_FROM_ENV) missingRecommended.push('ADMIN_TOKEN_SECRET');
   if (!ADMIN_PASSWORD_FROM_ENV) missingRecommended.push('ADMIN_PASSWORD');
   if (!String(process.env.ADMIN_EMAIL || '').trim()) missingRecommended.push('ADMIN_EMAIL');
+  const telegramBotToken = String(process.env.TELEGRAM_BOT_TOKEN || '').trim();
+  const telegramChatId = String(process.env.TELEGRAM_CHAT_ID || '').trim();
+  if (telegramBotToken && !telegramChatId) missingRecommended.push('TELEGRAM_CHAT_ID');
+  if (!telegramBotToken && telegramChatId) missingRecommended.push('TELEGRAM_BOT_TOKEN');
+  const smtpHost = String(process.env.SMTP_HOST || '').trim();
+  const smtpPort = String(process.env.SMTP_PORT || '').trim();
+  const smtpUser = String(process.env.SMTP_USER || '').trim();
+  const smtpPass = String(process.env.SMTP_PASS || '').trim();
+  const hasAnySmtp = Boolean(smtpHost || smtpPort || smtpUser || smtpPass);
+  const hasFullSmtp = Boolean(smtpHost && smtpPort && smtpUser && smtpPass);
+  if (hasAnySmtp && !hasFullSmtp) {
+    missingRecommended.push('SMTP_HOST/SMTP_PORT/SMTP_USER/SMTP_PASS');
+  }
 
   if (missingRequired.length > 0) {
     console.error(`[env] Missing required environment variables: ${missingRequired.join(', ')}`);
@@ -259,6 +277,150 @@ async function delayMs(ms = 0) {
   const safeMs = Math.max(Number(ms || 0), 0);
   if (!safeMs) return;
   await new Promise((resolve) => setTimeout(resolve, safeMs));
+}
+
+function parseEnvBoolean(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on';
+}
+
+function escapeHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function getAdminNotificationRecipientEmail() {
+  const raw = String(process.env.ADMIN_NOTIFY_EMAIL || process.env.ADMIN_EMAIL || '').trim().toLowerCase();
+  return raw.includes('@') ? raw : '';
+}
+
+function getAdminNotificationSender() {
+  const fromEmail = String(
+    process.env.ADMIN_NOTIFY_FROM_EMAIL
+    || process.env.AUTH_EMAIL_FROM_ADDRESS
+    || process.env.SMTP_ADMIN_EMAIL
+    || process.env.SMTP_USER
+    || ''
+  ).trim();
+  if (!fromEmail.includes('@')) {
+    return '';
+  }
+  const fromName = String(process.env.ADMIN_NOTIFY_FROM_NAME || process.env.AUTH_EMAIL_FROM_NAME || ADMIN_NOTIFY_DEFAULT_FROM_NAME).trim();
+  return fromName ? `${fromName} <${fromEmail}>` : fromEmail;
+}
+
+function getAdminNotificationTransporter() {
+  if (adminNotificationTransporter) {
+    return adminNotificationTransporter;
+  }
+
+  const host = String(process.env.SMTP_HOST || '').trim();
+  const user = String(process.env.SMTP_USER || '').trim();
+  const pass = String(process.env.SMTP_PASS || '').trim();
+  const parsedPort = Number(process.env.SMTP_PORT || SMTP_DEFAULT_PORT);
+  const port = Number.isFinite(parsedPort) && parsedPort > 0 ? parsedPort : SMTP_DEFAULT_PORT;
+  if (!host || !user || !pass) {
+    return null;
+  }
+
+  const secure = parseEnvBoolean(process.env.SMTP_SECURE) || port === 465;
+  adminNotificationTransporter = nodemailer.createTransport({
+    host,
+    port,
+    secure,
+    auth: { user, pass },
+    connectionTimeout: SIGNUP_NOTIFY_TIMEOUT_MS,
+    greetingTimeout: SIGNUP_NOTIFY_TIMEOUT_MS,
+    socketTimeout: SIGNUP_NOTIFY_TIMEOUT_MS
+  });
+
+  return adminNotificationTransporter;
+}
+
+function buildSignupNotificationLines({ email = '', userId = '', ip = '', createdAt = '' }) {
+  return [
+    'New signup on Transcripta AI',
+    `Email: ${String(email || '').trim() || 'n/a'}`,
+    `User ID: ${String(userId || '').trim() || 'n/a'}`,
+    `IP: ${String(ip || '').trim() || 'n/a'}`,
+    `Time (UTC): ${String(createdAt || '').trim() || new Date().toISOString()}`
+  ];
+}
+
+function buildSignupNotificationHtml(lines = []) {
+  const items = lines.map((line) => `<li>${escapeHtml(line)}</li>`).join('');
+  return `<div><p><strong>Transcripta AI - New signup</strong></p><ul>${items}</ul></div>`;
+}
+
+async function sendTelegramSignupNotification(payload) {
+  const botToken = String(process.env.TELEGRAM_BOT_TOKEN || '').trim();
+  const chatId = String(process.env.TELEGRAM_CHAT_ID || '').trim();
+  if (!botToken || !chatId) {
+    return { channel: 'telegram', sent: false, skipped: true };
+  }
+
+  const lines = buildSignupNotificationLines(payload);
+  const response = await fetchWithTimeout(
+    `https://api.telegram.org/bot${botToken}/sendMessage`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: lines.join('\n'),
+        disable_web_page_preview: true
+      })
+    },
+    SIGNUP_NOTIFY_TIMEOUT_MS,
+    'Telegram signup notification'
+  );
+
+  const responseBody = await response.json().catch(() => ({}));
+  if (!response.ok || responseBody?.ok === false) {
+    const description = String(responseBody?.description || `Telegram API request failed with status ${response.status}`);
+    throw new Error(description);
+  }
+
+  return { channel: 'telegram', sent: true, skipped: false };
+}
+
+async function sendAdminSignupEmailNotification(payload) {
+  const transporter = getAdminNotificationTransporter();
+  const recipient = getAdminNotificationRecipientEmail();
+  const sender = getAdminNotificationSender();
+  if (!transporter || !recipient || !sender) {
+    return { channel: 'email', sent: false, skipped: true };
+  }
+
+  const lines = buildSignupNotificationLines(payload);
+  const subject = `New signup on Transcripta AI: ${String(payload?.email || '').trim() || 'unknown'}`;
+  await transporter.sendMail({
+    from: sender,
+    to: recipient,
+    subject,
+    text: lines.join('\n'),
+    html: buildSignupNotificationHtml(lines)
+  });
+
+  return { channel: 'email', sent: true, skipped: false };
+}
+
+async function notifyAdminOnSignup(payload) {
+  const jobs = [
+    sendTelegramSignupNotification(payload),
+    sendAdminSignupEmailNotification(payload)
+  ];
+  const settled = await Promise.allSettled(jobs);
+  for (const result of settled) {
+    if (result.status !== 'rejected') continue;
+    console.warn(`[notify][signup] ${String(result.reason?.message || result.reason || 'notification failed')}`);
+  }
 }
 
 function shouldRetryTranscriptApiStatus(statusCode = 0) {
@@ -4621,6 +4783,12 @@ export default async function handler(req, res) {
           // Non-blocking bootstrap fallback; auth account is already created.
         }
       }
+      await notifyAdminOnSignup({
+        email,
+        userId: authUser?.id || '',
+        ip: requestIp,
+        createdAt: new Date().toISOString()
+      });
 
       return res.status(201).json({
         success: true,
