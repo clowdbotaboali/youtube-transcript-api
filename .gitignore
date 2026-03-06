@@ -42,5 +42,8 @@ backend/.cache/
 backend/*-player-script.js
 .vercel
 
+# Temporary SEO audit/analysis files
+tmp_seo_*
+
 # Sensitive recovery codes
 Authentications/RECOVERY-CODES-*.txt
