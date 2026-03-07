@@ -1,15 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FaSpinner } from 'react-icons/fa';
-import VideoInput from './components/VideoInput';
-import TranscriptDisplay from './components/TranscriptDisplay';
-import ProcessingOptions from './components/ProcessingOptions';
-import ResultsDisplay from './components/ResultsDisplay';
-import VideoPreviewCard from './components/VideoPreviewCard';
 import SavedHistory from './components/SavedHistory';
 import Settings from './components/Settings';
-import ChatAssistant from './components/ChatAssistant';
 import SavedLinks from './components/SavedLinks';
-import LocalServerGuide from './components/LocalServerGuide';
 import AuthModal from './components/AuthModal';
 import PricingModal from './components/PricingModal';
 import LandingPage from './components/LandingPage';
@@ -38,7 +31,6 @@ import { formatApiErrorMessage, parseApiError } from './utils/apiError';
 import { cleanText, LANG, tr } from './utils/lang';
 import {
   DEFAULT_OUTPUT_LANGUAGE,
-  getOutputLanguageLabel,
   normalizeOutputLanguage
 } from './utils/outputLanguage';
 import {
@@ -50,7 +42,7 @@ import {
   clearEdgeAuthCookie, syncEdgeAuthCookie, readAccountSnapshot,
   writeAccountSnapshot, clearSupabaseAuthStorage, normalizeUiMessage,
   isLikelyArabic, isLikelyEnglish, parseInstructionLines,
-  buildFallbackVideoBrief, paymentRequestStatusLabel, paymentRequestStatusClass
+  buildFallbackVideoBrief
 } from './helpers';
 
 const hasWindow = typeof window !== 'undefined';
