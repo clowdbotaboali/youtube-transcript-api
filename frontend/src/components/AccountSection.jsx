@@ -4,7 +4,6 @@ import { LANG } from '../utils/lang';
 
 export default function AccountSection({
   lang,
-  theme,
   user,
   credits,
   freeLinksRemaining,
