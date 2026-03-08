@@ -1,15 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FaSpinner } from 'react-icons/fa';
-import VideoInput from './components/VideoInput';
-import TranscriptDisplay from './components/TranscriptDisplay';
-import ProcessingOptions from './components/ProcessingOptions';
-import ResultsDisplay from './components/ResultsDisplay';
-import VideoPreviewCard from './components/VideoPreviewCard';
 import SavedHistory from './components/SavedHistory';
 import Settings from './components/Settings';
-import ChatAssistant from './components/ChatAssistant';
 import SavedLinks from './components/SavedLinks';
-import LocalServerGuide from './components/LocalServerGuide';
 import AuthModal from './components/AuthModal';
 import PricingModal from './components/PricingModal';
 import LandingPage from './components/LandingPage';
@@ -18,6 +11,8 @@ import ToastStack from './components/ToastStack';
 import ClientHeader, { PAGES as CLIENT_PAGES } from './components/ClientHeader';
 import ClientDashboard from './components/ClientDashboard';
 import SiteFooter from './components/SiteFooter';
+import AccountSection from './components/AccountSection';
+import WorkspaceSection from './components/WorkspaceSection';
 import SeoMeta from './components/SeoMeta';
 import PublicHeader from './components/PublicHeader';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
@@ -36,52 +31,22 @@ import { formatApiErrorMessage, parseApiError } from './utils/apiError';
 import { cleanText, LANG, tr } from './utils/lang';
 import {
   DEFAULT_OUTPUT_LANGUAGE,
-  getOutputLanguageLabel,
   normalizeOutputLanguage
 } from './utils/outputLanguage';
-
-const normalizeApiUrl = (value) => String(value || '').trim().replace(/\/+$/, '');
-
-const isValidApiUrl = (value) => {
-  try {
-    const parsed = new URL(value);
-    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
-  } catch {
-    return false;
-  }
-};
-
-const probeApiUrl = async (baseUrl) => {
-  const response = await fetch(`${baseUrl}/api/settings/status`, {
-    method: 'GET',
-    cache: 'no-store'
-  });
-  if (!response.ok) {
-    throw new Error(`Probe failed: ${response.status}`);
-  }
-};
+import {
+  FREE_PLAN_REQUESTS, CREDIT_COST_PER_SUCCESS, PAID_PLAN_CREDITS,
+  PAID_PLAN_PRICE_USD, THEME, LOGOUT_MARKER_KEY
+} from './constants';
+import {
+  normalizeApiUrl, isValidApiUrl, probeApiUrl, normalizePathname,
+  clearEdgeAuthCookie, syncEdgeAuthCookie, readAccountSnapshot,
+  writeAccountSnapshot, clearSupabaseAuthStorage, normalizeUiMessage,
+  isLikelyArabic, isLikelyEnglish, parseInstructionLines,
+  buildFallbackVideoBrief
+} from './helpers';
 
 const hasWindow = typeof window !== 'undefined';
 const STATIC_ROUTES = new Set(['/privacy-policy', '/terms', '/refund-policy', '/contact', '/pricing', '/admin']);
-const LOGOUT_MARKER_KEY = 'forceLoggedOut';
-const FREE_PLAN_REQUESTS = 5;
-const CREDIT_COST_PER_SUCCESS = 1;
-const PAID_PLAN_CREDITS = 200;
-const PAID_PLAN_PRICE_USD = 19;
-const THEME = {
-  light: 'light',
-  dark: 'dark'
-};
-const ACCOUNT_SNAPSHOT_KEY_PREFIX = 'account-snapshot:';
-const EDGE_AUTH_COOKIE_NAME = 'sb_access_token';
-
-const normalizePathname = (value) => {
-  const raw = String(value || '/').trim();
-  if (!raw) return '/';
-  const withLeadingSlash = raw.startsWith('/') ? raw : `/${raw}`;
-  if (withLeadingSlash === '/') return '/';
-  return withLeadingSlash.replace(/\/+$/, '');
-};
 
 const getLangFromPath = (pathValue) => {
   const match = normalizePathname(pathValue).match(/^\/(en|ar|fr)(?:\/|$)/i);
@@ -104,125 +69,7 @@ const getHomeAlternates = () => [
   { hreflang: 'x-default', href: `${SEO_CONFIG.SITE_ORIGIN}/en` }
 ];
 
-const clearEdgeAuthCookie = () => {
-  if (!hasWindow) return;
-  const secure = window.location.protocol === 'https:' ? '; Secure' : '';
-  document.cookie = `${EDGE_AUTH_COOKIE_NAME}=; Path=/; Max-Age=0; SameSite=Lax${secure}`;
-};
 
-const syncEdgeAuthCookie = (session) => {
-  if (!hasWindow) return;
-  const token = String(session?.access_token || '').trim();
-  if (!token) {
-    clearEdgeAuthCookie();
-    return;
-  }
-  const maxAge = Math.max(Number(session?.expires_in || 3600), 60);
-  const secure = window.location.protocol === 'https:' ? '; Secure' : '';
-  document.cookie = `${EDGE_AUTH_COOKIE_NAME}=${encodeURIComponent(token)}; Path=/; Max-Age=${maxAge}; SameSite=Lax${secure}`;
-};
-
-const buildFallbackVideoBrief = (titleValue, langCode) => {
-  const title = cleanText(titleValue || '').trim();
-  if (!title) return '';
-  const compact = title.length > 90 ? `${title.slice(0, 87).trim()}...` : title;
-  const lang = normalizeOutputLanguage(langCode);
-  if (lang === 'ar') return `\u0645\u0644\u062e\u0635 \u0633\u0631\u064a\u0639: \u0646\u0638\u0631\u0629 \u0639\u0644\u0649 ${compact}`;
-  if (lang === 'fr') return `Resume rapide: ${compact}`;
-  if (lang === 'es') return `Resumen breve: ${compact}`;
-  if (lang === 'de') return `Kurzzusammenfassung: ${compact}`;
-  if (lang === 'it') return `Sintesi rapida: ${compact}`;
-  if (lang === 'pt') return `Resumo rapido: ${compact}`;
-  if (lang === 'tr') return `Kisa ozet: ${compact}`;
-  if (lang === 'ru') return `Kratkoe rezyume: ${compact}`;
-  if (lang === 'hi') return `Sankshipt saar: ${compact}`;
-  if (lang === 'id') return `Ringkasan singkat: ${compact}`;
-  if (lang === 'ur') return `Khulasa mukhtasar: ${compact}`;
-  if (lang === 'zh') return `Jianyao zhaiyao: ${compact}`;
-  if (lang === 'ja') return `Yoyaku: ${compact}`;
-  if (lang === 'ko') return `Yoyak: ${compact}`;
-  return `Quick brief: ${compact}`;
-};
-
-const parseInstructionLines = (value) =>
-  String(value || '')
-    .split(/\r?\n/)
-    .map((line) => cleanText(line || '').trim())
-    .map((line) => line.replace(/^\s*(?:\d+[.)-]?|[-*]|\u2022)\s+/, '').trim())
-    .filter((line) => line.length >= 8)
-    .slice(0, 12);
-
-const isLikelyArabic = (value) => /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/.test(String(value || ''));
-const isLikelyEnglish = (value) => /[A-Za-z]/.test(String(value || '')) && !isLikelyArabic(value);
-
-const readAccountSnapshot = (userId) => {
-  if (!hasWindow || !userId) return null;
-  try {
-    const raw = localStorage.getItem(`${ACCOUNT_SNAPSHOT_KEY_PREFIX}${userId}`);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== 'object') return null;
-    return parsed;
-  } catch {
-    return null;
-  }
-};
-
-const writeAccountSnapshot = (userId, snapshot) => {
-  if (!hasWindow || !userId || !snapshot) return;
-  try {
-    localStorage.setItem(`${ACCOUNT_SNAPSHOT_KEY_PREFIX}${userId}`, JSON.stringify(snapshot));
-  } catch {
-    // ignore local cache write failures
-  }
-};
-
-const clearSupabaseAuthStorage = () => {
-  if (!hasWindow) return;
-  const storages = [window.localStorage, window.sessionStorage];
-
-  for (const storage of storages) {
-    if (!storage) continue;
-    const keysToRemove = [];
-    for (let i = 0; i < storage.length; i += 1) {
-      const key = storage.key(i);
-      if (!key) continue;
-      if (key.startsWith('sb-') || key === 'supabase.auth.token' || key.toLowerCase().includes('supabase')) {
-        keysToRemove.push(key);
-      }
-    }
-    keysToRemove.forEach((key) => storage.removeItem(key));
-  }
-};
-const normalizeUiMessage = (value) => {
-  if (typeof value === 'string') return cleanText(value);
-  if (typeof value === 'number' || typeof value === 'boolean') return cleanText(String(value));
-  if (value && typeof value === 'object') {
-    if (typeof value.message === 'string') return cleanText(value.message);
-    try {
-      return cleanText(JSON.stringify(value));
-    } catch {
-      return '';
-    }
-  }
-  return '';
-};
-const paymentRequestStatusLabel = (status, lang) => {
-  const normalized = String(status || '').trim().toLowerCase();
-  if (normalized === 'approved') return tr(lang, '\u0645\u0642\u0628\u0648\u0644', 'Approved', 'Approuve');
-  if (normalized === 'rejected') return tr(lang, '\u0645\u0631\u0641\u0648\u0636', 'Rejected', 'Rejete');
-  if (normalized === 'cancelled') return tr(lang, '\u0645\u0644\u063a\u064a', 'Cancelled', 'Annule');
-  if (normalized === 'paid') return tr(lang, '\u0645\u062f\u0641\u0648\u0639', 'Paid', 'Paye');
-  return tr(lang, '\u0642\u064a\u062f \u0627\u0644\u0645\u0631\u0627\u062c\u0639\u0629', 'Pending review', 'En attente');
-};
-
-const paymentRequestStatusClass = (status) => {
-  const normalized = String(status || '').trim().toLowerCase();
-  if (normalized === 'approved' || normalized === 'paid') return 'bg-emerald-100 text-emerald-800 border border-emerald-200';
-  if (normalized === 'rejected') return 'bg-red-100 text-red-700 border border-red-200';
-  if (normalized === 'cancelled') return 'bg-slate-100 text-slate-700 border border-slate-200';
-  return 'bg-amber-100 text-amber-800 border border-amber-200';
-};
 
 function App() {
   const [transcriptData, setTranscriptData] = useState(null);
@@ -1258,104 +1105,37 @@ function App() {
         )}
 
         {clientPage === CLIENT_PAGES.workspace && (
-          <section className="space-y-4 sm:space-y-6">
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6">
-              <h2 className="text-xl sm:text-2xl font-black text-slate-900 mb-1">{tr(lang, '\u0645\u0633\u0627\u062d\u0629 \u0627\u0633\u062a\u062e\u0631\u0627\u062c \u0627\u0644\u0645\u0639\u0631\u0641\u0629', 'Knowledge Extraction Workspace', 'Espace extraction de connaissance')}</h2>
-              <p className="text-sm text-slate-600">{tr(lang, '\u0636\u0639 \u0627\u0644\u0631\u0627\u0628\u0637\u060c \u0627\u0633\u062a\u062e\u0631\u062c \u0627\u0644\u0646\u0635\u060c \u062b\u0645 \u062d\u0648\u0651\u0644 \u0627\u0644\u0645\u062d\u062a\u0648\u0649 \u0625\u0644\u0649 \u062e\u0637\u0648\u0627\u062a \u062a\u0646\u0641\u064a\u0630 \u0623\u0648 \u0627\u0633\u0623\u0644 \u0627\u0644\u0645\u0633\u0627\u0639\u062f \u0627\u0644\u0630\u0643\u064a.', 'Paste a URL, extract knowledge, then generate execution-ready output or chat.', 'Collez un lien, extrayez la connaissance, puis generez une sortie executable ou utilisez le chat.')}</p>
-            </div>
-            {accountRestrictionMessage ? (
-              <div className="rounded-xl border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm font-medium">
-                {accountRestrictionMessage}
-              </div>
-            ) : null}
-            {canUseLocalGuide && (
-              <div className="mb-3 sm:mb-4">
-                <button
-                  type="button"
-                  onClick={toggleLocalGuide}
-                  className="inline-flex items-center gap-2 text-xs sm:text-sm px-3 py-1.5 rounded-full border border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100 transition"
-                >
-                  <span>{showLocalGuide ? tr(lang, '\u0625\u062e\u0641\u0627\u0621', 'Hide') : tr(lang, '\u0625\u0638\u0647\u0627\u0631', 'Show')}</span>
-                  <span>{tr(lang, '\u062f\u0644\u064a\u0644 \u0627\u0644\u062e\u0627\u062f\u0645 \u0627\u0644\u0645\u062d\u0644\u064a', 'Local backend guide')}</span>
-                </button>
-              </div>
-            )}
-
-            {canUseLocalGuide && showLocalGuide && (
-              <LocalServerGuide apiUrl={apiUrl} onApiUrlChange={handleApiUrlChange} lang={lang} />
-            )}
-
-            <VideoInput
-              onTranscriptExtracted={handleTranscriptExtracted}
-              loading={extractLoading}
-              setLoading={setExtractLoading}
-              initialUrl={selectedUrl}
-              apiUrl={apiUrl}
-              lang={lang}
-              outputLang={normalizeOutputLanguage(outputLang)}
-              onOutputLangChange={(next) => setOutputLang(normalizeOutputLanguage(next))}
-              accessRestrictionMessage={accountRestrictionMessage}
-            />
-
-            {transcriptData && (
-              <div className="space-y-4 sm:space-y-6">
-                <VideoPreviewCard
-                  data={transcriptData}
-                  localizedSubtitle={videoBrief}
-                  localizedSubtitleLoading={videoBriefLoading}
-                  localizedDescriptionInstructions={localizedDescriptionInstructions}
-                  localizedDescriptionLoading={localizedDescriptionLoading}
-                  outputLanguageLabel={getOutputLanguageLabel(outputLang, lang)}
-                  lang={lang}
-                  extraContext={extraContext}
-                  onExtraContextChange={setExtraContext}
-                />
-
-                <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
-                  <div className="grid grid-cols-1 lg:grid-cols-2">
-                    <div className="p-3 sm:p-4 border-b lg:border-b-0 lg:border-l border-gray-200">
-                      <TranscriptDisplay
-                        transcript={transcriptData.transcript}
-                        videoId={transcriptData.videoId}
-                        wordCount={transcriptData.wordCount}
-                        lang={lang}
-                      />
-                    </div>
-                    <div className="p-3 sm:p-4 h-[400px] sm:h-[600px] flex flex-col">
-                      <ChatAssistant
-                        transcript={transcriptForProcessing || transcriptData.transcript}
-                        videoId={transcriptData.videoId}
-                        apiUrl={apiUrl}
-                        onCreditsChange={setCredits}
-                        onRequireTopup={openTopupPicker}
-                        lang={lang}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <ProcessingOptions
-                  onProcess={handleProcess}
-                  loading={processLoading}
-                  lang={lang}
-                />
-
-                {aiResult && (
-                  <ResultsDisplay
-                    result={aiResult.result}
-                    type={aiResult.type}
-                    videoId={transcriptData.videoId}
-                    videoTitle={transcriptData.videoTitle || transcriptData.videoId}
-                    transcript={transcriptForProcessing || transcriptData.transcript}
-                    onSave={handleSave}
-                    user={user}
-                    lang={lang}
-                    onNotify={notify}
-                  />
-                )}
-              </div>
-            )}
-          </section>
+          <WorkspaceSection
+            lang={lang}
+            apiUrl={apiUrl}
+            outputLang={outputLang}
+            onOutputLangChange={(next) => setOutputLang(normalizeOutputLanguage(next))}
+            accountRestrictionMessage={accountRestrictionMessage}
+            canUseLocalGuide={canUseLocalGuide}
+            showLocalGuide={showLocalGuide}
+            onToggleLocalGuide={toggleLocalGuide}
+            onApiUrlChange={handleApiUrlChange}
+            extractLoading={extractLoading}
+            setExtractLoading={setExtractLoading}
+            selectedUrl={selectedUrl}
+            onTranscriptExtracted={handleTranscriptExtracted}
+            transcriptData={transcriptData}
+            transcriptForProcessing={transcriptForProcessing}
+            videoBrief={videoBrief}
+            videoBriefLoading={videoBriefLoading}
+            localizedDescriptionInstructions={localizedDescriptionInstructions}
+            localizedDescriptionLoading={localizedDescriptionLoading}
+            extraContext={extraContext}
+            onExtraContextChange={setExtraContext}
+            onCreditsChange={setCredits}
+            onRequireTopup={openTopupPicker}
+            processLoading={processLoading}
+            onProcess={handleProcess}
+            aiResult={aiResult}
+            onSave={handleSave}
+            user={user}
+            onNotify={notify}
+          />
         )}
 
         {clientPage === CLIENT_PAGES.history && (
@@ -1391,147 +1171,26 @@ function App() {
         )}
 
         {clientPage === CLIENT_PAGES.account && (
-          <section className="space-y-4 sm:space-y-5">
-            <div className="grid gap-4 sm:gap-5 md:grid-cols-2">
-              <article className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
-                <h2 className="text-xl font-black text-slate-900 mb-3">{tr(lang, '\u062a\u0641\u0627\u0635\u064a\u0644 \u0627\u0644\u062d\u0633\u0627\u0628', 'Account details')}</h2>
-                <div className="space-y-3 text-sm">
-                  <p><span className="font-bold">{tr(lang, '\u0627\u0644\u0628\u0631\u064a\u062f:', 'Email:')}</span> {user?.email || '-'}</p>
-                  <p><span className="font-bold">{tr(lang, '\u0631\u0635\u064a\u062f \u0627\u0644\u0641\u064a\u062f\u064a\u0648\u0647\u0627\u062a:', 'Video balance:')}</span> {credits ?? '...'}</p>
-                  <p><span className="font-bold">{tr(lang, '\u0627\u0644\u062e\u0637\u0629 \u0627\u0644\u0645\u062c\u0627\u0646\u064a\u0629:', 'Free plan:')}</span> {freePlanLimit} {tr(lang, '\u0631\u0648\u0627\u0628\u0637 \u0641\u0642\u0637', 'links only')}</p>
-                  <p><span className="font-bold">{tr(lang, '\u0627\u0644\u0631\u0648\u0627\u0628\u0637 \u0627\u0644\u0645\u062c\u0627\u0646\u064a\u0629 \u0627\u0644\u0645\u062a\u0628\u0642\u064a\u0629:', 'Free links remaining:')}</span> {tr(lang, `${freeLinksRemaining} من ${freePlanLimit}`, `${freeLinksRemaining} of ${freePlanLimit}`, `${freeLinksRemaining} sur ${freePlanLimit}`)}</p>
-                  <p><span className="font-bold">{tr(lang, '\u062a\u0643\u0644\u0641\u0629 \u0627\u0644\u0631\u0627\u0628\u0637:', 'Link cost:')}</span> {CREDIT_COST_PER_SUCCESS} {tr(lang, '\u0641\u064a\u062f\u064a\u0648 \u0645\u0646 \u0627\u0644\u0631\u0635\u064a\u062f \u0644\u0643\u0644 \u0631\u0627\u0628\u0637 \u062c\u062f\u064a\u062f', 'video from balance per new video link')}</p>
-                  <p><span className="font-bold">{tr(lang, '\u0627\u0644\u062c\u0644\u0633\u0629:', 'Session:')}</span> {tr(lang, '\u0646\u0634\u0637\u0629', 'Active')}</p>
-                  {accountAccess.status !== 'active' ? (
-                    <p>
-                      <span className="font-bold">{tr(lang, '\u062d\u0627\u0644\u0629 \u0627\u0644\u0648\u0635\u0648\u0644:', 'Access status:')}</span>{' '}
-                      {accountAccess.status} {accountAccess.reason ? `(${accountAccess.reason})` : ''}
-                    </p>
-                  ) : null}
-                </div>
-              </article>
-
-              <article className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
-                <h3 className="text-lg font-black text-slate-900 mb-3">{tr(lang, '\u0627\u0644\u062e\u0637\u0637 \u0648\u0627\u0644\u0634\u062d\u0646', 'Plans & top-up')}</h3>
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 mb-3">
-                  <p className="font-black text-emerald-900 mb-2">{tr(lang, '\u0627\u0644\u062e\u0637\u0629 \u0627\u0644\u0645\u062c\u0627\u0646\u064a\u0629', 'Free plan')}</p>
-                  <p className="text-sm text-emerald-800">{tr(lang, '\u062a\u0634\u0645\u0644 5 \u0641\u064a\u062f\u064a\u0648\u0647\u0627\u062a \u0634\u0647\u0631\u064a\u064b\u0627\u060c \u0648\u0627\u0644\u062a\u0644\u062e\u064a\u0635 \u0648\u0627\u0644\u0634\u0627\u062a \u0644\u0646\u0641\u0633 \u0627\u0644\u0641\u064a\u062f\u064a\u0648 \u0628\u062f\u0648\u0646 \u062e\u0635\u0645 \u0625\u0636\u0627\u0641\u064a\u060c', '5 videos monthly, and same-video summary/chat do not consume extra balance.')}</p>
-                </div>
-                <div className="rounded-xl border border-orange-200 bg-orange-50 p-4">
-                  <p className="font-black text-orange-900 mb-2">{tr(lang, '\u0627\u0644\u0634\u062d\u0646 \u0627\u0644\u0645\u062f\u0641\u0648\u0639', 'Paid top-up')}</p>
-                  <p className="text-sm text-orange-800 mb-3">
-                    {tr(lang, 'باقة الدفع الرئيسية: $19 = 200 فيديو، مع بونص 10% لباقات 2x و3x و5x. تفاصيل الدفع تظهر في صفحة مخصصة بعد اختيار الباقة.', 'Main paid pack: $19 = 200 videos, with a 10% bonus on 2x, 3x, and 5x packs. Full payment details open on a dedicated page after selecting the pack.')}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={openTopupPicker}
-                    className="rounded-xl px-4 py-2 bg-orange-400 text-slate-950 font-extrabold hover:bg-orange-300 transition"
-                  >
-                    {tr(lang, '\u0627\u062e\u062a\u0631 \u0628\u0627\u0642\u0629 \u0627\u0644\u0641\u064a\u062f\u064a\u0648\u0647\u0627\u062a', 'Choose video pack')}
-                  </button>
-                </div>
-              </article>
-            </div>
-
-            <div className="grid gap-4 sm:gap-5 md:grid-cols-2">
-              <article className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
-                <h3 className="text-lg font-black text-slate-900 mb-3">{tr(lang, '\u0623\u0645\u0627\u0646 \u0627\u0644\u062d\u0633\u0627\u0628', 'Account security')}</h3>
-                <form onSubmit={handlePasswordChange} className="space-y-3">
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1">{tr(lang, '\u0643\u0644\u0645\u0629 \u0645\u0631\u0648\u0631 \u062c\u062f\u064a\u062f\u0629', 'New password')}</label>
-                    <input
-                      type="password"
-                      value={passwordForm.newPassword}
-                      onChange={(event) => setPasswordForm((prev) => ({ ...prev, newPassword: event.target.value }))}
-                      className="w-full rounded-xl border border-slate-300 px-3 py-2 outline-none focus:ring-2 focus:ring-cyan-500"
-                      placeholder={tr(lang, '\u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644 8 \u0623\u062d\u0631\u0641', 'At least 8 characters')}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1">{tr(lang, '\u062a\u0623\u0643\u064a\u062f \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631', 'Confirm password')}</label>
-                    <input
-                      type="password"
-                      value={passwordForm.confirmPassword}
-                      onChange={(event) => setPasswordForm((prev) => ({ ...prev, confirmPassword: event.target.value }))}
-                      className="w-full rounded-xl border border-slate-300 px-3 py-2 outline-none focus:ring-2 focus:ring-cyan-500"
-                      placeholder={tr(lang, '\u0623\u0639\u062f \u0625\u062f\u062e\u0627\u0644 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631', 'Re-enter password')}
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    disabled={passwordSubmitting}
-                    className="rounded-xl px-4 py-2 bg-slate-900 text-white font-bold hover:bg-slate-800 transition disabled:opacity-60"
-                  >
-                    {passwordSubmitting ? tr(lang, '\u062c\u0627\u0631\u064d \u0627\u0644\u062a\u062d\u062f\u064a\u062b\u2026', 'Updating...') : tr(lang, '\u062a\u062d\u062f\u064a\u062b \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631', 'Update password')}
-                  </button>
-                </form>
-              </article>
-
-              <article className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
-                <h3 className="text-lg font-black text-slate-900 mb-3">{tr(lang, '\u0637\u0648\u0631 \u0646\u062a\u0627\u0626\u062c\u0643 \u0628\u0627\u0644\u0634\u062d\u0646', 'Upgrade your results with top-up')}</h3>
-                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 mb-4">
-                  <p className="text-sm text-amber-900 mb-2">
-                    {tr(lang, '\u0645\u0639 \u0631\u0635\u064a\u062f \u0641\u064a\u062f\u064a\u0648\u0647\u0627\u062a \u0623\u0643\u062b\u0631\u060c \u062a\u0633\u062a\u0637\u064a\u0639 \u0645\u0639\u0627\u0644\u062c\u0629 \u0641\u064a\u062f\u064a\u0648\u0647\u0627\u062a \u0623\u0643\u062b\u0631 \u0628\u062f\u0648\u0646 \u0627\u0646\u0642\u0637\u0627\u0639 \u0648\u0628\u0646\u0627\u0621 \u0645\u0643\u062a\u0628\u0629 \u062a\u0646\u0641\u064a\u0630 \u0623\u0642\u0648\u0649\u060c', 'With more video balance, you can process more videos without interruption and build a stronger execution library.')}
-                  </p>
-                  <ul className="text-sm text-amber-800 space-y-1">
-                    <li>{tr(lang, '\u2022 \u0628\u0627\u0642\u0629 \u0648\u0627\u0636\u062d\u0629: $19 = 200 \u0641\u064a\u062f\u064a\u0648', '\u2022 Clear pack: $19 = 200 videos')}</li>
-                    <li>{tr(lang, '\u2022 \u0628\u0648\u0646\u0635 10% \u0644\u0628\u0627\u0642\u0627\u062a 2x \u0648 3x \u0648 5x', '\u2022 10% bonus on 2x, 3x, and 5x packs')}</li>
-                    <li>{tr(lang, '\u2022 \u062a\u0633\u0639\u064a\u0631 \u0645\u0628\u0646\u064a \u0639\u0644\u0649 \u0627\u0644\u0641\u064a\u062f\u064a\u0648\u0647\u0627\u062a \u0628\u062f\u0648\u0646 \u062a\u0639\u0642\u064a\u062f \u0648\u062d\u062f\u0627\u062a', '\u2022 Video-based pricing with clear units')}</li>
-                    <li>{tr(lang, '\u2022 \u0635\u0641\u062d\u0629 \u062f\u0641\u0639 \u0648\u0627\u0636\u062d\u0629 \u0648\u0645\u0646\u0638\u0645\u0629', '\u2022 Dedicated clear checkout page')}</li>
-                  </ul>
-                </div>
-                <div className="flex flex-wrap gap-3">
-                  {canUseLocalGuide && (
-                    <button
-                      type="button"
-                      onClick={() => setShowSettings(true)}
-                      className="rounded-xl px-4 py-2 bg-slate-900 text-white font-bold hover:bg-slate-800 transition"
-                    >
-                      {tr(lang, '\u0641\u062a\u062d \u0627\u0644\u0625\u0639\u062f\u0627\u062f\u0627\u062a', 'Open settings')}
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    className="rounded-xl px-4 py-2 bg-red-500 text-white font-bold hover:bg-red-600 transition"
-                  >
-                    {tr(lang, '\u062a\u0633\u062c\u064a\u0644 \u062e\u0631\u0648\u062c', 'Sign out')}
-                  </button>
-                </div>
-              </article>
-            </div>
-
-            <article className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
-              <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-                <h3 className="text-lg font-black text-slate-900">{tr(lang, '\u0637\u0644\u0628\u0627\u062a\u064a \u0627\u0644\u0623\u062e\u064a\u0631\u0629', 'My recent requests', 'Mes demandes recentes')}</h3>
-                {recentTopupLoading ? <span className="text-xs text-slate-500">{tr(lang, '\u062c\u0627\u0631\u064d \u0627\u0644\u062a\u062d\u062f\u064a\u062b\u2026', 'Refreshing...', 'Actualisation...')}</span> : null}
-              </div>
-
-              {recentTopupRequests.length === 0 ? (
-                <p className="text-sm text-slate-600">
-                  {tr(lang, '\u0644\u0627 \u062a\u0648\u062c\u062f \u0637\u0644\u0628\u0627\u062a \u0634\u062d\u0646 \u0628\u0639\u062f\u060c', 'No top-up requests yet.', 'Aucune demande de recharge pour le moment.')}
-                </p>
-              ) : (
-                <div className="max-h-72 overflow-auto space-y-2 pr-1">
-                  {recentTopupRequests.map((item) => (
-                    <div key={item.id} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                      <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                        <span className="font-semibold text-slate-900">
-                          ${(Number(item.amount_cents || 0) / 100).toFixed(2)} / {item.credits_added} {tr(lang, '\u0641\u064a\u062f\u064a\u0648', 'videos', 'videos')}
-                        </span>
-                        <span className={`text-xs rounded-full px-2 py-1 ${paymentRequestStatusClass(item.status)}`}>
-                          {paymentRequestStatusLabel(item.status, lang)}
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-500 mt-1">
-                        {new Date(item.created_at).toLocaleString(lang === LANG.ar ? 'ar-EG' : lang === LANG.fr ? 'fr-FR' : 'en-US')}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </article>
-          </section>
+          <AccountSection
+            lang={lang}
+            theme={theme}
+            user={user}
+            credits={credits}
+            freeLinksRemaining={freeLinksRemaining}
+            freePlanLimit={freePlanLimit}
+            accountAccess={accountAccess}
+            recentTopupRequests={recentTopupRequests}
+            recentTopupLoading={recentTopupLoading}
+            passwordForm={passwordForm}
+            passwordSubmitting={passwordSubmitting}
+            onPasswordFormChange={setPasswordForm}
+            onPasswordSubmit={handlePasswordChange}
+            onOpenTopupPicker={openTopupPicker}
+            onOpenSettings={() => setShowSettings(true)}
+            onLogout={handleLogout}
+            canUseLocalGuide={canUseLocalGuide}
+            CREDIT_COST_PER_SUCCESS={CREDIT_COST_PER_SUCCESS}
+          />
         )}
       </div>
 

@@ -37,6 +37,7 @@ const TRANSCRIPT_CREDIT_HEADER_CANDIDATES = [
 const AI_TRANSCRIPT_CHAR_LIMIT = 12000;
 const CHAT_TRANSCRIPT_CHAR_LIMIT = 6500;
 const CHAT_QUESTION_CHAR_LIMIT = 1200;
+const GUEST_LOCALIZED_TRANSCRIPT_CHAR_LIMIT = 4500;
 const QUOTA_MARKER_TYPE = 'quota_extract_marker';
 const EXTRACT_TYPE = 'extract';
 const CHAT_TYPE_PREFIX = 'chat:';
@@ -5745,7 +5746,9 @@ export default async function handler(req, res) {
       }
 
       const supabase = guestSupabase;
-      const { url: videoUrl } = body;
+      const { url: videoUrl, lang: requestedLang, outputLang: requestedOutputLang, locale: requestedLocale } = body;
+      const requestedGuestLangRaw = String(requestedLang || requestedOutputLang || requestedLocale || '').trim().toLowerCase();
+      const guestOutputLang = OUTPUT_LANG_CONFIG[requestedGuestLangRaw] ? requestedGuestLangRaw : '';
       const parsedVideo = parseYouTubeInput(videoUrl);
       if (!parsedVideo.ok) {
         return sendError(
@@ -5848,6 +5851,39 @@ export default async function handler(req, res) {
       };
 
       const guestVideoTitle = sanitizeVideoTitle(extractMeta.title || extractMeta.videoTitle || '', videoId);
+      let localizedVideoTitle = guestVideoTitle;
+      let localizedTranscript = '';
+      let localizedTranscriptTruncated = false;
+      if (guestOutputLang) {
+        if (isLikelyTextForOutputLang(transcript, guestOutputLang)) {
+          localizedTranscript = transcript;
+        } else {
+          const {
+            text: transcriptForLocalization,
+            truncated: transcriptWasTruncated
+          } = trimForModel(transcript, GUEST_LOCALIZED_TRANSCRIPT_CHAR_LIMIT);
+          localizedTranscriptTruncated = transcriptWasTruncated;
+          const localizedCandidate = await enforceOutputLanguageIfNeeded({
+            supabase,
+            text: transcriptForLocalization,
+            outputLang: guestOutputLang,
+            maxTokens: 950
+          });
+          if (isLikelyTextForOutputLang(localizedCandidate, guestOutputLang)) {
+            localizedTranscript = String(localizedCandidate || '').trim();
+          }
+        }
+
+        if (!isLikelyTextForOutputLang(guestVideoTitle, guestOutputLang)) {
+          const localizedTitleCandidate = await enforceOutputLanguageIfNeeded({
+            supabase,
+            text: guestVideoTitle,
+            outputLang: guestOutputLang,
+            maxTokens: 120
+          });
+          localizedVideoTitle = sanitizeVideoTitle(localizedTitleCandidate, guestVideoTitle);
+        }
+      }
       const guestSeoPage = await safeUpsertSeoTranscriptPage(supabase, {
         videoId,
         youtubeUrl: parsedVideo.canonicalUrl,
@@ -5862,7 +5898,12 @@ export default async function handler(req, res) {
         guest: true,
         videoId,
         videoTitle: guestVideoTitle,
+        localizedVideoTitle,
         transcript,
+        localizedTranscript,
+        localizedWordCount: localizedTranscript ? localizedTranscript.split(/\s+/).length : 0,
+        localizedTranscriptTruncated,
+        outputLang: guestOutputLang || null,
         wordCount: transcript.split(/\s+/).length,
         method,
         thumbnailUrl: extractMeta.thumbnailUrl || buildYouTubeThumbnailUrl(videoId),

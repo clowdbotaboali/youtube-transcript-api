@@ -6,6 +6,7 @@ export default defineConfig({
   plugins: [react()],
   envPrefix: ['VITE_', 'NEXT_PUBLIC_'],
   build: {
+    chunkSizeWarningLimit: 700,
     rollupOptions: {
       output: {
         manualChunks: {

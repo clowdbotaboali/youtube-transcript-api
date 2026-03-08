@@ -146,11 +146,19 @@ function LandingPage({
         return;
       }
 
+      const preferredTranscript = String(payload.localizedTranscript || payload.transcript || '').trim();
+      const preferredTitle = String(payload.localizedVideoTitle || payload.videoTitle || payload.videoId || '').trim();
+      const localizedWordCount = Number(payload.localizedWordCount || 0);
+      const baseWordCount = Number(payload.wordCount || 0);
+
       setGuestResult({
         videoId: payload.videoId || '',
-        videoTitle: payload.videoTitle || payload.videoId || '',
-        transcript: payload.transcript || '',
-        wordCount: Number(payload.wordCount || 0),
+        videoTitle: preferredTitle || payload.videoId || '',
+        transcript: preferredTranscript,
+        wordCount:
+          localizedWordCount > 0
+            ? localizedWordCount
+            : (preferredTranscript ? preferredTranscript.split(/\s+/).filter(Boolean).length : baseWordCount),
         sourceUrl: nextUrl
       });
     } catch {
