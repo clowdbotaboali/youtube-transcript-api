@@ -21,8 +21,7 @@ function statusBadge(status, lang) {
 
 function formatEgpAmount(amountCents, lang) {
   const value = Number(amountCents || 0) / 100;
-  const locale = lang === LANG.ar ? 'ar-EG' : lang === LANG.fr ? 'fr-FR' : 'en-US';
-  return `${value.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${tr(lang, 'ج.م', 'EGP', 'EGP')}`;
+  return `${value.toFixed(2)} ${tr(lang, 'ج.م', 'EGP', 'EGP')}`;
 }
 
 function formatUsdAmount(amountCents) {
