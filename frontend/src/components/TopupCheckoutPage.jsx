@@ -19,13 +19,18 @@ function statusBadge(status, lang) {
   return tr(lang, 'معلّق', 'Pending', 'En attente');
 }
 
-function formatEgpAmount(amountCents, lang) {
-  const value = Number(amountCents || 0) / 100;
-  return `${value.toFixed(2)} ${tr(lang, 'ج.م', 'EGP', 'EGP')}`;
-}
-
 function formatUsdAmount(amountCents) {
   return `$${(Number(amountCents || 0) / 100).toFixed(2)}`;
+}
+
+function renderEgpAmountEnDigits(amountCents, lang) {
+  const value = Number(amountCents || 0) / 100;
+  return (
+    <>
+      <span dir="ltr" lang="en" className="inline-block">{value.toFixed(2)}</span>{' '}
+      {tr(lang, 'ج.م', 'EGP', 'EGP')}
+    </>
+  );
 }
 
 function isLocalPaymentMethod(method) {
@@ -228,7 +233,9 @@ function TopupCheckoutPage({
   const bonusVideos = Math.max(Number(quote?.bonusVideos ?? quote?.bonusCredits ?? 0), 0);
   const bonusPercent = Number(quote?.bonusRate || 0) > 0 ? Math.round(Number(quote.bonusRate) * 100) : 0;
   const quoteAmountCents = Number(quote?.amountCents || 0);
-  const quotePriceLabel = isLocalPaymentMethod(method) ? formatEgpAmount(quoteAmountCents, lang) : formatUsdAmount(quoteAmountCents);
+  const quotePriceLabel = isLocalPaymentMethod(method)
+    ? renderEgpAmountEnDigits(quoteAmountCents, lang)
+    : formatUsdAmount(quoteAmountCents);
 
   if (!quote?.valid) {
     return (
@@ -394,7 +401,9 @@ function TopupCheckoutPage({
               <div key={item.id} className={`rounded-lg border p-3 ${isDark ? 'border-slate-700 bg-slate-900/70' : 'border-slate-200 bg-slate-50'}`}>
                 <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
                   <span className="font-semibold">
-                    {isLocalPaymentMethod(item.payment_method) ? formatEgpAmount(item.amount_cents, lang) : formatUsdAmount(item.amount_cents)} / {item.credits_added} {tr(lang, 'فيديو', 'videos', 'videos')}
+                    {isLocalPaymentMethod(item.payment_method)
+                      ? renderEgpAmountEnDigits(item.amount_cents, lang)
+                      : formatUsdAmount(item.amount_cents)} / {item.credits_added} {tr(lang, 'فيديو', 'videos', 'videos')}
                   </span>
                   <span
                     className={`text-xs rounded-full px-2 py-1 ${
