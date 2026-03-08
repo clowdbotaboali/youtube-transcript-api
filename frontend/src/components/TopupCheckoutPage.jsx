@@ -19,6 +19,21 @@ function statusBadge(status, lang) {
   return tr(lang, 'معلّق', 'Pending', 'En attente');
 }
 
+function formatEgpAmount(amountCents, lang) {
+  const value = Number(amountCents || 0) / 100;
+  const locale = lang === LANG.ar ? 'ar-EG' : lang === LANG.fr ? 'fr-FR' : 'en-US';
+  return `${value.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${tr(lang, 'ج.م', 'EGP', 'EGP')}`;
+}
+
+function formatUsdAmount(amountCents) {
+  return `$${(Number(amountCents || 0) / 100).toFixed(2)}`;
+}
+
+function isLocalPaymentMethod(method) {
+  const normalized = String(method || '').trim().toLowerCase();
+  return normalized === 'instapay' || normalized === 'vodafone_cash';
+}
+
 function TopupCheckoutPage({
   user,
   quote,
@@ -213,6 +228,8 @@ function TopupCheckoutPage({
   const baseVideos = Math.max(Number(quote?.baseVideos ?? quote?.baseCredits ?? quote?.videos ?? 0), 0);
   const bonusVideos = Math.max(Number(quote?.bonusVideos ?? quote?.bonusCredits ?? 0), 0);
   const bonusPercent = Number(quote?.bonusRate || 0) > 0 ? Math.round(Number(quote.bonusRate) * 100) : 0;
+  const quoteAmountCents = Number(quote?.amountCents || 0);
+  const quotePriceLabel = isLocalPaymentMethod(method) ? formatEgpAmount(quoteAmountCents, lang) : formatUsdAmount(quoteAmountCents);
 
   if (!quote?.valid) {
     return (
@@ -265,7 +282,7 @@ function TopupCheckoutPage({
             </p>
           ) : null}
           <p>{tr(lang, 'عدد الباقات:', 'Packs:', 'Packs:')} {quote.packs}</p>
-          <p>{tr(lang, 'السعر:', 'Price:', 'Prix:')} ${quote.amountUsd}</p>
+          <p>{tr(lang, 'السعر:', 'Price:', 'Prix:')} {quotePriceLabel}</p>
         </div>
       </div>
 
@@ -377,7 +394,9 @@ function TopupCheckoutPage({
             {myRequests.slice(0, 10).map((item) => (
               <div key={item.id} className={`rounded-lg border p-3 ${isDark ? 'border-slate-700 bg-slate-900/70' : 'border-slate-200 bg-slate-50'}`}>
                 <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                  <span className="font-semibold">${(Number(item.amount_cents || 0) / 100).toFixed(2)} / {item.credits_added} {tr(lang, 'فيديو', 'videos', 'videos')}</span>
+                  <span className="font-semibold">
+                    {isLocalPaymentMethod(item.payment_method) ? formatEgpAmount(item.amount_cents, lang) : formatUsdAmount(item.amount_cents)} / {item.credits_added} {tr(lang, 'فيديو', 'videos', 'videos')}
+                  </span>
                   <span
                     className={`text-xs rounded-full px-2 py-1 ${
                       item.status === 'approved'

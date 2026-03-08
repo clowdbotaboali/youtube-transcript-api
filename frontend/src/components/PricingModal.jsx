@@ -3,6 +3,7 @@ import { FaBolt, FaCheck, FaCrown, FaLeaf } from 'react-icons/fa';
 import { cleanText, LANG, tr } from '../utils/lang';
 
 const PRICE_PER_PACK_USD = 19;
+const PRICE_PER_PACK_EGP = 890;
 const VIDEOS_PER_PACK = 200;
 const QUICK_PACKS = [1, 2, 3, 5];
 const BONUS_PACKS = new Set([2, 3, 5]);
@@ -15,6 +16,7 @@ function calculateQuote(packCount) {
   }
 
   const amountUsd = packs * PRICE_PER_PACK_USD;
+  const amountEgp = packs * PRICE_PER_PACK_EGP;
   const baseVideos = packs * VIDEOS_PER_PACK;
   const bonusRate = BONUS_PACKS.has(packs) ? BONUS_RATE : 0;
   const bonusVideos = Math.round(baseVideos * bonusRate);
@@ -23,7 +25,8 @@ function calculateQuote(packCount) {
     valid: true,
     packs,
     amountUsd,
-    amountCents: amountUsd * 100,
+    amountEgp,
+    amountCents: amountEgp * 100,
     videos,
     baseVideos,
     bonusVideos,

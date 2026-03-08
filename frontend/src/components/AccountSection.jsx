@@ -2,6 +2,19 @@ import { tr } from '../utils/lang';
 import { paymentRequestStatusLabel, paymentRequestStatusClass } from '../helpers';
 import { LANG } from '../utils/lang';
 
+function isLocalPaymentMethod(method) {
+  const normalized = String(method || '').trim().toLowerCase();
+  return normalized === 'instapay' || normalized === 'vodafone_cash';
+}
+
+function formatPaymentAmount(amountCents, method, lang) {
+  const value = Number(amountCents || 0) / 100;
+  if (isLocalPaymentMethod(method)) {
+    return `${value.toFixed(2)} ${tr(lang, 'ج.م', 'EGP', 'EGP')}`;
+  }
+  return `$${value.toFixed(2)}`;
+}
+
 export default function AccountSection({
   lang,
   user,
@@ -148,7 +161,7 @@ export default function AccountSection({
               <div key={item.id} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
                 <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
                   <span className="font-semibold text-slate-900">
-                    ${(Number(item.amount_cents || 0) / 100).toFixed(2)} / {item.credits_added} {tr(lang, '\u0641\u064a\u062f\u064a\u0648', 'videos', 'videos')}
+                    {formatPaymentAmount(item.amount_cents, item.payment_method, lang)} / {item.credits_added} {tr(lang, '\u0641\u064a\u062f\u064a\u0648', 'videos', 'videos')}
                   </span>
                   <span className={`text-xs rounded-full px-2 py-1 ${paymentRequestStatusClass(item.status)}`}>
                     {paymentRequestStatusLabel(item.status, lang)}

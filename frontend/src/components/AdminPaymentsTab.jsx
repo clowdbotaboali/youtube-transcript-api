@@ -1,6 +1,19 @@
 import { FaCheck, FaCreditCard, FaImage, FaTimes } from 'react-icons/fa';
 import { LANG, tr } from '../utils/lang';
 
+function isLocalPaymentMethod(method) {
+  const normalized = String(method || '').trim().toLowerCase();
+  return normalized === 'instapay' || normalized === 'vodafone_cash';
+}
+
+function formatPaymentAmount(amountCents, method, lang) {
+  const value = Number(amountCents || 0) / 100;
+  if (isLocalPaymentMethod(method)) {
+    return `${value.toFixed(2)} ${tr(lang, 'ج.م', 'EGP', 'EGP')}`;
+  }
+  return `$${value.toFixed(2)}`;
+}
+
 export default function AdminPaymentsTab({
   lang,
   payments,
@@ -38,7 +51,7 @@ export default function AdminPaymentsTab({
                   <div className="text-xs text-slate-500">{item.user_email || '-'}</div>
                 </td>
                 <td className="p-3">{item.payment_method || '-'}</td>
-                <td className="p-3">${(Number(item.amount_cents || 0) / 100).toFixed(2)}</td>
+                <td className="p-3">{formatPaymentAmount(item.amount_cents, item.payment_method, lang)}</td>
                 <td className="p-3">{item.credits_added}</td>
                 <td className="p-3">
                   <span className={`inline-flex rounded-full px-2 py-1 text-xs font-bold ${badgeClass(item.status)}`}>

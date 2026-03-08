@@ -10,7 +10,7 @@ let groqClient = null;
 let supabaseClient = null;
 const FREE_PLAN_CREDITS = 0;
 const CREDIT_COST_PER_SUCCESS = 1;
-const TOPUP_PACK_PRICE_CENTS = 1900;
+const TOPUP_PACK_PRICE_CENTS = 89000;
 const TOPUP_PACK_VIDEOS = 200;
 const TOPUP_BONUS_PACKS = new Set([2, 3, 5]);
 const TOPUP_BONUS_RATE = 0.1;
@@ -3506,7 +3506,7 @@ async function getAdminUsageSummary(supabase, { days = 7 } = {}) {
 function calculateTopupQuote(amountCents) {
   const amount = Number(amountCents || 0);
   if (!Number.isInteger(amount) || amount < TOPUP_PACK_PRICE_CENTS || amount % TOPUP_PACK_PRICE_CENTS !== 0) {
-    throw new Error(`Amount must be a multiple of $19 (${TOPUP_PACK_PRICE_CENTS} cents)`);
+    throw new Error(`Amount must be a multiple of 890 EGP (${TOPUP_PACK_PRICE_CENTS} piasters)`);
   }
   const packs = amount / TOPUP_PACK_PRICE_CENTS;
   const baseVideos = packs * TOPUP_PACK_VIDEOS;
