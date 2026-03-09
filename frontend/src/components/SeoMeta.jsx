@@ -31,6 +31,21 @@ function removeNode(selector) {
 function normalizePath(value) {
   const raw = String(value || '/').trim();
   if (!raw) return '/';
+  const embeddedAbsoluteUrl = raw.match(/^\/(https?:\/\/.+)$/i);
+  const absoluteCandidate = embeddedAbsoluteUrl ? embeddedAbsoluteUrl[1] : raw;
+  try {
+    const parsed = new URL(absoluteCandidate);
+    const hostname = String(parsed.hostname || '').trim().toLowerCase();
+    if (hostname === 'transcripta.tech' || hostname === 'www.transcripta.tech') {
+      const pathname = String(parsed.pathname || '/').trim() || '/';
+      const withLeadingSlash = pathname.startsWith('/') ? pathname : `/${pathname}`;
+      if (withLeadingSlash === '/') return '/';
+      return withLeadingSlash.replace(/\/+$/, '');
+    }
+    return '/';
+  } catch {
+    // Fall through for normal internal paths.
+  }
   if (raw === '/') return '/';
   return raw.startsWith('/') ? raw : `/${raw}`;
 }

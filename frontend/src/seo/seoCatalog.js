@@ -491,6 +491,21 @@ const OUT_OF_SCOPE_BLOG_SLUGS = Object.freeze([
 function normalizePath(pathname) {
   const raw = String(pathname || '/').trim();
   if (!raw) return '/';
+  const embeddedAbsoluteUrl = raw.match(/^\/(https?:\/\/.+)$/i);
+  const absoluteCandidate = embeddedAbsoluteUrl ? embeddedAbsoluteUrl[1] : raw;
+  try {
+    const parsed = new URL(absoluteCandidate);
+    const hostname = String(parsed.hostname || '').trim().toLowerCase();
+    if (hostname === 'transcripta.tech' || hostname === 'www.transcripta.tech') {
+      const parsedPath = String(parsed.pathname || '/').trim() || '/';
+      const withLeadingSlash = parsedPath.startsWith('/') ? parsedPath : `/${parsedPath}`;
+      if (withLeadingSlash === '/') return '/';
+      return withLeadingSlash.replace(/\/+$/, '');
+    }
+    return '/';
+  } catch {
+    // Fall through for regular internal paths.
+  }
   const withLeading = raw.startsWith('/') ? raw : `/${raw}`;
   if (withLeading === '/') return '/';
   return withLeading.replace(/\/+$/, '');

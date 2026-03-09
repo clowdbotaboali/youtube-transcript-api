@@ -3968,6 +3968,21 @@ function isMissingRelationError(error) {
 function normalizeSitePath(pathname) {
   const raw = String(pathname || '/').trim();
   if (!raw) return '/';
+  const embeddedAbsoluteUrl = raw.match(/^\/(https?:\/\/.+)$/i);
+  const absoluteCandidate = embeddedAbsoluteUrl ? embeddedAbsoluteUrl[1] : raw;
+  try {
+    const parsed = new URL(absoluteCandidate);
+    const hostname = String(parsed.hostname || '').trim().toLowerCase();
+    if (hostname === 'transcripta.tech' || hostname === 'www.transcripta.tech') {
+      const parsedPath = String(parsed.pathname || '/').trim() || '/';
+      const withLeadingSlash = parsedPath.startsWith('/') ? parsedPath : `/${parsedPath}`;
+      if (withLeadingSlash === '/') return '/';
+      return withLeadingSlash.replace(/\/+$/, '');
+    }
+    return '/';
+  } catch {
+    // Fall through for normal internal paths.
+  }
   const withLeadingSlash = raw.startsWith('/') ? raw : `/${raw}`;
   if (withLeadingSlash === '/') return '/';
   return withLeadingSlash.replace(/\/+$/, '');
@@ -6045,10 +6060,11 @@ export default async function handler(req, res) {
       return res.json({ success: true, managedInBackend: true });
     }
 
-    if ((pathname === '/sitemap.xml' || pathname === '/api/sitemap.xml') && req.method === 'GET') {
+    if ((pathname === '/sitemap.xml' || pathname === '/api/sitemap.xml') && (req.method === 'GET' || req.method === 'HEAD')) {
       const supabase = getSupabase();
       const xml = await buildRuntimeSitemapXml(supabase);
       res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+      if (req.method === 'HEAD') return res.status(200).end();
       return res.status(200).send(xml);
     }
 
