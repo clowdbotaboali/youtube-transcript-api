@@ -1,4 +1,4 @@
-const SITEMAP_URL = 'https://transcripta.tech/sitemap.xml';
+const SITEMAP_URL = 'https://www.transcripta.tech/sitemap.xml';
 
 const pingTargets = [
   {
@@ -57,4 +57,3 @@ main().catch((error) => {
   console.error('[seo:ping] unexpected failure:', error);
   process.exitCode = 1;
 });
-

@@ -2,7 +2,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 const INDEXNOW_ENDPOINT = 'https://api.indexnow.org/indexnow';
-const HOST = 'transcripta.tech';
+const HOST = 'www.transcripta.tech';
 const SITEMAP_PATH = path.resolve(process.cwd(), 'scripts', '.cache', 'sitemap.build.xml');
 const REPORT_DIR = path.resolve(process.cwd(), 'scripts', '.cache');
 const STATE_PATH = path.resolve(REPORT_DIR, 'indexnow-state.json');

@@ -132,7 +132,7 @@ const DEFAULT_ALLOWED_ORIGINS = [
   'https://transcripta.tech',
   'https://www.transcripta.tech',
 ];
-const SITE_ORIGIN = String(FRONTEND_SEO_CONFIG?.SITE_ORIGIN || 'https://transcripta.tech').replace(/\/+$/, '');
+const SITE_ORIGIN = String(FRONTEND_SEO_CONFIG?.SITE_ORIGIN || 'https://www.transcripta.tech').replace(/\/+$/, '');
 const SEO_TRANSCRIPT_TABLE = 'seo_transcript_pages';
 const SEO_TRANSCRIPT_ROUTE_PREFIX = '/transcript';
 const SEO_TRANSCRIPT_CATEGORIES = Object.freeze(['Education', 'Podcasts', 'Tutorials', 'Languages']);

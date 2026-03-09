@@ -4,7 +4,7 @@ import path from 'path';
 const PROJECT_ROOT = process.cwd();
 const BACKEND_ENV_PATH = path.join(PROJECT_ROOT, 'backend', '.env');
 const SUPABASE_API_BASE = 'https://api.supabase.com/v1';
-const DEFAULT_SITE_URL = 'https://transcripta.tech';
+const DEFAULT_SITE_URL = 'https://www.transcripta.tech';
 const DEFAULT_SENDER_NAME = 'Transcripta Support';
 const DEFAULT_FROM_EMAIL = 'support@transcripta.tech';
 

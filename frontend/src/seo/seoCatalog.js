@@ -1,4 +1,4 @@
-const SITE_ORIGIN = 'https://transcripta.tech';
+const SITE_ORIGIN = 'https://www.transcripta.tech';
 const SITE_NAME = 'Transcripta AI';
 const TOOL_PATH = '/tool';
 const DEFAULT_LANG = 'en';
