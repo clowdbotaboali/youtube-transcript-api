@@ -1,8 +1,16 @@
 import SeoMeta from '../components/SeoMeta';
 import CompliancePageLayout from '../components/CompliancePageLayout';
+import { SEO_CONFIG } from '../seo/seoCatalog';
 import { LANG, tr } from '../utils/lang';
 
 function TermsPage({ lang = LANG.ar, theme = 'light' }) {
+  const structuredData = {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    name: 'Terms of Service | Transcripta AI',
+    url: `${SEO_CONFIG.SITE_ORIGIN}/terms`,
+    description: 'Terms of Service for Transcripta AI digital transcript generation service.'
+  };
   return (
     <>
       <SeoMeta
@@ -13,6 +21,9 @@ function TermsPage({ lang = LANG.ar, theme = 'light' }) {
           'Terms of Service for Transcripta AI digital transcript generation service.'
         )}
         path="/terms"
+        canonicalOrigin={SEO_CONFIG.SITE_ORIGIN}
+        robots="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"
+        structuredData={structuredData}
       />
       <CompliancePageLayout
         lang={lang}

@@ -1,8 +1,16 @@
 import SeoMeta from '../components/SeoMeta';
 import CompliancePageLayout from '../components/CompliancePageLayout';
+import { SEO_CONFIG } from '../seo/seoCatalog';
 import { LANG, tr } from '../utils/lang';
 
 function PrivacyPolicyPage({ lang = LANG.ar, theme = 'light' }) {
+  const structuredData = {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    name: 'Privacy Policy | Transcripta AI',
+    url: `${SEO_CONFIG.SITE_ORIGIN}/privacy-policy`,
+    description: 'Privacy policy for Transcripta AI digital transcript generation service.'
+  };
   return (
     <>
       <SeoMeta
@@ -13,6 +21,9 @@ function PrivacyPolicyPage({ lang = LANG.ar, theme = 'light' }) {
           'Privacy Policy for Transcripta AI digital transcript generation service.'
         )}
         path="/privacy-policy"
+        canonicalOrigin={SEO_CONFIG.SITE_ORIGIN}
+        robots="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"
+        structuredData={structuredData}
       />
       <CompliancePageLayout
         lang={lang}

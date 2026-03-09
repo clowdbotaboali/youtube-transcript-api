@@ -3,7 +3,11 @@ import { createClient } from '@supabase/supabase-js';
 import ytdl from '@distube/ytdl-core';
 import crypto from 'crypto';
 import nodemailer from 'nodemailer';
-import { getSitemapEntries as getFrontendSitemapEntries, SEO_CONFIG as FRONTEND_SEO_CONFIG } from '../frontend/src/seo/seoCatalog.js';
+import {
+  getSitemapEntries as getFrontendSitemapEntries,
+  getSeoRouteInfo as getFrontendSeoRouteInfo,
+  SEO_CONFIG as FRONTEND_SEO_CONFIG
+} from '../frontend/src/seo/seoCatalog.js';
 
 let groqClient = null;
 
@@ -3589,6 +3593,24 @@ function applySecurityHeaders(res) {
   res.setHeader('Cache-Control', 'no-store');
 }
 
+function applyIndexableHtmlHeaders(res, robots = 'index, follow') {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=1800, stale-while-revalidate=3600');
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; img-src 'self' https: data:; style-src 'self' 'unsafe-inline'; script-src 'none'; connect-src 'none'; font-src 'self' https: data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+  );
+  res.setHeader('X-Robots-Tag', robots);
+}
+
+function normalizeRobotsContent(value, fallback = 'index, follow') {
+  const raw = String(value || fallback).trim();
+  if (!raw) return fallback;
+  if (/max-image-preview|max-snippet|max-video-preview/i.test(raw)) return raw;
+  if (/noindex/i.test(raw)) return `${raw}, max-image-preview:large`;
+  return `${raw}, max-snippet:-1, max-image-preview:large, max-video-preview:-1`;
+}
+
 function applyCors(req, res) {
   const origin = String(req.headers?.origin || '').trim();
   if (origin && isOriginAllowed(origin)) {
@@ -3986,6 +4008,469 @@ function normalizeSitePath(pathname) {
   const withLeadingSlash = raw.startsWith('/') ? raw : `/${raw}`;
   if (withLeadingSlash === '/') return '/';
   return withLeadingSlash.replace(/\/+$/, '');
+}
+
+function toAbsoluteSiteUrl(pathname = '/') {
+  return `${SITE_ORIGIN}${normalizeSitePath(pathname)}`;
+}
+
+function buildBreadcrumbSchema(items = []) {
+  const listItems = items
+    .map((item, index) => {
+      const name = String(item?.name || '').trim();
+      const url = String(item?.url || '').trim();
+      if (!name || !url) return null;
+      return {
+        '@type': 'ListItem',
+        position: index + 1,
+        name,
+        item: url
+      };
+    })
+    .filter(Boolean);
+  if (listItems.length === 0) return null;
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: listItems
+  };
+}
+
+function renderAlternateLinks(alternates = []) {
+  if (!Array.isArray(alternates) || alternates.length === 0) return '';
+  return alternates
+    .map((item) => {
+      const hreflang = escapeHtml(String(item?.hreflang || '').trim());
+      const href = escapeHtml(String(item?.href || '').trim());
+      if (!hreflang || !href) return '';
+      return `<link rel="alternate" hreflang="${hreflang}" href="${href}" />`;
+    })
+    .filter(Boolean)
+    .join('\n    ');
+}
+
+function renderStructuredDataScripts(items = []) {
+  return (Array.isArray(items) ? items : [])
+    .filter(Boolean)
+    .map((item) => toJsonLdScriptContent(item))
+    .filter(Boolean)
+    .map((content) => `<script type="application/ld+json">${content}</script>`)
+    .join('\n    ');
+}
+
+function renderHtmlDocument({
+  title = 'Transcripta AI',
+  description = 'Transcripta AI',
+  canonicalPath = '/',
+  lang = 'en',
+  dir = 'ltr',
+  robots = 'index, follow',
+  ogType = 'website',
+  alternates = [],
+  publishedTime = '',
+  structuredData = [],
+  bodyHtml = ''
+} = {}) {
+  const canonical = escapeHtml(toAbsoluteSiteUrl(canonicalPath));
+  const socialImage = escapeHtml(`${SITE_ORIGIN}/preview-image.png`);
+  const normalizedRobots = escapeHtml(normalizeRobotsContent(robots));
+  const alternateLinks = renderAlternateLinks(alternates);
+  const jsonLdHtml = renderStructuredDataScripts(structuredData);
+
+  return `<!doctype html>
+<html lang="${escapeHtml(lang)}" dir="${escapeHtml(dir)}">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>${escapeHtml(title)}</title>
+    <meta name="description" content="${escapeHtml(description)}" />
+    <meta name="robots" content="${normalizedRobots}" />
+    <link rel="canonical" href="${canonical}" />
+    ${alternateLinks}
+    <meta property="og:title" content="${escapeHtml(title)}" />
+    <meta property="og:description" content="${escapeHtml(description)}" />
+    <meta property="og:type" content="${escapeHtml(ogType)}" />
+    <meta property="og:url" content="${canonical}" />
+    <meta property="og:site_name" content="Transcripta AI" />
+    <meta property="og:image" content="${socialImage}" />
+    <meta property="og:image:secure_url" content="${socialImage}" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Transcripta AI preview" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="${escapeHtml(title)}" />
+    <meta name="twitter:description" content="${escapeHtml(description)}" />
+    <meta name="twitter:image" content="${socialImage}" />
+    <meta name="twitter:image:alt" content="Transcripta AI preview" />
+    ${publishedTime ? `<meta property="article:published_time" content="${escapeHtml(publishedTime)}" />` : ''}
+    ${jsonLdHtml}
+    <style>
+      :root { color-scheme: light; }
+      * { box-sizing: border-box; }
+      body { margin: 0; font-family: "Segoe UI", Arial, sans-serif; background: linear-gradient(180deg, #f8fafc 0%, #ecfeff 100%); color: #0f172a; line-height: 1.7; }
+      a { color: #0f766e; text-decoration: none; }
+      a:hover { color: #115e59; text-decoration: underline; }
+      .wrap { max-width: 1080px; margin: 0 auto; padding: 28px 18px 56px; }
+      .card { background: #fff; border: 1px solid #dbeafe; border-radius: 18px; padding: 24px; margin-bottom: 18px; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04); }
+      .hero { background: linear-gradient(135deg, #0f172a 0%, #164e63 100%); color: #fff; border-color: transparent; }
+      .eyebrow { display: inline-block; margin-bottom: 10px; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #67e8f9; }
+      .muted { color: #475569; }
+      .hero .muted { color: rgba(255,255,255,0.82); }
+      h1, h2, h3 { line-height: 1.25; margin: 0 0 12px; }
+      h1 { font-size: clamp(2rem, 4vw, 3rem); }
+      h2 { font-size: clamp(1.25rem, 2.4vw, 1.8rem); }
+      h3 { font-size: 1.08rem; }
+      p { margin: 0 0 12px; }
+      ul, ol { margin: 0; padding-inline-start: 22px; }
+      li { margin-bottom: 8px; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+      .pill { display: inline-flex; align-items: center; gap: 8px; font-size: 0.84rem; font-weight: 700; background: #ecfeff; color: #0f766e; border-radius: 999px; padding: 8px 12px; }
+      .cta { display: inline-flex; align-items: center; justify-content: center; padding: 12px 18px; border-radius: 12px; background: #0f172a; color: #fff; font-weight: 700; }
+      .cta:hover { color: #fff; text-decoration: none; background: #111827; }
+      .stack > * + * { margin-top: 12px; }
+      .faq-q { font-weight: 700; margin-bottom: 6px; }
+      .small { font-size: 0.95rem; }
+    </style>
+  </head>
+  <body>
+    ${bodyHtml}
+  </body>
+</html>`;
+}
+
+function renderParagraphBlock(paragraphs = []) {
+  return (Array.isArray(paragraphs) ? paragraphs : [])
+    .filter(Boolean)
+    .map((item) => `<p>${escapeHtml(item)}</p>`)
+    .join('');
+}
+
+function renderListBlock(items = []) {
+  const safeItems = (Array.isArray(items) ? items : []).filter(Boolean);
+  if (safeItems.length === 0) return '';
+  return `<ul>${safeItems.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>`;
+}
+
+function renderLinkList(items = []) {
+  const safeItems = (Array.isArray(items) ? items : []).filter(Boolean);
+  if (safeItems.length === 0) return '';
+  return `<ul>${safeItems.map((item) => {
+    const href = escapeHtml(normalizeSitePath(item?.path || '/'));
+    const label = escapeHtml(item?.label || item?.title || href);
+    return `<li><a href="${href}">${label}</a></li>`;
+  }).join('')}</ul>`;
+}
+
+function renderStepsBlock(steps = []) {
+  const safeSteps = (Array.isArray(steps) ? steps : []).filter(Boolean);
+  if (safeSteps.length === 0) return '';
+  return `<div class="grid">${safeSteps.map((step) => {
+    const title = escapeHtml(step?.title || 'Step');
+    const text = escapeHtml(step?.text || '');
+    return `<article class="card"><h3>${title}</h3><p class="small">${text}</p></article>`;
+  }).join('')}</div>`;
+}
+
+function renderFaqBlock(items = []) {
+  const safeItems = (Array.isArray(items) ? items : []).filter(Boolean);
+  if (safeItems.length === 0) return '';
+  return safeItems.map((item) => {
+    const question = escapeHtml(item?.question || '');
+    const answer = escapeHtml(item?.answer || '');
+    if (!question || !answer) return '';
+    return `<article class="card"><p class="faq-q">${question}</p><p>${answer}</p></article>`;
+  }).join('');
+}
+
+function renderFrontendSeoHtml(page) {
+  const canonical = page?.canonicalPath || '/';
+  const breadcrumb = buildBreadcrumbSchema([
+    { name: page?.lang === 'fr' ? 'Accueil' : 'Home', url: toAbsoluteSiteUrl(`/${page?.lang || 'en'}`) },
+    { name: page?.h1 || page?.title || 'Page', url: toAbsoluteSiteUrl(canonical) }
+  ]);
+  const structuredData = [...(Array.isArray(page?.structuredData) ? page.structuredData : [])];
+  if (breadcrumb) structuredData.push(breadcrumb);
+
+  const bodyHtml = `
+    <main class="wrap">
+      <section class="card hero">
+        <p class="eyebrow">${escapeHtml(page?.keyword || 'Transcripta AI')}</p>
+        <h1>${escapeHtml(page?.h1 || page?.title || 'Transcripta AI')}</h1>
+        <p class="muted">${escapeHtml(page?.metaDescription || '')}</p>
+        <p><a class="cta" href="${escapeHtml(page?.toolPath || '/tool')}">Open The Main Tool</a></p>
+      </section>
+
+      <section class="card">
+        <h2>${escapeHtml(page?.copy?.introTitle || 'Introduction')}</h2>
+        ${renderParagraphBlock(page?.introParagraphs)}
+      </section>
+
+      <section class="card">
+        <h2>${escapeHtml(page?.copy?.problemTitle || 'What Problem Does It Solve?')}</h2>
+        ${renderParagraphBlock(page?.problemParagraphs)}
+      </section>
+
+      <section class="card">
+        <h2>${escapeHtml(page?.copy?.howTitle || 'How It Works')}</h2>
+        ${renderParagraphBlock(page?.howParagraphs)}
+      </section>
+
+      <section class="card">
+        <h2>${escapeHtml(page?.copy?.stepsTitle || 'Step By Step')}</h2>
+        ${renderStepsBlock(page?.steps)}
+      </section>
+
+      <section class="grid">
+        <article class="card">
+          <h2>${escapeHtml(page?.copy?.benefitsTitle || 'Benefits')}</h2>
+          ${renderListBlock(page?.benefits)}
+        </article>
+        <article class="card">
+          <h2>${escapeHtml(page?.copy?.useCasesTitle || 'Use Cases')}</h2>
+          ${renderListBlock(page?.useCases)}
+        </article>
+      </section>
+
+      <section class="card">
+        <h2>${escapeHtml(page?.copy?.detailTitle || 'Detailed Guide')}</h2>
+        ${renderParagraphBlock(page?.detailedGuide)}
+      </section>
+
+      <section class="card">
+        <h2>${escapeHtml(page?.copy?.canonicalLandingTitle || 'Key Related Page')}</h2>
+        ${renderLinkList(page?.relatedLandingPages)}
+      </section>
+
+      <section class="grid">
+        <article class="card">
+          <h2>${escapeHtml(page?.copy?.relatedArticlesTitle || 'Related Articles')}</h2>
+          ${renderLinkList(page?.relatedArticles)}
+        </article>
+        <article class="card">
+          <h2>${escapeHtml(page?.copy?.clusterTitle || 'Topic Hubs')}</h2>
+          ${renderLinkList(page?.clusterLinks)}
+        </article>
+      </section>
+
+      <section class="stack">
+        <h2>${escapeHtml(page?.copy?.faqTitle || 'FAQ')}</h2>
+        ${renderFaqBlock(page?.faqItems)}
+      </section>
+    </main>`;
+
+  return renderHtmlDocument({
+    title: page?.title || 'Transcripta AI',
+    description: page?.metaDescription || 'Transcripta AI',
+    canonicalPath: canonical,
+    lang: page?.lang || 'en',
+    dir: page?.dir || 'ltr',
+    robots: page?.robots || 'index, follow',
+    ogType: page?.ogType || 'article',
+    alternates: page?.alternates || [],
+    publishedTime: page?.publishedTime || '',
+    structuredData,
+    bodyHtml
+  });
+}
+
+function getStaticMarketingPage(pathname) {
+  const path = normalizeSitePath(pathname);
+  const pages = {
+    '/pricing': {
+      title: 'Pricing | Transcripta AI',
+      description: 'Pricing for extracting transcripts, summaries, notes, and execution-ready outputs from long YouTube videos.',
+      h1: 'Pricing',
+      sections: [
+        {
+          title: 'Free Plan',
+          bullets: [
+            '5 videos per month to test the full extraction workflow.',
+            'Full transcript extraction with AI processing options.',
+            'Chat on the same processed video without extra usage.'
+          ]
+        },
+        {
+          title: 'Paid Video Pack',
+          bullets: [
+            'Core pack: 200 videos.',
+            'Designed for repeated extraction, summaries, and execution outputs.',
+            'Bonus volume uplift on larger multi-pack purchases.'
+          ]
+        },
+        {
+          title: 'Service Scope',
+          paragraphs: [
+            'Transcripta AI is a digital software service for turning public YouTube links into structured knowledge outputs.',
+            'Charges apply to software access and processing capacity only.'
+          ]
+        }
+      ]
+    },
+    '/contact': {
+      title: 'Contact | Transcripta AI',
+      description: 'Contact information for support, billing, and compliance questions related to Transcripta AI.',
+      h1: 'Contact',
+      sections: [
+        {
+          title: 'Business Contact',
+          bullets: [
+            'Email: support@transcripta.tech',
+            'Country of operation: Egypt',
+            'Support response time: within 24 business hours'
+          ]
+        },
+        {
+          title: 'Billing And Refund Support',
+          paragraphs: [
+            'For billing and refund cases, contact hello@transcripta.tech.'
+          ]
+        },
+        {
+          title: 'Compliance And Legal',
+          paragraphs: [
+            'For compliance or legal matters, contact hello@transcripta.tech.'
+          ]
+        }
+      ]
+    },
+    '/privacy-policy': {
+      title: 'Privacy Policy | Transcripta AI',
+      description: 'How Transcripta AI collects, uses, stores, and protects account and transcript-related information.',
+      h1: 'Privacy Policy',
+      sections: [
+        {
+          title: 'Information We Collect',
+          paragraphs: [
+            'We collect the minimum data required to run the service, including account email, submitted YouTube URLs, and operational logs.',
+            'We do not store YouTube video files themselves.'
+          ]
+        },
+        {
+          title: 'How Information Is Used',
+          paragraphs: [
+            'Data is used to deliver transcripts, support authentication, maintain service quality, and investigate abuse or billing disputes.'
+          ]
+        },
+        {
+          title: 'Retention And Security',
+          paragraphs: [
+            'Records are retained only as long as needed for account operation, compliance, and dispute handling.',
+            'Administrative and infrastructure controls are used to protect stored data.'
+          ]
+        }
+      ]
+    },
+    '/terms': {
+      title: 'Terms of Service | Transcripta AI',
+      description: 'Terms governing the use of Transcripta AI transcript extraction and AI processing features.',
+      h1: 'Terms of Service',
+      sections: [
+        {
+          title: 'Service Description',
+          paragraphs: [
+            'Transcripta AI converts public YouTube links into transcripts and optional AI-generated knowledge outputs.',
+            'The product is software access only.'
+          ]
+        },
+        {
+          title: 'User Responsibilities',
+          paragraphs: [
+            'Users are responsible for the links they submit and for complying with platform rules and applicable law.'
+          ]
+        },
+        {
+          title: 'Acceptable Use',
+          paragraphs: [
+            'Unauthorized access attempts, abusive request patterns, and policy violations may lead to restricted access.'
+          ]
+        }
+      ]
+    },
+    '/refund-policy': {
+      title: 'Refund Policy | Transcripta AI',
+      description: 'Refund eligibility rules for failed or unusable transcript generation requests on Transcripta AI.',
+      h1: 'Refund Policy',
+      sections: [
+        {
+          title: 'Eligibility',
+          paragraphs: [
+            'Refunds may be considered when transcript generation fails and no usable output is delivered.'
+          ]
+        },
+        {
+          title: 'Non-Refundable Cases',
+          paragraphs: [
+            'Refunds are not available once successful output has been delivered and consumed as a completed digital service.'
+          ]
+        },
+        {
+          title: 'How To Request',
+          bullets: [
+            'Account email',
+            'Payment reference',
+            'Date and time of charge',
+            'Brief issue summary'
+          ]
+        }
+      ]
+    }
+  };
+  return pages[path] || null;
+}
+
+function renderStaticMarketingHtml(page, pathname) {
+  const canonicalPath = normalizeSitePath(pathname);
+  const breadcrumb = buildBreadcrumbSchema([
+    { name: 'Home', url: toAbsoluteSiteUrl('/') },
+    { name: page?.h1 || page?.title || 'Page', url: toAbsoluteSiteUrl(canonicalPath) }
+  ]);
+  const structuredData = [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'WebPage',
+      name: page?.title || 'Transcripta AI',
+      description: page?.description || '',
+      url: toAbsoluteSiteUrl(canonicalPath),
+      inLanguage: 'en'
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'Organization',
+      name: 'Transcripta AI',
+      url: SITE_ORIGIN,
+      logo: `${SITE_ORIGIN}/logo.png`
+    },
+    breadcrumb
+  ].filter(Boolean);
+
+  const bodyHtml = `
+    <main class="wrap">
+      <section class="card hero">
+        <p class="eyebrow">Transcripta AI</p>
+        <h1>${escapeHtml(page?.h1 || page?.title || 'Transcripta AI')}</h1>
+        <p class="muted">${escapeHtml(page?.description || '')}</p>
+        <p><a class="cta" href="/tool">Open The Main Tool</a></p>
+      </section>
+      ${(Array.isArray(page?.sections) ? page.sections : []).map((section) => `
+        <section class="card">
+          <h2>${escapeHtml(section?.title || 'Section')}</h2>
+          ${renderParagraphBlock(section?.paragraphs)}
+          ${renderListBlock(section?.bullets)}
+        </section>
+      `).join('')}
+    </main>`;
+
+  return renderHtmlDocument({
+    title: page?.title || 'Transcripta AI',
+    description: page?.description || 'Transcripta AI',
+    canonicalPath,
+    lang: 'en',
+    dir: 'ltr',
+    robots: 'index, follow',
+    ogType: 'website',
+    bodyHtml,
+    structuredData
+  });
 }
 
 function escapeXmlValue(value) {
@@ -6068,6 +6553,24 @@ export default async function handler(req, res) {
       return res.status(200).send(xml);
     }
 
+    const frontendSeoPage = getFrontendSeoRouteInfo(pathname);
+    if (frontendSeoPage && (req.method === 'GET' || req.method === 'HEAD')) {
+      const requestedPath = normalizeSitePath(pathname);
+      if (frontendSeoPage.canonicalPath && requestedPath !== normalizeSitePath(frontendSeoPage.canonicalPath)) {
+        return res.redirect(308, frontendSeoPage.canonicalPath);
+      }
+      applyIndexableHtmlHeaders(res, normalizeRobotsContent(frontendSeoPage.robots || 'index, follow'));
+      if (req.method === 'HEAD') return res.status(200).end();
+      return res.status(200).send(renderFrontendSeoHtml(frontendSeoPage));
+    }
+
+    const staticMarketingPage = getStaticMarketingPage(pathname);
+    if (staticMarketingPage && (req.method === 'GET' || req.method === 'HEAD')) {
+      applyIndexableHtmlHeaders(res, normalizeRobotsContent('index, follow'));
+      if (req.method === 'HEAD') return res.status(200).end();
+      return res.status(200).send(renderStaticMarketingHtml(staticMarketingPage, pathname));
+    }
+
     const transcriptHtmlMatch = pathname.match(/^\/(?:api\/)?transcript\/([a-z0-9-]+)$/i);
     if (transcriptHtmlMatch && req.method === 'GET') {
       const slug = String(transcriptHtmlMatch[1] || '').trim().toLowerCase();
@@ -6123,8 +6626,7 @@ export default async function handler(req, res) {
       }
 
       const html = renderSeoTranscriptHtml(page);
-      res.setHeader('Content-Type', 'text/html; charset=utf-8');
-      res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=900, stale-while-revalidate=3600');
+      applyIndexableHtmlHeaders(res, normalizeRobotsContent(page.robots || 'index, follow'));
       return res.status(200).send(html);
     }
 

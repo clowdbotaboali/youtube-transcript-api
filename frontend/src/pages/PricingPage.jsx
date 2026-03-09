@@ -1,7 +1,15 @@
 ﻿import SeoMeta from '../components/SeoMeta';
 import { LANG, tr } from '../utils/lang';
+import { SEO_CONFIG } from '../seo/seoCatalog';
 
 function PricingPage({ lang = LANG.ar, theme = 'light' }) {
+  const structuredData = {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    name: 'Pricing | Transcripta AI',
+    url: `${SEO_CONFIG.SITE_ORIGIN}/pricing`,
+    description: 'Pricing for transcript extraction, summaries, notes, and execution-ready outputs.'
+  };
   const isDark = theme === 'dark';
 
   return (
@@ -15,6 +23,9 @@ function PricingPage({ lang = LANG.ar, theme = 'light' }) {
           'Tarification pour transformer les longues videos en connaissance structuree et plans d execution.'
         )}
         path="/pricing"
+        canonicalOrigin={SEO_CONFIG.SITE_ORIGIN}
+        robots="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"
+        structuredData={structuredData}
       />
 
       <main

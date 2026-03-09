@@ -35,67 +35,67 @@
     },
     {
       "source": "/en/blog/:slug",
-      "destination": "/"
+      "destination": "/api/index.js"
     },
     {
       "source": "/ar/blog/:slug",
-      "destination": "/"
+      "destination": "/api/index.js"
     },
     {
       "source": "/fr/blog/:slug",
-      "destination": "/"
+      "destination": "/api/index.js"
     },
     {
       "source": "/blog/:slug",
-      "destination": "/"
+      "destination": "/api/index.js"
     },
     {
       "source": "/en/cluster/:slug",
-      "destination": "/"
+      "destination": "/api/index.js"
     },
     {
       "source": "/ar/cluster/:slug",
-      "destination": "/"
+      "destination": "/api/index.js"
     },
     {
       "source": "/fr/cluster/:slug",
-      "destination": "/"
+      "destination": "/api/index.js"
     },
     {
       "source": "/cluster/:slug",
-      "destination": "/"
+      "destination": "/api/index.js"
     },
     {
       "source": "/en/:slug",
-      "destination": "/"
+      "destination": "/api/index.js"
     },
     {
       "source": "/ar/:slug",
-      "destination": "/"
+      "destination": "/api/index.js"
     },
     {
       "source": "/fr/:slug",
-      "destination": "/"
+      "destination": "/api/index.js"
     },
     {
       "source": "/privacy-policy",
-      "destination": "/"
+      "destination": "/api/index.js"
     },
     {
       "source": "/terms",
-      "destination": "/"
+      "destination": "/api/index.js"
     },
     {
       "source": "/refund-policy",
-      "destination": "/"
+      "destination": "/api/index.js"
     },
     {
       "source": "/contact",
-      "destination": "/"
+      "destination": "/api/index.js"
     },
     {
       "source": "/pricing",
-      "destination": "/"
+      "destination": "/api/index.js"
     },
     {
       "source": "/admin",
@@ -135,6 +135,33 @@
           "key": "Permissions-Policy",
           "value": "geolocation=(), camera=(), microphone=()"
         },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/admin",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/dashboard",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/auth/callback",
+      "headers": [
         {
           "key": "X-Robots-Tag",
           "value": "noindex, nofollow"

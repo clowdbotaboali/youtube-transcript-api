@@ -3,6 +3,7 @@ import { useEffect, useMemo } from 'react';
 const DEFAULT_SOCIAL_IMAGE = 'https://www.transcripta.tech/preview-image.png';
 const DEFAULT_SOCIAL_IMAGE_WIDTH = '1200';
 const DEFAULT_SOCIAL_IMAGE_HEIGHT = '630';
+const DEFAULT_SOCIAL_IMAGE_ALT = 'Transcripta AI preview';
 
 function upsertMeta(selector, attrs, content) {
   let el = document.head.querySelector(selector);
@@ -104,7 +105,8 @@ function SeoMeta({
   ogImageWidth = DEFAULT_SOCIAL_IMAGE_WIDTH,
   ogImageHeight = DEFAULT_SOCIAL_IMAGE_HEIGHT,
   twitterImage = '',
-  twitterCard = 'summary_large_image'
+  twitterCard = 'summary_large_image',
+  imageAlt = DEFAULT_SOCIAL_IMAGE_ALT
 }) {
   const alternatesKey = stableStringify(alternates);
   const structuredDataList = useMemo(() => {
@@ -116,6 +118,7 @@ function SeoMeta({
   const normalizedOgImageWidth = String(ogImageWidth || DEFAULT_SOCIAL_IMAGE_WIDTH).trim() || DEFAULT_SOCIAL_IMAGE_WIDTH;
   const normalizedOgImageHeight = String(ogImageHeight || DEFAULT_SOCIAL_IMAGE_HEIGHT).trim() || DEFAULT_SOCIAL_IMAGE_HEIGHT;
   const normalizedTwitterImage = String(twitterImage || normalizedOgImage).trim() || normalizedOgImage;
+  const normalizedImageAlt = String(imageAlt || DEFAULT_SOCIAL_IMAGE_ALT).trim() || DEFAULT_SOCIAL_IMAGE_ALT;
 
   useEffect(() => {
     const prevTitle = document.title;
@@ -135,14 +138,17 @@ function SeoMeta({
     upsertMeta('meta[property="og:title"]', { property: 'og:title' }, title);
     upsertMeta('meta[property="og:description"]', { property: 'og:description' }, description);
     upsertMeta('meta[property="og:type"]', { property: 'og:type' }, ogType);
+    upsertMeta('meta[property="og:site_name"]', { property: 'og:site_name' }, 'Transcripta AI');
     upsertMeta('meta[property="og:image"]', { property: 'og:image' }, normalizedOgImage);
     upsertMeta('meta[property="og:image:secure_url"]', { property: 'og:image:secure_url' }, normalizedOgImage);
     upsertMeta('meta[property="og:image:width"]', { property: 'og:image:width' }, normalizedOgImageWidth);
     upsertMeta('meta[property="og:image:height"]', { property: 'og:image:height' }, normalizedOgImageHeight);
+    upsertMeta('meta[property="og:image:alt"]', { property: 'og:image:alt' }, normalizedImageAlt);
     upsertMeta('meta[name="twitter:title"]', { name: 'twitter:title' }, title);
     upsertMeta('meta[name="twitter:description"]', { name: 'twitter:description' }, description);
     upsertMeta('meta[name="twitter:card"]', { name: 'twitter:card' }, twitterCard);
     upsertMeta('meta[name="twitter:image"]', { name: 'twitter:image' }, normalizedTwitterImage);
+    upsertMeta('meta[name="twitter:image:alt"]', { name: 'twitter:image:alt' }, normalizedImageAlt);
     if (publishedTime) {
       upsertMeta('meta[property="article:published_time"]', { property: 'article:published_time' }, publishedTime);
     } else {
@@ -176,6 +182,7 @@ function SeoMeta({
     normalizedOgImageWidth,
     normalizedOgImageHeight,
     normalizedTwitterImage,
+    normalizedImageAlt,
     twitterCard,
     alternates,
     structuredDataList

@@ -1,8 +1,21 @@
 import SeoMeta from '../components/SeoMeta';
 import CompliancePageLayout from '../components/CompliancePageLayout';
+import { SEO_CONFIG } from '../seo/seoCatalog';
 import { LANG, tr } from '../utils/lang';
 
 function ContactPage({ lang = LANG.ar, theme = 'light' }) {
+  const structuredData = {
+    '@context': 'https://schema.org',
+    '@type': 'ContactPage',
+    name: 'Contact | Transcripta AI',
+    url: `${SEO_CONFIG.SITE_ORIGIN}/contact`,
+    description: 'Contact information for support, billing, and compliance questions.',
+    mainEntity: {
+      '@type': 'Organization',
+      name: 'Transcripta AI',
+      email: 'support@transcripta.tech'
+    }
+  };
   return (
     <>
       <SeoMeta
@@ -13,6 +26,9 @@ function ContactPage({ lang = LANG.ar, theme = 'light' }) {
           'Contact information for Transcripta AI service operations in Egypt.'
         )}
         path="/contact"
+        canonicalOrigin={SEO_CONFIG.SITE_ORIGIN}
+        robots="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"
+        structuredData={structuredData}
       />
       <CompliancePageLayout
         lang={lang}
