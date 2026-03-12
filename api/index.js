@@ -4010,6 +4010,16 @@ function normalizeSitePath(pathname) {
   return withLeadingSlash.replace(/\/+$/, '');
 }
 
+function extractEmbeddedAbsoluteUrl(pathname) {
+  const raw = String(pathname || '').trim();
+  if (!raw.startsWith('/')) return null;
+  const directMatch = raw.match(/^\/(https?:\/\/.+)$/i);
+  if (directMatch) return directMatch[1];
+  const relaxedMatch = raw.match(/^\/(https?):\/+(.+)$/i);
+  if (relaxedMatch) return `${relaxedMatch[1]}://${relaxedMatch[2]}`;
+  return null;
+}
+
 function toAbsoluteSiteUrl(pathname = '/') {
   return `${SITE_ORIGIN}${normalizeSitePath(pathname)}`;
 }
@@ -6474,6 +6484,22 @@ export default async function handler(req, res) {
 
   applySecurityHeaders(res);
   applyCors(req, res);
+
+  const embeddedUrl = extractEmbeddedAbsoluteUrl(pathname);
+  if (embeddedUrl) {
+    try {
+      const parsed = new URL(embeddedUrl);
+      const siteHost = new URL(SITE_ORIGIN).host;
+      const isSameHost = parsed.host === siteHost || parsed.host === `www.${siteHost}`;
+      if (isSameHost) {
+        const targetPath = normalizeSitePath(parsed.pathname || '/');
+        return res.redirect(308, `${targetPath}${parsed.search || ''}`);
+      }
+    } catch {
+      // fall through
+    }
+    return res.redirect(308, '/');
+  }
 
   const originalJson = res.json.bind(res);
   res.json = (payload) => {

@@ -123,6 +123,8 @@ function App() {
   const isStaticRoute = STATIC_ROUTES.has(currentPath) || Boolean(blogRouteInfo) || Boolean(transcriptSeoSlug);
   const isLocalizedHome = /^\/(en|ar|fr)$/i.test(currentPath);
   const isHomePath = currentPath === '/' || isLocalizedHome;
+  const isToolPath = currentPath === '/tool';
+  const toolRobots = isToolPath ? 'noindex, follow' : '';
   const schemaPath = currentPath === '/tool'
     ? '/tool'
     : isHomePath
@@ -1003,6 +1005,7 @@ function App() {
           path={schemaPath}
           alternates={rootAlternates}
           canonicalOrigin={SEO_CONFIG.SITE_ORIGIN}
+          robots={toolRobots}
         />
         <div className="flex-1 bg-slate-950 text-slate-100 flex items-center justify-center">
           <div className="flex items-center gap-2 text-sm">
@@ -1018,14 +1021,15 @@ function App() {
   if (!user) {
     return (
       <div className={`min-h-screen flex flex-col ${theme === THEME.dark ? 'bg-slate-950 text-slate-100' : ''}`}>
-      <SeoMeta
-        title="Transcripta AI | Knowledge Extraction & Execution Engine"
-        description="Transform long YouTube videos into structured knowledge, execution plans, and implementation-ready outputs."
-        path={schemaPath}
-        alternates={rootAlternates}
-        canonicalOrigin={SEO_CONFIG.SITE_ORIGIN}
-        structuredData={softwareSchema}
-      />
+        <SeoMeta
+          title="Transcripta AI | Knowledge Extraction & Execution Engine"
+          description="Transform long YouTube videos into structured knowledge, execution plans, and implementation-ready outputs."
+          path={schemaPath}
+          alternates={rootAlternates}
+          canonicalOrigin={SEO_CONFIG.SITE_ORIGIN}
+          structuredData={softwareSchema}
+          robots={toolRobots}
+        />
         <div className="flex-1">
           <LandingPage
             onStart={handleLandingStart}
@@ -1065,6 +1069,7 @@ function App() {
         alternates={rootAlternates}
         canonicalOrigin={SEO_CONFIG.SITE_ORIGIN}
         structuredData={softwareSchema}
+        robots={toolRobots}
       />
       <ToastStack items={toasts} onDismiss={dismissToast} />
       <div className="max-w-7xl mx-auto w-full px-3 sm:px-4 py-4 sm:py-6 flex-1">

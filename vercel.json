@@ -167,6 +167,15 @@
           "value": "noindex, nofollow"
         }
       ]
+    },
+    {
+      "source": "/tool",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, follow"
+        }
+      ]
     }
   ],
   "redirects": [
