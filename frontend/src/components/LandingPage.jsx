@@ -3,6 +3,8 @@ import {
   FaArrowRight,
   FaBolt,
   FaCheckCircle,
+  FaFacebookF,
+  FaLinkedinIn,
   FaMoon,
   FaPlayCircle,
   FaQuestionCircle,
@@ -596,6 +598,35 @@ function LandingPage({
             {t('finalCta.button')}
             <FaArrowRight className={isArabic ? 'rotate-180' : ''} />
           </button>
+
+          <div className="flex items-center justify-center gap-3 mt-6">
+            <a
+              href="https://www.facebook.com/transcripta.tech"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Facebook"
+              className={`w-11 h-11 rounded-xl inline-flex items-center justify-center border transition transform-gpu duration-200 hover:-translate-y-0.5 hover:shadow-lg ${
+                isDark
+                  ? 'border-slate-700 bg-slate-900/70 text-blue-400 hover:bg-blue-500/20 hover:border-blue-500/50 hover:shadow-blue-500/20'
+                  : 'border-slate-200 bg-white text-blue-600 hover:bg-blue-50 hover:border-blue-300 hover:shadow-blue-200/50'
+              }`}
+            >
+              <FaFacebookF className="text-lg" />
+            </a>
+            <a
+              href="https://www.linkedin.com/in/transcriptatech/"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="LinkedIn"
+              className={`w-11 h-11 rounded-xl inline-flex items-center justify-center border transition transform-gpu duration-200 hover:-translate-y-0.5 hover:shadow-lg ${
+                isDark
+                  ? 'border-slate-700 bg-slate-900/70 text-sky-400 hover:bg-sky-500/20 hover:border-sky-500/50 hover:shadow-sky-500/20'
+                  : 'border-slate-200 bg-white text-sky-700 hover:bg-sky-50 hover:border-sky-300 hover:shadow-sky-200/50'
+              }`}
+            >
+              <FaLinkedinIn className="text-lg" />
+            </a>
+          </div>
         </section>
       </div>
     </div>
