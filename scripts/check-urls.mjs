@@ -84,9 +84,15 @@ async function main() {
   console.log(`Redirects: ${report.redirects}`);
   console.log(`Errors: ${report.errors}`);
 
+  const strict = String(process.env.URL_CHECK_STRICT || '1') !== '0';
   if (report.errors > 0) {
-    console.error(`[seo:check-urls] Build failed because ${report.errors} URL(s) returned errors.`);
-    process.exitCode = 1;
+    console.error(`[seo:check-urls] Build found ${report.errors} URL(s) with errors.`);
+    if (strict) {
+      console.error('[seo:check-urls] Failing build because URL_CHECK_STRICT=1.');
+      process.exitCode = 1;
+    } else {
+      console.warn('[seo:check-urls] Continuing because URL_CHECK_STRICT=0.');
+    }
   }
 }
 

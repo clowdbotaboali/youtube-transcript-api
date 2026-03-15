@@ -1,4 +1,4 @@
-import { LANG } from '../utils/lang';
+import { LANG } from '../utils/lang.js';
 
 const INSIGHTS = [
   {
