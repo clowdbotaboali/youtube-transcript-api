@@ -13,6 +13,7 @@ function PublicHeader({
   const isDark = theme === 'dark';
   const pricingHref = '/#landing-pricing';
   const accountHref = isAuthenticated ? '/' : '/?auth=login';
+  const insightsActive = currentPath === '/insights' || currentPath.startsWith('/insights/');
 
   return (
     <header
@@ -26,6 +27,20 @@ function PublicHeader({
         </a>
 
         <div className="flex items-center gap-2">
+          <a
+            href="/insights"
+            className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition ${
+              insightsActive
+                ? isDark
+                  ? 'bg-cyan-500/20 text-cyan-200'
+                  : 'bg-cyan-100 text-cyan-800'
+                : isDark
+                  ? 'text-slate-200 hover:bg-slate-800'
+                  : 'text-slate-700 hover:bg-slate-100'
+            }`}
+          >
+            {tr(lang, 'Ù…ÙƒØªØ¨Ø© Ø§Ù„Ù…Ø¹Ø±ÙØ©', 'Insights', 'Insights')}
+          </a>
           <a
             href={pricingHref}
             className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition ${
@@ -82,4 +97,3 @@ function PublicHeader({
 }
 
 export default PublicHeader;
-

@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createClient } from '@supabase/supabase-js';
 import { SEO_CONFIG, getSitemapEntries } from '../src/seo/seoCatalog.js';
+import { getInsightPaths } from '../src/content/insights.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -18,6 +19,8 @@ const staticEntries = [
   { path: '/ar/', changefreq: 'weekly', priority: '0.9' },
   { path: '/fr/', changefreq: 'weekly', priority: '0.9' },
   { path: '/pricing', changefreq: 'monthly', priority: '0.7' },
+  { path: '/about', changefreq: 'monthly', priority: '0.6' },
+  { path: '/insights', changefreq: 'weekly', priority: '0.7' },
   { path: '/contact', changefreq: 'monthly', priority: '0.5' },
   { path: '/privacy-policy', changefreq: 'yearly', priority: '0.3' },
   { path: '/terms', changefreq: 'yearly', priority: '0.3' },
@@ -111,8 +114,13 @@ async function main() {
   await cleanupOldSitemapChunks();
 
   const dynamicEntries = getSitemapEntries();
+  const insightEntries = getInsightPaths().map((entryPath) => ({
+    path: entryPath,
+    changefreq: 'monthly',
+    priority: '0.6'
+  }));
   const transcriptEntries = await loadTranscriptSitemapEntries();
-  const allEntries = uniqueEntries([...staticEntries, ...dynamicEntries, ...transcriptEntries]);
+  const allEntries = uniqueEntries([...staticEntries, ...insightEntries, ...dynamicEntries, ...transcriptEntries]);
 
   if (allEntries.length <= MAX_URLS_PER_FILE) {
     const xml = toUrlsetXml(allEntries);

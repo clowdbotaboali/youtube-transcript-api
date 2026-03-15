@@ -95,6 +95,19 @@ function PrivacyPolicyPage({ lang = LANG.ar, theme = 'light' }) {
           )}</p>
         </CompliancePageLayout.Section>
 
+        <CompliancePageLayout.Section title={tr(lang, '7. الإعلانات وملفات تعريف الارتباط', '7. Advertising and Cookies')}>
+          <p>{tr(
+            lang,
+            'قد نعرض إعلانات من أطراف ثالثة مثل Google AdSense. هذه الخدمات قد تستخدم ملفات تعريف الارتباط (Cookies) أو معرفات مشابهة لعرض إعلانات أكثر ملاءمة.',
+            'We may show ads from third parties such as Google AdSense. These services may use cookies or similar identifiers to display more relevant ads.'
+          )}</p>
+          <p>{tr(
+            lang,
+            'يمكنك إدارة ملفات تعريف الارتباط من خلال إعدادات المتصفح. ولمزيد من المعلومات عن تفضيلات إعلانات Google، يمكنك مراجعة Google Ads Settings.',
+            'You can manage cookies through your browser settings. For Google ad preferences, visit Google Ads Settings.'
+          )}</p>
+        </CompliancePageLayout.Section>
+
         <CompliancePageLayout.Section title={tr(lang, '6. حقوقك ووسيلة التواصل', '6. Your Rights and Contact')}>
           <p>{tr(
             lang,

@@ -2,6 +2,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { createClient } from '@supabase/supabase-js';
 import { SEO_CONFIG, getSitemapEntries } from '../frontend/src/seo/seoCatalog.js';
+import { getInsightPaths } from '../frontend/src/content/insights.js';
 
 const SITEMAP_PATH = path.resolve(process.cwd(), 'scripts', '.cache', 'sitemap.build.xml');
 const MAX_URLS_PER_FILE = 45000;
@@ -14,6 +15,8 @@ const staticEntries = [
   { path: '/fr', changefreq: 'weekly', priority: '0.9' },
   { path: '/tool', changefreq: 'weekly', priority: '0.95' },
   { path: '/pricing', changefreq: 'monthly', priority: '0.7' },
+  { path: '/about', changefreq: 'monthly', priority: '0.6' },
+  { path: '/insights', changefreq: 'weekly', priority: '0.7' },
   { path: '/contact', changefreq: 'monthly', priority: '0.5' },
   { path: '/privacy-policy', changefreq: 'yearly', priority: '0.3' },
   { path: '/terms', changefreq: 'yearly', priority: '0.3' },
@@ -99,8 +102,13 @@ function toUrlSetXml(entries) {
 
 async function main() {
   const seoEntries = getSitemapEntries();
+  const insightEntries = getInsightPaths().map((entryPath) => ({
+    path: entryPath,
+    changefreq: 'monthly',
+    priority: '0.6'
+  }));
   const transcriptEntries = await loadTranscriptSitemapEntries();
-  const allEntries = uniqueEntries([...staticEntries, ...seoEntries, ...transcriptEntries]);
+  const allEntries = uniqueEntries([...staticEntries, ...insightEntries, ...seoEntries, ...transcriptEntries]);
 
   if (allEntries.length > MAX_URLS_PER_FILE) {
     throw new Error(

@@ -21,6 +21,9 @@ import RefundPolicyPage from './pages/RefundPolicyPage';
 import ContactPage from './pages/ContactPage';
 import PricingPage from './pages/PricingPage';
 import AdminPage from './pages/AdminPage';
+import AboutPage from './pages/AboutPage';
+import InsightsIndexPage from './pages/InsightsIndexPage';
+import InsightArticlePage from './pages/InsightArticlePage';
 import BlogArticlePage, { getBlogRouteInfo } from './pages/BlogArticlePage';
 import TranscriptSeoPage from './pages/TranscriptSeoPage';
 import { SEO_CONFIG, getSoftwareApplicationSchema } from './seo/seoCatalog';
@@ -46,7 +49,16 @@ import {
 } from './helpers';
 
 const hasWindow = typeof window !== 'undefined';
-const STATIC_ROUTES = new Set(['/privacy-policy', '/terms', '/refund-policy', '/contact', '/pricing', '/admin']);
+const STATIC_ROUTES = new Set([
+  '/privacy-policy',
+  '/terms',
+  '/refund-policy',
+  '/contact',
+  '/pricing',
+  '/admin',
+  '/about',
+  '/insights'
+]);
 
 const getLangFromPath = (pathValue) => {
   const match = normalizePathname(pathValue).match(/^\/(en|ar|fr)(?:\/|$)/i);
@@ -58,6 +70,12 @@ const getLangFromPath = (pathValue) => {
 
 const getTranscriptSlugFromPath = (pathValue) => {
   const match = normalizePathname(pathValue).match(/^\/transcript\/([a-z0-9-]+)$/i);
+  if (!match) return '';
+  return String(match[1] || '').trim().toLowerCase();
+};
+
+const getInsightSlugFromPath = (pathValue) => {
+  const match = normalizePathname(pathValue).match(/^\/insights\/([a-z0-9-]+)$/i);
   if (!match) return '';
   return String(match[1] || '').trim().toLowerCase();
 };
@@ -120,7 +138,8 @@ function App() {
   const user = session?.user ?? null;
   const blogRouteInfo = useMemo(() => getBlogRouteInfo(currentPath), [currentPath]);
   const transcriptSeoSlug = useMemo(() => getTranscriptSlugFromPath(currentPath), [currentPath]);
-  const isStaticRoute = STATIC_ROUTES.has(currentPath) || Boolean(blogRouteInfo) || Boolean(transcriptSeoSlug);
+  const insightSlug = useMemo(() => getInsightSlugFromPath(currentPath), [currentPath]);
+  const isStaticRoute = STATIC_ROUTES.has(currentPath) || Boolean(blogRouteInfo) || Boolean(transcriptSeoSlug) || Boolean(insightSlug);
   const isLocalizedHome = /^\/(en|ar|fr)$/i.test(currentPath);
   const isHomePath = currentPath === '/' || isLocalizedHome;
   const isToolPath = currentPath === '/tool';
@@ -956,8 +975,11 @@ function App() {
     if (currentPath === '/contact') return <ContactPage lang={lang} theme={theme} />;
     if (currentPath === '/pricing') return <PricingPage lang={lang} theme={theme} />;
     if (currentPath === '/admin') return <AdminPage apiUrl={apiUrl} lang={lang} theme={theme} />;
+    if (currentPath === '/about') return <AboutPage lang={lang} theme={theme} />;
+    if (currentPath === '/insights') return <InsightsIndexPage lang={lang} theme={theme} />;
     if (blogRouteInfo) return <BlogArticlePage routeInfo={blogRouteInfo} theme={theme} />;
     if (transcriptSeoSlug) return <TranscriptSeoPage slug={transcriptSeoSlug} apiUrl={apiUrl} theme={theme} />;
+    if (insightSlug) return <InsightArticlePage slug={insightSlug} lang={lang} theme={theme} />;
     return null;
   };
 

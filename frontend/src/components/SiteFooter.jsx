@@ -30,6 +30,12 @@ function SiteFooter({ lang = LANG.ar, theme = 'light' }) {
           <a href="/pricing" className={isDark ? 'text-slate-300 hover:text-cyan-300 hover:underline' : 'text-slate-700 hover:text-cyan-700 hover:underline'}>
             {tr(lang, 'الأسعار', 'Pricing', 'Tarification')}
           </a>
+          <a href="/about" className={isDark ? 'text-slate-300 hover:text-cyan-300 hover:underline' : 'text-slate-700 hover:text-cyan-700 hover:underline'}>
+            {tr(lang, 'Ù…Ù† Ù†Ø­Ù†', 'About', 'A propos')}
+          </a>
+          <a href="/insights" className={isDark ? 'text-slate-300 hover:text-cyan-300 hover:underline' : 'text-slate-700 hover:text-cyan-700 hover:underline'}>
+            {tr(lang, 'Ù…ÙƒØªØ¨Ø© Ø§Ù„Ù…Ø¹Ø±ÙØ©', 'Insights', 'Insights')}
+          </a>
         </nav>
       </div>
     </footer>
