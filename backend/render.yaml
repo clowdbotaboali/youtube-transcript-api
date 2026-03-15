@@ -1,18 +1,43 @@
 services:
   - type: web
-    name: youtube-transcript-backend
+    name: yt-transcript-backend
     runtime: node
     region: frankfurt
     plan: free
+    rootDir: backend
     buildCommand: npm ci
     startCommand: node server.js
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 5000
+        value: 10000
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: ADMIN_TOKEN_SECRET
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: TURNSTILE_SECRET_KEY
+        sync: false
       - key: GROQ_API_KEY
+        sync: false
       - key: TRANSCRIPT_API_KEY
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: RATE_LIMIT_STORAGE
+        value: durable
     disk:
       name: data
       mountPath: /app

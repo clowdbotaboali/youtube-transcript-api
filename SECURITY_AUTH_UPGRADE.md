@@ -72,7 +72,8 @@
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `SUPABASE_ANON_KEY`
 - `TURNSTILE_SECRET_KEY`
-- `ADMIN_TOKEN_SECRET`
+- `ADMIN_TOKEN_SECRET` (or `ADMIN_TOKEN_SECRET_SEED`)
+- `ADMIN_PASSWORD` (or `ADMIN_PASSWORD_SEED`)
 
 ### Frontend (required)
 - `VITE_SUPABASE_URL`
@@ -82,3 +83,6 @@
 ### Optional
 - `VITE_API_URL` (leave empty in production same-origin deploy)
 - `ALLOWED_ORIGINS` (comma-separated allow list)
+- `ADMIN_PASSWORD_SEED` (stable fallback for admin password)
+- `ADMIN_TOKEN_SECRET_SEED` (stable fallback for admin token signing)
+- `RATE_LIMIT_STORAGE` (`durable` or `memory`)

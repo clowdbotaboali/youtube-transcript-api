@@ -1,10 +1,12 @@
 services:
   - type: web
     name: yt-transcript-backend
-    env: node
+    runtime: node
+    region: frankfurt
+    plan: free
     rootDir: backend
-    buildCommand: npm install
-    startCommand: npm start
+    buildCommand: npm ci
+    startCommand: node server.js
     envVars:
       - key: NODE_ENV
         value: production
@@ -14,13 +16,29 @@ services:
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
-      - key: STRIPE_SECRET_KEY
+      - key: SUPABASE_ANON_KEY
         sync: false
-      - key: STRIPE_WEBHOOK_SECRET
+      - key: ADMIN_TOKEN_SECRET
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: TURNSTILE_SECRET_KEY
         sync: false
       - key: GROQ_API_KEY
         sync: false
       - key: TRANSCRIPT_API_KEY
         sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
       - key: FRONTEND_URL
         sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: RATE_LIMIT_STORAGE
+        value: durable
+    disk:
+      name: data
+      mountPath: /app
+      sizeGB: 1

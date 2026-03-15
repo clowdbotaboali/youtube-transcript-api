@@ -53,12 +53,15 @@ Required:
 
 Recommended:
 - `SUPABASE_ANON_KEY` (or `SUPABASE_PUBLISHABLE_KEY`, plus `NEXT_PUBLIC_*` / `VITE_*` aliases)
-- `ADMIN_TOKEN_SECRET`
+- `ADMIN_TOKEN_SECRET` (or `ADMIN_TOKEN_SECRET_SEED`)
+- `ADMIN_PASSWORD` (or `ADMIN_PASSWORD_SEED`)
 
 Optional:
 - `ALLOWED_ORIGINS` (comma-separated)
 - `ADMIN_EMAIL`
 - `ADMIN_PASSWORD`
+- `ADMIN_PASSWORD_SEED` (stable fallback for admin password if `ADMIN_PASSWORD` is unset)
+- `ADMIN_TOKEN_SECRET_SEED` (stable fallback for admin token signing if `ADMIN_TOKEN_SECRET` is unset)
 - `PAYMENT_PROOF_BUCKET`
 - `SUPABASE_ACCESS_TOKEN` (for one-time auth email template/sender setup script)
 - `SUPABASE_PROJECT_REF` (optional if `SUPABASE_URL` is set)
@@ -71,6 +74,8 @@ Optional:
 - `ADMIN_NOTIFY_EMAIL` (admin mailbox for signup alerts; fallback: `ADMIN_EMAIL`)
 - `ADMIN_NOTIFY_FROM_NAME`
 - `ADMIN_NOTIFY_FROM_EMAIL`
+- `RATE_LIMIT_STORAGE` (`durable` or `memory`; defaults to `durable` in production)
+- `RATE_LIMIT_OWNER_USER_ID` (optional override for durable rate-limit owner user)
 
 ### Frontend (`frontend`)
 - `VITE_SUPABASE_URL`

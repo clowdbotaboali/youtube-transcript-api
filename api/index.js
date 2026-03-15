@@ -64,21 +64,30 @@ const ADMIN_DEFAULT_EMAIL = String(process.env.ADMIN_EMAIL || 'admin@localhost.l
 const ADMIN_NOTIFY_DEFAULT_FROM_NAME = 'Transcripta AI';
 const SIGNUP_NOTIFY_TIMEOUT_MS = 10000;
 const SMTP_DEFAULT_PORT = 587;
-const ADMIN_PASSWORD_FROM_ENV = Boolean(String(process.env.ADMIN_PASSWORD || '').trim());
-const ADMIN_PASSWORD_FALLBACK_SOURCE = String(process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || '').trim();
+const ADMIN_PASSWORD_RAW = String(process.env.ADMIN_PASSWORD || '').trim();
+const ADMIN_TOKEN_SECRET_RAW = String(process.env.ADMIN_TOKEN_SECRET || '').trim();
+const ADMIN_PASSWORD_FROM_ENV = Boolean(ADMIN_PASSWORD_RAW);
+const ADMIN_TOKEN_SECRET_FROM_ENV = Boolean(ADMIN_TOKEN_SECRET_RAW);
+const ADMIN_PASSWORD_SEED = String(process.env.ADMIN_PASSWORD_SEED || ADMIN_TOKEN_SECRET_RAW || '').trim();
+const ADMIN_TOKEN_SECRET_SEED = String(process.env.ADMIN_TOKEN_SECRET_SEED || ADMIN_PASSWORD_RAW || '').trim();
 const ADMIN_DEFAULT_PASSWORD = ADMIN_PASSWORD_FROM_ENV
-  ? String(process.env.ADMIN_PASSWORD || '').trim()
-  : crypto
-      .createHash('sha256')
-      .update(ADMIN_PASSWORD_FALLBACK_SOURCE || crypto.randomBytes(32).toString('base64url'))
-      .digest('base64url')
-      .slice(0, 24);
-const ADMIN_TOKEN_SECRET_FROM_ENV = Boolean(String(process.env.ADMIN_TOKEN_SECRET || '').trim());
-const ADMIN_TOKEN_SECRET = String(process.env.ADMIN_TOKEN_SECRET || '').trim()
-  || crypto
-    .createHash('sha256')
-    .update(ADMIN_PASSWORD_FALLBACK_SOURCE || crypto.randomBytes(48).toString('base64url'))
-    .digest('base64url');
+  ? ADMIN_PASSWORD_RAW
+  : (ADMIN_PASSWORD_SEED
+    ? crypto
+        .createHash('sha256')
+        .update(ADMIN_PASSWORD_SEED)
+        .digest('base64url')
+        .slice(0, 24)
+    : crypto.randomBytes(18).toString('base64url'));
+const ADMIN_PASSWORD_IS_EPHEMERAL = !ADMIN_PASSWORD_FROM_ENV && !ADMIN_PASSWORD_SEED;
+const ADMIN_TOKEN_SECRET = ADMIN_TOKEN_SECRET_RAW
+  || (ADMIN_TOKEN_SECRET_SEED
+    ? crypto
+        .createHash('sha256')
+        .update(ADMIN_TOKEN_SECRET_SEED)
+        .digest('base64url')
+    : crypto.randomBytes(48).toString('base64url'));
+const ADMIN_TOKEN_SECRET_IS_EPHEMERAL = !ADMIN_TOKEN_SECRET_FROM_ENV && !ADMIN_TOKEN_SECRET_SEED;
 const ADMIN_TOKEN_TTL_MS = 1000 * 60 * 60 * 12;
 const LINKS_MAX_ITEMS = 500;
 const PAYMENT_PROOF_BUCKET = process.env.PAYMENT_PROOF_BUCKET || 'payment-proofs';
@@ -90,6 +99,9 @@ const GUEST_EXTRACT_LIMIT_PER_TOKEN = 1;
 const VIDEO_ID_REGEX = /^[A-Za-z0-9_-]{11}$/;
 const PRO_SUBSCRIPTION_DAYS = 30;
 const RATE_LIMIT_OWNER_CACHE_TTL_MS = 5 * 60 * 1000;
+const RATE_LIMIT_STORAGE_MODE = String(process.env.RATE_LIMIT_STORAGE || '').trim().toLowerCase();
+const RATE_LIMIT_FORCE_DURABLE = RATE_LIMIT_STORAGE_MODE === 'durable';
+const RATE_LIMIT_FORCE_MEMORY = RATE_LIMIT_STORAGE_MODE === 'memory';
 const DEFAULT_OUTPUT_LANG = 'ar';
 const OUTPUT_LANG_CONFIG = {
   ar: { label: 'Arabic', instruction: 'Write the final output in clear Modern Standard Arabic with natural phrasing (not literal translation).' },
@@ -238,8 +250,12 @@ function validateEnvironment() {
 
   if (!getSupabasePublicKey()) missingRecommended.push('SUPABASE_ANON_KEY');
   if (!String(process.env.TURNSTILE_SECRET_KEY || '').trim()) missingRecommended.push('TURNSTILE_SECRET_KEY');
-  if (!ADMIN_TOKEN_SECRET_FROM_ENV) missingRecommended.push('ADMIN_TOKEN_SECRET');
-  if (!ADMIN_PASSWORD_FROM_ENV) missingRecommended.push('ADMIN_PASSWORD');
+  if (!ADMIN_TOKEN_SECRET_FROM_ENV && !ADMIN_TOKEN_SECRET_SEED) {
+    missingRecommended.push('ADMIN_TOKEN_SECRET (or ADMIN_TOKEN_SECRET_SEED)');
+  }
+  if (!ADMIN_PASSWORD_FROM_ENV && !ADMIN_PASSWORD_SEED) {
+    missingRecommended.push('ADMIN_PASSWORD (or ADMIN_PASSWORD_SEED)');
+  }
   if (!String(process.env.ADMIN_EMAIL || '').trim()) missingRecommended.push('ADMIN_EMAIL');
   const telegramBotToken = String(process.env.TELEGRAM_BOT_TOKEN || '').trim();
   const telegramChatId = String(process.env.TELEGRAM_CHAT_ID || '').trim();
@@ -260,6 +276,12 @@ function validateEnvironment() {
   }
   if (missingRecommended.length > 0) {
     console.warn(`[env] Missing recommended environment variables: ${missingRecommended.join(', ')}`);
+  }
+  if (ADMIN_PASSWORD_IS_EPHEMERAL) {
+    console.warn('[env] ADMIN_PASSWORD not set. Admin login uses a generated password that changes on restart.');
+  }
+  if (ADMIN_TOKEN_SECRET_IS_EPHEMERAL) {
+    console.warn('[env] ADMIN_TOKEN_SECRET not set. Admin tokens will be invalidated on restart.');
   }
   return {
     valid: missingRequired.length === 0,
@@ -3670,7 +3692,10 @@ function sendError(res, status, code, message, details) {
 
 function isDurableRateLimitRule(ruleName) {
   const rule = RATE_LIMIT_RULES[ruleName];
-  return rule?.storage === 'durable';
+  if (!rule) return false;
+  if (RATE_LIMIT_FORCE_MEMORY) return false;
+  if (RATE_LIMIT_FORCE_DURABLE) return true;
+  return rule.storage === 'durable';
 }
 
 function hashRateLimitIdentity(ruleName, identity) {
@@ -6536,7 +6561,14 @@ export default async function handler(req, res) {
     return res.status(200).end();
   }
 
-  if (pathname.startsWith('/api/') && !(await enforceRateLimit(res, 'ipGlobal', requestIp, 'Too many requests from this IP'))) {
+  const rateLimitSupabase = getSupabase();
+  if (pathname.startsWith('/api/') && !(await enforceRateLimit(
+    res,
+    'ipGlobal',
+    requestIp,
+    'Too many requests from this IP',
+    { supabase: rateLimitSupabase }
+  ))) {
     return;
   }
 
