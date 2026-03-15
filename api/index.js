@@ -7468,6 +7468,8 @@ export default async function handler(req, res) {
         return res.status(400).json({ success: false, error: 'username and email are required' });
       }
 
+      let authUserUpdated = false;
+      let authUpdateWarning = '';
       try {
         await authAdminRequest(`/auth/v1/admin/users/${current.userId}`, {
           method: 'PUT',
@@ -7480,8 +7482,17 @@ export default async function handler(req, res) {
             }
           })
         });
+        authUserUpdated = true;
       } catch (authError) {
-        return res.status(400).json({ success: false, error: authError.message || 'Failed to update auth admin user' });
+        const authMessage = String(authError?.message || '');
+        const lower = authMessage.toLowerCase();
+        const isServerError =
+          authMessage.includes('500') || lower.includes('internal') || lower.includes('server');
+        if (!isServerError) {
+          return res.status(400).json({ success: false, error: authMessage || 'Failed to update auth admin user' });
+        }
+        authUpdateWarning = authMessage || 'Auth admin update failed due to a server error';
+        console.warn(`[admin][settings] ${authUpdateWarning}`);
       }
 
       const nextConfig = {
@@ -7503,7 +7514,9 @@ export default async function handler(req, res) {
           username: nextConfig.username,
           email: nextConfig.email,
           userId: nextConfig.userId
-        }
+        },
+        authUserUpdated,
+        ...(authUpdateWarning ? { warning: authUpdateWarning } : {})
       });
     }
 
