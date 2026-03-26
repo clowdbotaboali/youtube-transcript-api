@@ -192,6 +192,76 @@
   ],
   "redirects": [
     {
+      "source": "/blog/extract-subtitles-from-youtube",
+      "destination": "/en/youtube-subtitles-extractor",
+      "permanent": true
+    },
+    {
+      "source": "/en/blog/extract-subtitles-from-youtube",
+      "destination": "/en/youtube-subtitles-extractor",
+      "permanent": true
+    },
+    {
+      "source": "/ar/blog/extract-subtitles-from-youtube",
+      "destination": "/ar/youtube-subtitles-extractor",
+      "permanent": true
+    },
+    {
+      "source": "/fr/blog/extract-subtitles-from-youtube",
+      "destination": "/fr/youtube-subtitles-extractor",
+      "permanent": true
+    },
+    {
+      "source": "/extract-subtitles-from-youtube",
+      "destination": "/en/youtube-subtitles-extractor",
+      "permanent": true
+    },
+    {
+      "source": "/blog/how-to-get-youtube-transcript",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/en/blog/how-to-get-youtube-transcript",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/ar/blog/how-to-get-youtube-transcript",
+      "destination": "/ar/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/fr/blog/how-to-get-youtube-transcript",
+      "destination": "/fr/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/how-to-get-youtube-transcript",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/blog/youtube-transcript-generator",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/en/blog/youtube-transcript-generator",
+      "destination": "/en/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/ar/blog/youtube-transcript-generator",
+      "destination": "/ar/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
+      "source": "/fr/blog/youtube-transcript-generator",
+      "destination": "/fr/youtube-transcript-generator",
+      "permanent": true
+    },
+    {
       "source": "/en/youtube-transcript-tool-online",
       "destination": "/en/youtube-transcript-generator",
       "permanent": true
