@@ -8936,7 +8936,7 @@ export default async function handler(req, res) {
       }
       return res.json({ success: true });
     }
-\n    if (pathname === '/api/chat/clear' && req.method === 'POST') {
+    if (pathname === '/api/chat/clear' && req.method === 'POST') {
       return res.json({ success: true });
     }
 
