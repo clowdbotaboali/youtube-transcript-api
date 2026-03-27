@@ -98,9 +98,10 @@ function PricingModal({
       if (data.success && data.url) {
         window.location.href = data.url;
       } else {
-        notify('error', data.error || tr(lang, 'حدث خطأ في تجهيز الدفع', 'Error preparing payment', 'Erreur de preparation du paiement'));
+        const errorMsg = typeof data.error === 'object' ? data.error?.message : data.error;
+        notify('error', errorMsg || tr(lang, 'حدث خطأ في تجهيز الدفع', 'Error preparing payment', 'Erreur de preparation du paiement'));
       }
-    } catch (e) {
+    } catch {
       notify('error', tr(lang, 'فشل الاتصال بالخادم', 'Server connection failed', 'Echec de connexion au serveur'));
     } finally {
       setIsProcessingPaymob(false);
