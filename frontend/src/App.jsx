@@ -503,6 +503,21 @@ function App() {
   }, [currentPath, user?.id]);
 
   useEffect(() => {
+    if (!hasWindow || !user?.id) return;
+    const params = new URLSearchParams(window.location.search);
+    const success = params.get('success');
+    if (params.has('order') && success) {
+      if (success === 'true') {
+        notify('success', tr(lang, 'تم الدفع بنجاح! تم تحديث رصيد الفيديوهات الخاص بك.', 'Payment successful! Your video balance was updated.', 'Paiement reussi ! Votre solde de videos a ete mis a jour.'));
+        refreshAccount();
+      } else if (success === 'false') {
+        notify('error', tr(lang, 'فشلت عملية الدفع. يرجى المحاولة مرة أخرى.', 'Payment failed. Please try again.', 'Le paiement a echoue. Veuillez reessayer.'));
+      }
+      window.history.replaceState({}, '', currentPath);
+    }
+  }, [currentPath, lang, notify, user?.id]);
+
+  useEffect(() => {
     if (!hasWindow || user?.id) return;
     const params = new URLSearchParams(window.location.search);
     const authFlag = String(params.get('auth') || '').trim().toLowerCase();

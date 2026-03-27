@@ -1,5 +1,5 @@
-﻿import { useMemo, useState } from 'react';
-import { FaBolt, FaCheck, FaCrown, FaLeaf } from 'react-icons/fa';
+import { useMemo, useState } from 'react';
+import { FaBolt, FaCheck, FaCrown, FaLeaf, FaCreditCard } from 'react-icons/fa';
 import { cleanText, LANG, tr } from '../utils/lang';
 
 const PRICE_PER_PACK_USD = 19;
@@ -48,6 +48,7 @@ function PricingModal({
   onProceed
 }) {
   const [packCount, setPackCount] = useState(1);
+  const [isProcessingPaymob, setIsProcessingPaymob] = useState(false);
   const quote = useMemo(() => calculateQuote(packCount), [packCount]);
   const isDark = theme === 'dark';
 
@@ -57,7 +58,7 @@ function PricingModal({
 
   if (!isOpen) return null;
 
-  const handleContinue = () => {
+  const handleContinueLocal = () => {
     if (!user) {
       requireLogin?.();
       return;
@@ -77,6 +78,33 @@ function PricingModal({
     }
 
     onProceed?.(quote);
+  };
+
+  const handleContinueGlobal = async () => {
+    if (!user) {
+      requireLogin?.();
+      return;
+    }
+    if (!quote.valid) return;
+
+    try {
+      setIsProcessingPaymob(true);
+      const res = await fetch('/api/paymob/create-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ packCount: quote.packs })
+      });
+      const data = await res.json();
+      if (data.success && data.url) {
+        window.location.href = data.url;
+      } else {
+        notify('error', data.error || tr(lang, 'حدث خطأ في تجهيز الدفع', 'Error preparing payment', 'Erreur de preparation du paiement'));
+      }
+    } catch (e) {
+      notify('error', tr(lang, 'فشل الاتصال بالخادم', 'Server connection failed', 'Echec de connexion au serveur'));
+    } finally {
+      setIsProcessingPaymob(false);
+    }
   };
 
   return (
@@ -203,15 +231,26 @@ function PricingModal({
                 </div>
               )}
 
-              <button
-                type="button"
-                onClick={handleContinue}
-                disabled={!quote.valid}
-                className="w-full mt-4 rounded-xl py-3 bg-orange-600 text-white font-bold hover:bg-orange-700 transition disabled:opacity-60 inline-flex items-center justify-center gap-2"
-              >
-                <FaBolt />
-                <span>{tr(lang, 'متابعة تفاصيل الدفع', 'Continue to payment details', 'Continuer vers les details de paiement')}</span>
-              </button>
+              <div className="flex flex-col sm:flex-row gap-3 mt-4">
+                <button
+                  type="button"
+                  onClick={handleContinueLocal}
+                  disabled={!quote.valid || isProcessingPaymob}
+                  className="flex-1 rounded-xl py-3 bg-orange-600 text-white font-bold hover:bg-orange-700 transition disabled:opacity-60 inline-flex items-center justify-center gap-2"
+                >
+                  <FaBolt />
+                  <span>{tr(lang, 'متابعة الدفع المحلي', 'Continue to Local Payment', 'Paiement Local')}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleContinueGlobal}
+                  disabled={!quote.valid || isProcessingPaymob}
+                  className="flex-1 rounded-xl py-3 bg-slate-800 text-white font-bold hover:bg-slate-900 transition disabled:opacity-60 inline-flex items-center justify-center gap-2"
+                >
+                  <FaCreditCard />
+                  <span>{isProcessingPaymob ? tr(lang, 'جاري التحويل...', 'Redirecting...', 'Redirection...') : tr(lang, 'الدفع بالبطاقة (دولي)', 'Pay with Card (Global)', 'Payer par Carte (Global)')}</span>
+                </button>
+              </div>
             </article>
           </div>
         </div>
