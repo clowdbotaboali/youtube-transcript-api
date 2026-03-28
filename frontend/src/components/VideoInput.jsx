@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { FaFileAlt, FaSpinner, FaUpload, FaYoutube } from 'react-icons/fa';
 import { getAuthHeaders } from '../utils/authHeaders';
-import { formatApiErrorMessage } from '../utils/apiError';
+import { formatApiErrorMessage, parseApiError } from '../utils/apiError';
 import { LANG, tr } from '../utils/lang';
 import { getOutputLanguageLabel, normalizeOutputLanguage, OUTPUT_LANGUAGE_OPTIONS } from '../utils/outputLanguage';
 import { createManualSourceId } from '../utils/source';
@@ -30,7 +30,9 @@ function VideoInput({
   const [manualText, setManualText] = useState('');
   const [uploadMessage, setUploadMessage] = useState('');
   const [error, setError] = useState('');
+  const [errorCode, setErrorCode] = useState('');
   const fileInputRef = useRef(null);
+  const manualTextareaRef = useRef(null);
 
   const isLowQualityTranscript = (text = '', wordCount = 0) => {
     const normalized = String(text || '')
@@ -51,12 +53,54 @@ function VideoInput({
 
   useEffect(() => {
     setError('');
+    setErrorCode('');
     setUploadMessage('');
   }, [mode]);
+
+  useEffect(() => {
+    if (mode !== INPUT_MODES.text) return;
+    const timer = setTimeout(() => {
+      manualTextareaRef.current?.focus();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [mode]);
+
+  const applyApiError = (payload, status) => {
+    const parsed = parseApiError(payload);
+    setErrorCode(String(parsed.code || '').trim().toUpperCase());
+    setError(
+      formatApiErrorMessage({
+        payload,
+        status,
+        lang,
+        fallbackAr: 'حدث خطأ أثناء استخراج النص.',
+        fallbackEn: 'Transcript extraction failed.',
+        fallbackFr: "Echec de l'extraction de la transcription."
+      })
+    );
+  };
+
+  const switchToWrittenTextMode = ({ openUploader = false } = {}) => {
+    setMode(INPUT_MODES.text);
+    setUploadMessage(
+      tr(
+        lang,
+        'يمكنك الآن لصق النص مباشرة أو رفع ملف نصي للمتابعة.',
+        'You can now paste text directly or upload a text file to continue.',
+        'Vous pouvez maintenant coller le texte ou telecharger un fichier texte pour continuer.'
+      )
+    );
+    if (openUploader) {
+      setTimeout(() => fileInputRef.current?.click(), 0);
+    }
+  };
 
   const handleManualSubmit = () => {
     const normalizedTranscript = String(manualText || '').trim();
     const normalizedTitle = String(manualTitle || '').trim();
+
+    setError('');
+    setErrorCode('');
 
     if (!normalizedTranscript) {
       setError(
@@ -113,6 +157,7 @@ function VideoInput({
     if (!file) return;
 
     setError('');
+    setErrorCode('');
     setUploadMessage('');
 
     const lowerName = String(file.name || '').toLowerCase();
@@ -175,6 +220,7 @@ function VideoInput({
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError('');
+    setErrorCode('');
 
     if (mode === INPUT_MODES.text) {
       handleManualSubmit();
@@ -196,6 +242,7 @@ function VideoInput({
     const timeoutId = setTimeout(() => controller.abort(), 45000);
     const failSafeId = setTimeout(() => {
       if (!settled) {
+        setErrorCode('REQUEST_TIMEOUT');
         setError(
           tr(
             lang,
@@ -226,16 +273,7 @@ function VideoInput({
       }
 
       if (!response.ok) {
-        setError(
-          formatApiErrorMessage({
-            payload: data,
-            status: response.status,
-            lang,
-            fallbackAr: 'حدث خطأ أثناء استخراج النص.',
-            fallbackEn: 'Transcript extraction failed.',
-            fallbackFr: "Echec de l'extraction de la transcription."
-          })
-        );
+        applyApiError(data, response.status);
         return;
       }
 
@@ -254,19 +292,11 @@ function VideoInput({
         onTranscriptExtracted(data);
         setUrl('');
       } else {
-        setError(
-          formatApiErrorMessage({
-            payload: data,
-            status: response.status,
-            lang,
-            fallbackAr: 'حدث خطأ أثناء استخراج النص.',
-            fallbackEn: 'Transcript extraction failed.',
-            fallbackFr: "Echec de l'extraction de la transcription."
-          })
-        );
+        applyApiError(data, response.status);
       }
     } catch (err) {
       if (err?.name === 'AbortError') {
+        setErrorCode('REQUEST_TIMEOUT');
         setError(
           tr(
             lang,
@@ -276,6 +306,7 @@ function VideoInput({
           )
         );
       } else {
+        setErrorCode('CONNECTION_FAILED');
         setError(tr(lang, 'فشل الاتصال بالخادم', 'Connection failed', 'Echec de connexion'));
       }
     } finally {
@@ -292,6 +323,12 @@ function VideoInput({
   };
 
   const selectedOutputLang = normalizeOutputLanguage(outputLang);
+  const shouldSuggestWrittenText =
+    errorCode === 'TRANSCRIPT_UNAVAILABLE' ||
+    errorCode === 'TRANSCRIPT_PROVIDER_EXHAUSTED' ||
+    errorCode === 'TRANSCRIPT_PROVIDER_UNAVAILABLE' ||
+    errorCode === 'REQUEST_TIMEOUT' ||
+    errorCode === 'CONNECTION_FAILED';
 
   return (
     <div
@@ -439,6 +476,7 @@ function VideoInput({
                 </div>
               </div>
               <textarea
+                ref={manualTextareaRef}
                 id="manual-transcript"
                 rows={10}
                 value={manualText}
@@ -465,6 +503,33 @@ function VideoInput({
         {error ? (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
             <p className="font-semibold">{String(error)}</p>
+            {shouldSuggestWrittenText ? (
+              <div className="mt-3 flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => switchToWrittenTextMode({ openUploader: false })}
+                  className="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm font-medium text-red-700 border border-red-200 hover:bg-red-100"
+                >
+                  <FaFileAlt />
+                  <span>
+                    {tr(
+                      lang,
+                      'استخدم نصًا مكتوبًا بدلًا من ذلك',
+                      'Use written text instead',
+                      'Utiliser un texte ecrit a la place'
+                    )}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => switchToWrittenTextMode({ openUploader: true })}
+                  className="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm font-medium text-red-700 border border-red-200 hover:bg-red-100"
+                >
+                  <FaUpload />
+                  <span>{tr(lang, 'رفع ملف نصي', 'Upload text file', 'Telecharger un fichier texte')}</span>
+                </button>
+              </div>
+            ) : null}
           </div>
         ) : null}
 
