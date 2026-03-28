@@ -1,10 +1,14 @@
 import { useState } from 'react';
 import { FaCheck, FaCopy, FaDownload } from 'react-icons/fa';
-import { downloadTextAsPdf } from '../utils/pdf';
 import { LANG, tr } from '../utils/lang';
+import { downloadTextAsPdf } from '../utils/pdf';
+import { isManualSourceId } from '../utils/source';
 
 function TranscriptDisplay({ transcript, videoId, wordCount, lang = LANG.ar }) {
   const [copied, setCopied] = useState(false);
+  const sourceLabel = isManualSourceId(videoId)
+    ? tr(lang, 'معرف المصدر', 'Source ID', 'ID source')
+    : tr(lang, 'معرف الفيديو', 'Video ID', 'ID video');
 
   const handleCopy = () => {
     navigator.clipboard.writeText(transcript);
@@ -17,7 +21,7 @@ function TranscriptDisplay({ transcript, videoId, wordCount, lang = LANG.ar }) {
       filename: `transcript-${videoId || Date.now()}.pdf`,
       title: tr(lang, 'النص الأصلي', 'Original Transcript', 'Transcription originale'),
       metadata: [
-        `${tr(lang, 'معرف الفيديو', 'Video ID', 'ID video')}: ${videoId || '-'}`,
+        `${sourceLabel}: ${videoId || '-'}`,
         `${tr(lang, 'عدد الكلمات', 'Word count', 'Nombre de mots')}: ${wordCount ?? 0}`
       ],
       body: transcript

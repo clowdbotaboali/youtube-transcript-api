@@ -103,6 +103,7 @@ const TRANSCRIPT_MEMORY_CACHE_MAX_ITEMS = 300;
 const GUEST_EXTRACT_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const GUEST_EXTRACT_LIMIT_PER_TOKEN = 1;
 const VIDEO_ID_REGEX = /^[A-Za-z0-9_-]{11}$/;
+const MANUAL_SOURCE_ID_REGEX = /^manual_[A-Za-z0-9_-]{8,80}$/;
 const PRO_SUBSCRIPTION_DAYS = 30;
 const RATE_LIMIT_OWNER_CACHE_TTL_MS = 5 * 60 * 1000;
 const RATE_LIMIT_STORAGE_MODE = String(process.env.RATE_LIMIT_STORAGE || '').trim().toLowerCase();
@@ -752,6 +753,10 @@ function isValidVideoId(value) {
   return VIDEO_ID_REGEX.test(String(value || '').trim());
 }
 
+function isManualSourceId(value) {
+  return MANUAL_SOURCE_ID_REGEX.test(String(value || '').trim());
+}
+
 function parseYouTubeInput(rawValue) {
   const raw = String(rawValue || '').trim();
   if (!raw) {
@@ -821,6 +826,35 @@ function parseYouTubeInput(rawValue) {
     ok: true,
     videoId,
     canonicalUrl: `https://www.youtube.com/watch?v=${videoId}`
+  };
+}
+
+function parseContentSourceInput(rawValue) {
+  const raw = String(rawValue || '').trim();
+  if (!raw) {
+    return {
+      ok: false,
+      code: 'EMPTY_INPUT',
+      message: 'Source ID is required'
+    };
+  }
+
+  if (isManualSourceId(raw)) {
+    return {
+      ok: true,
+      sourceType: 'manual-text',
+      videoId: raw,
+      sourceId: raw,
+      canonicalUrl: ''
+    };
+  }
+
+  const parsedYouTube = parseYouTubeInput(raw);
+  if (!parsedYouTube.ok) return parsedYouTube;
+  return {
+    ...parsedYouTube,
+    sourceType: 'youtube',
+    sourceId: parsedYouTube.videoId
   };
 }
 
@@ -2706,6 +2740,7 @@ async function getPreferredVideoTitleForUser(supabase, userId, videoId, fallback
 }
 
 function buildYouTubeThumbnailUrl(videoId) {
+  if (isManualSourceId(videoId)) return '';
   return `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
 }
 
@@ -8589,11 +8624,11 @@ export default async function handler(req, res) {
         return sendError(res, 400, 'INVALID_INPUT', 'Please provide transcript text');
       }
 
-      const parsedVideo = parseYouTubeInput(providedVideoId || '');
-      if (!parsedVideo.ok) {
-        return sendError(res, 400, 'INVALID_VIDEO_ID', 'Invalid YouTube video ID format');
-      }
-      const videoId = parsedVideo.videoId;
+        const parsedSource = parseContentSourceInput(providedVideoId || '');
+        if (!parsedSource.ok) {
+          return sendError(res, 400, 'INVALID_VIDEO_ID', 'Invalid YouTube video ID format');
+        }
+        const videoId = parsedSource.videoId;
 
       const userRow = await ensureUserAccountRow(supabase, user);
       await assertUserIsActive(supabase, user.id);
@@ -8696,14 +8731,15 @@ export default async function handler(req, res) {
       if (isReservedProcessingType(normalizedType)) {
         return sendError(res, 400, 'INVALID_INPUT', 'Processing type is reserved');
       }
-      const parsedHistoryVideo = parseYouTubeInput(videoId);
-      if (!parsedHistoryVideo.ok) {
-        return sendError(res, 400, 'INVALID_VIDEO_ID', 'Invalid YouTube video ID format');
-      }
-      const canonicalVideoId = parsedHistoryVideo.videoId;
-      const preferredTitle = sanitizeVideoTitle(
-        videoTitle,
-        await getPreferredVideoTitleForUser(supabase, user.id, canonicalVideoId, canonicalVideoId)
+        const parsedHistorySource = parseContentSourceInput(videoId);
+        if (!parsedHistorySource.ok) {
+          return sendError(res, 400, 'INVALID_VIDEO_ID', 'Invalid YouTube video ID format');
+        }
+        const canonicalVideoId = parsedHistorySource.videoId;
+        const isYoutubeHistorySource = parsedHistorySource.sourceType !== 'manual-text';
+        const preferredTitle = sanitizeVideoTitle(
+          videoTitle,
+          await getPreferredVideoTitleForUser(supabase, user.id, canonicalVideoId, canonicalVideoId)
       );
       const finalAi = result ?? aiResult ?? null;
       const seoSummary = extractSummaryFromAiResult(normalizedType, finalAi);
@@ -8719,20 +8755,22 @@ export default async function handler(req, res) {
 
       if (existingError) throw existingError;
       const existing = Array.isArray(existingRows) ? existingRows[0] : null;
-      if (existing && String(existing.ai_result || '') === String(finalAi || '')) {
-        const dedupedSeoPage = await safeUpsertSeoTranscriptPage(supabase, {
-          userId: user.id,
-          videoId: canonicalVideoId,
-          youtubeUrl: parsedHistoryVideo.canonicalUrl,
-          title: preferredTitle,
-          transcript,
-          processingType: normalizedType,
-          summary: seoSummary,
-          keyTakeaways: seoTakeaways
-        });
-        return res.json({
-          success: true,
-          data: existing,
+        if (existing && String(existing.ai_result || '') === String(finalAi || '')) {
+          const dedupedSeoPage = isYoutubeHistorySource
+            ? await safeUpsertSeoTranscriptPage(supabase, {
+                userId: user.id,
+                videoId: canonicalVideoId,
+                youtubeUrl: parsedHistorySource.canonicalUrl,
+                title: preferredTitle,
+                transcript,
+                processingType: normalizedType,
+                summary: seoSummary,
+                keyTakeaways: seoTakeaways
+              })
+            : null;
+          return res.json({
+            success: true,
+            data: existing,
           deduplicated: true,
           seoPath: dedupedSeoPage?.path || '',
           seoSlug: dedupedSeoPage?.slug || ''
@@ -8755,19 +8793,21 @@ export default async function handler(req, res) {
         .single();
 
       if (error) throw error;
-      const savedSeoPage = await safeUpsertSeoTranscriptPage(supabase, {
-        userId: user.id,
-        videoId: canonicalVideoId,
-        youtubeUrl: parsedHistoryVideo.canonicalUrl,
-        title: preferredTitle,
-        transcript,
-        processingType: normalizedType,
-        summary: seoSummary,
-        keyTakeaways: seoTakeaways
-      });
-      return res.json({
-        success: true,
-        data,
+        const savedSeoPage = isYoutubeHistorySource
+          ? await safeUpsertSeoTranscriptPage(supabase, {
+              userId: user.id,
+              videoId: canonicalVideoId,
+              youtubeUrl: parsedHistorySource.canonicalUrl,
+              title: preferredTitle,
+              transcript,
+              processingType: normalizedType,
+              summary: seoSummary,
+              keyTakeaways: seoTakeaways
+            })
+          : null;
+        return res.json({
+          success: true,
+          data,
         seoPath: savedSeoPage?.path || '',
         seoSlug: savedSeoPage?.slug || ''
       });
@@ -8891,13 +8931,14 @@ export default async function handler(req, res) {
 
       if (error) throw error;
 
-      const unique = new Map();
-      for (const row of data || []) {
-        const key = row.video_id;
-        if (!key || unique.has(key)) continue;
-        const meta = parseExtractMeta(row.ai_result, row.video_id);
-        unique.set(key, {
-          videoId: row.video_id,
+        const unique = new Map();
+        for (const row of data || []) {
+          const key = row.video_id;
+          if (!key || unique.has(key)) continue;
+          if (isManualSourceId(key)) continue;
+          const meta = parseExtractMeta(row.ai_result, row.video_id);
+          unique.set(key, {
+            videoId: row.video_id,
           title: row.video_title || row.video_id,
           url: `https://www.youtube.com/watch?v=${row.video_id}`,
           createdAt: row.created_at,
@@ -9085,12 +9126,12 @@ export default async function handler(req, res) {
         return sendError(res, 400, 'INVALID_INPUT', 'Missing message or transcript');
       }
 
-      const parsedVideo = parseYouTubeInput(providedVideoId || '');
-      if (!parsedVideo.ok) {
-        return sendError(res, 400, 'INVALID_VIDEO_ID', 'Invalid YouTube video ID format');
-      }
-      const videoId = parsedVideo.videoId;
-      audit.videoId = videoId;
+        const parsedSource = parseContentSourceInput(providedVideoId || '');
+        if (!parsedSource.ok) {
+          return sendError(res, 400, 'INVALID_VIDEO_ID', 'Invalid YouTube video ID format');
+        }
+        const videoId = parsedSource.videoId;
+        audit.videoId = videoId;
 
       const { text: transcriptForContext } = trimForModel(transcript, CHAT_TRANSCRIPT_CHAR_LIMIT);
       const { text: questionForModel } = trimForModel(message, CHAT_QUESTION_CHAR_LIMIT);

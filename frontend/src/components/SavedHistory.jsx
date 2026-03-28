@@ -4,6 +4,7 @@ import defaultApiUrl from '../config';
 import { getAuthHeaders } from '../utils/authHeaders';
 import { cleanText, LANG, tr } from '../utils/lang';
 import { getBaseProcessingType } from '../utils/processingType';
+import { isManualSourceId } from '../utils/source';
 
 const FILTERS = [
   'all',
@@ -23,6 +24,9 @@ const HISTORY_CACHE_TTL_MS = 1000 * 60 * 10;
 const TITLE_UPDATED_EVENT = 'video-title-updated';
 
 function defaultThumbnail(videoId) {
+  if (isManualSourceId(videoId)) {
+    return 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180" viewBox="0 0 320 180"><rect width="320" height="180" rx="18" fill="%23e2e8f0"/><rect x="24" y="24" width="272" height="132" rx="14" fill="%23f8fafc" stroke="%23cbd5e1"/><text x="160" y="88" text-anchor="middle" font-family="Arial" font-size="22" fill="%23475569">Manual Text</text><text x="160" y="116" text-anchor="middle" font-family="Arial" font-size="14" fill="%2364748b">Saved transcript source</text></svg>';
+  }
   return videoId ? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg` : '';
 }
 
