@@ -76,9 +76,10 @@ export function formatApiErrorMessage({
         lang,
         'رصيد الفيديوهات غير كافٍ لاستخراج فيديو جديد. اشحن رصيدك ثم حاول مرة أخرى.',
         'Insufficient video balance for a new video link. Top up and try again.',
-        "Solde videos insuffisant pour un nouveau lien video. Rechargez puis reessayez."
+        'Solde videos insuffisant pour un nouveau lien video. Rechargez puis reessayez.'
       );
     }
+
     if (typeof details.dailyLimit === 'number') {
       return localize(
         lang,
@@ -87,6 +88,7 @@ export function formatApiErrorMessage({
         `Limite quotidienne atteinte (${details.dailyLimit}) pour votre plan actuel.`
       );
     }
+
     return localize(
       lang,
       'تم الوصول للحد المسموح حسب الخطة الحالية.',
@@ -125,9 +127,27 @@ export function formatApiErrorMessage({
   if (code === 'TRANSCRIPT_UNAVAILABLE') {
     return localize(
       lang,
-      'لا يوجد نص متاح لهذا الفيديو (Subtitles/CC غير متوفرة أو غير مدعومة).',
-      'No transcript is available for this video (missing/unsupported subtitles).',
-      'Aucune transcription disponible pour cette video (sous-titres absents/non pris en charge).'
+      'هذا الفيديو نفسه لا يوفّر نصًا أو Subtitles/CC متاحة حاليًا.',
+      'This video itself does not expose an available transcript or subtitles right now.',
+      'Cette video elle-meme ne fournit pas de transcription ou de sous-titres disponibles pour le moment.'
+    );
+  }
+
+  if (code === 'TRANSCRIPT_PROVIDER_EXHAUSTED') {
+    return localize(
+      lang,
+      'خدمة استخراج النص تعمل، لكن رصيد مزود الترانسكريبت انتهى حاليًا. حاول لاحقًا.',
+      'Transcript extraction is working, but the transcript provider has exhausted its credits right now. Please try again later.',
+      'Le service dextraction fonctionne, mais le fournisseur de transcription a epuise ses credits pour le moment. Reessayez plus tard.'
+    );
+  }
+
+  if (code === 'TRANSCRIPT_PROVIDER_UNAVAILABLE') {
+    return localize(
+      lang,
+      'تعذر الوصول إلى مزود استخراج النص حاليًا. حاول مرة أخرى بعد قليل.',
+      'The transcript provider is temporarily unavailable right now. Please retry shortly.',
+      'Le fournisseur de transcription est temporairement indisponible pour le moment. Reessayez dans un instant.'
     );
   }
 
@@ -160,6 +180,7 @@ export function formatApiErrorMessage({
 
   const raw = cleanText(parsed.message || '');
   const rawLower = raw.toLowerCase();
+
   if (
     (rawLower.includes('monthly transcript quota reached') && rawLower.includes('no credits')) ||
     (rawLower.includes('monthly free video quota reached') && rawLower.includes('no paid video balance'))
@@ -171,6 +192,7 @@ export function formatApiErrorMessage({
       'Le quota video mensuel gratuit est epuise et aucun solde video payant nest disponible. Attendez la reinitialisation ou rechargez votre solde.'
     );
   }
+
   if (rawLower.includes('insufficient credits') || rawLower.includes('insufficient video balance')) {
     return localize(
       lang,
@@ -179,6 +201,7 @@ export function formatApiErrorMessage({
       'Solde videos insuffisant pour un nouveau lien video. Rechargez puis reessayez.'
     );
   }
+
   if (raw) return raw;
 
   return localize(lang, cleanText(fallbackAr), cleanText(fallbackEn), cleanText(fallbackFr));

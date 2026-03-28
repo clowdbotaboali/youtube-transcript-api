@@ -11,7 +11,9 @@ function formatDate(lang, iso) {
 
 function InsightsIndexPage({ lang = LANG.ar, theme = 'light' }) {
   const isDark = theme === 'dark';
-  const cards = INSIGHTS.map((item) => mapInsightForLang(item, lang));
+  const cards = [...INSIGHTS]
+    .sort((a, b) => String(b?.publishedAt || '').localeCompare(String(a?.publishedAt || '')) || String(a?.slug || '').localeCompare(String(b?.slug || '')))
+    .map((item) => mapInsightForLang(item, lang));
 
   return (
     <>

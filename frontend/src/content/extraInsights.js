@@ -619,7 +619,7 @@ const extraInsights = [
   }),
   createInsight({
     slug: 'transcript-workflow-for-team-handovers',
-    publishedAt: '2026-03-29',
+    publishedAt: '2026-03-28',
     titleEn: 'A transcript workflow for cleaner team handovers after meetings and videos',
     summaryEn: 'Use transcripts to produce better handover notes when a meeting or walkthrough contains too much context to remember.',
     sections: [
@@ -655,7 +655,7 @@ const extraInsights = [
   }),
   createInsight({
     slug: 'use-transcripts-to-spot-repeated-questions',
-    publishedAt: '2026-03-30',
+    publishedAt: '2026-03-28',
     titleEn: 'Use transcripts to spot repeated customer questions across videos',
     summaryEn: 'Repeated questions in transcripts can reveal friction points worth addressing in support, product, or marketing.',
     sections: [

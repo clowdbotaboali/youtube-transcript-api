@@ -4600,6 +4600,7 @@ function getInsightRoutePage(pathname) {
           };
         })
         .filter(Boolean)
+        .sort((a, b) => String(b?.publishedAt || '').localeCompare(String(a?.publishedAt || '')) || String(a?.slug || '').localeCompare(String(b?.slug || '')))
     };
   }
 
@@ -6540,6 +6541,79 @@ function resolveTranscriptCreditStatus(statusCode, availableCredits) {
   return 'unknown';
 }
 
+function buildTranscriptProviderFailure({
+  keyId = '',
+  status = 0,
+  message = '',
+  availableCredits = null,
+  creditsStatus = 'unknown'
+} = {}) {
+  return {
+    provider: 'transcriptapi',
+    keyId: String(keyId || '').trim() || null,
+    status: Number(status || 0),
+    message: String(message || '').trim(),
+    availableCredits: normalizeCreditCount(availableCredits),
+    creditsStatus: String(creditsStatus || 'unknown').trim() || 'unknown'
+  };
+}
+
+function classifyTranscriptFetchFailure(failure = null) {
+  const normalized = failure && typeof failure === 'object' ? failure : {};
+  const status = Number(normalized.status || 0);
+  const creditsStatus = String(normalized.creditsStatus || '').trim().toLowerCase();
+  const availableCredits = normalizeCreditCount(normalized.availableCredits);
+  const rawMessage = String(normalized.message || '').trim();
+  const lowerMessage = rawMessage.toLowerCase();
+  const details = {
+    provider: String(normalized.provider || 'transcriptapi').trim() || 'transcriptapi',
+    providerStatus: status || null,
+    providerMessage: rawMessage || '',
+    creditsStatus: creditsStatus || 'unknown',
+    availableCredits
+  };
+
+  if (
+    status === 402 ||
+    creditsStatus === 'exhausted' ||
+    availableCredits === 0 ||
+    lowerMessage.includes('insufficient credits') ||
+    lowerMessage.includes('payment required') ||
+    lowerMessage.includes('credits exhausted')
+  ) {
+    return {
+      status: 503,
+      code: 'TRANSCRIPT_PROVIDER_EXHAUSTED',
+      message: 'Transcript provider credits are exhausted right now. Please try again later.',
+      details
+    };
+  }
+
+  if (
+    lowerMessage.includes('transcript is disabled') ||
+    lowerMessage.includes('transcripts are disabled') ||
+    lowerMessage.includes('captions unavailable') ||
+    lowerMessage.includes('subtitle') ||
+    lowerMessage.includes('subtitles') ||
+    lowerMessage.includes('no transcript available') ||
+    lowerMessage.includes('transcript unavailable')
+  ) {
+    return {
+      status: 404,
+      code: 'TRANSCRIPT_UNAVAILABLE',
+      message: 'No transcript is available for this video (captions unavailable or unsupported).',
+      details
+    };
+  }
+
+  return {
+    status: 503,
+    code: 'TRANSCRIPT_PROVIDER_UNAVAILABLE',
+    message: 'Transcript provider is temporarily unavailable. Please try again later.',
+    details
+  };
+}
+
 async function probeTranscriptApiCreditsForKey(keyEntry, { force = false } = {}) {
   const keyId = String(keyEntry?.id || '').trim();
   const apiKey = String(keyEntry?.apiKey || '').trim();
@@ -6607,6 +6681,7 @@ async function fetchWithTranscriptApi(videoUrl, supabase, transcriptConfig = nul
   if (candidates.length === 0) return null;
 
   const encodedUrl = encodeURIComponent(videoUrl);
+  let lastFailure = null;
 
   for (const keyEntry of candidates) {
     const apiKey = String(keyEntry.apiKey || '').trim();
@@ -6646,7 +6721,15 @@ async function fetchWithTranscriptApi(videoUrl, supabase, transcriptConfig = nul
         });
 
         if (!response.ok) {
-          keyError = new Error(extractTranscriptApiErrorMessage(data, `TranscriptAPI failed with status ${response.status}`));
+          const failureMessage = extractTranscriptApiErrorMessage(data, `TranscriptAPI failed with status ${response.status}`);
+          keyError = new Error(failureMessage);
+          lastFailure = buildTranscriptProviderFailure({
+            keyId: keyEntry.id,
+            status: Number(response.status || 0),
+            message: failureMessage,
+            availableCredits,
+            creditsStatus: creditStatus
+          });
           const canRetry = attempt < attemptsPerKey - 1 && shouldRetryTranscriptApiStatus(response.status);
           if (canRetry) {
             await delayMs(transcriptApiRetryDelayMs(attempt));
@@ -6657,6 +6740,13 @@ async function fetchWithTranscriptApi(videoUrl, supabase, transcriptConfig = nul
 
         if (!data?.transcript || !Array.isArray(data.transcript)) {
           keyError = new Error('TranscriptAPI response did not include transcript');
+          lastFailure = buildTranscriptProviderFailure({
+            keyId: keyEntry.id,
+            status: Number(response.status || 0),
+            message: keyError.message,
+            availableCredits,
+            creditsStatus: creditStatus
+          });
           break;
         }
 
@@ -6669,6 +6759,13 @@ async function fetchWithTranscriptApi(videoUrl, supabase, transcriptConfig = nul
           };
         }
         keyError = new Error('TranscriptAPI returned empty transcript');
+        lastFailure = buildTranscriptProviderFailure({
+          keyId: keyEntry.id,
+          status: Number(response.status || 0),
+          message: keyError.message,
+          availableCredits,
+          creditsStatus: creditStatus
+        });
         break;
       } catch (error) {
         keyError = error instanceof Error ? error : new Error(String(error || 'Transcript key failed'));
@@ -6682,6 +6779,13 @@ async function fetchWithTranscriptApi(videoUrl, supabase, transcriptConfig = nul
           availableCredits: null,
           message: keyError.message || 'Transcript key failed'
         });
+        lastFailure = buildTranscriptProviderFailure({
+          keyId: keyEntry.id,
+          status: 0,
+          message: keyError.message || 'Transcript key failed',
+          availableCredits: null,
+          creditsStatus: 'unknown'
+        });
         break;
       }
     }
@@ -6694,7 +6798,7 @@ async function fetchWithTranscriptApi(videoUrl, supabase, transcriptConfig = nul
     }
   }
 
-  return null;
+  return lastFailure ? { transcript: '', keyId: null, error: lastFailure } : null;
 }
 
 export default async function handler(req, res) {
@@ -6995,6 +7099,7 @@ export default async function handler(req, res) {
       let transcript = null;
       let method = 'unknown';
       let extractMeta = parseExtractMeta(null, videoId);
+      let transcriptFailure = null;
 
       const memoryCache = getCachedTranscriptFromMemory(videoId);
       if (!transcript && memoryCache?.transcript) {
@@ -7047,17 +7152,20 @@ export default async function handler(req, res) {
             };
           } else {
             transcript = null;
+            transcriptFailure = transcriptResult?.error || transcriptFailure;
           }
-        } catch {}
+        } catch (error) {
+          transcriptFailure = buildTranscriptProviderFailure({
+            status: 0,
+            message: error instanceof Error ? error.message : String(error || 'Transcript extraction failed'),
+            creditsStatus: 'unknown'
+          });
+        }
       }
 
       if (!transcript) {
-        return sendError(
-          res,
-          400,
-          'TRANSCRIPT_UNAVAILABLE',
-          'No transcript is available for this video (captions unavailable or unsupported).'
-        );
+        const classified = classifyTranscriptFetchFailure(transcriptFailure);
+        return sendError(res, classified.status, classified.code, classified.message, classified.details);
       }
 
       transcript = String(transcript || '').trim();
@@ -8287,6 +8395,7 @@ export default async function handler(req, res) {
       let method = 'unknown';
       let fetchedFromCache = false;
       let extractMeta = { ...defaultExtractMeta };
+      let transcriptFailure = null;
 
       const memoryCache = getCachedTranscriptFromMemory(videoId);
       if (!transcript && memoryCache?.transcript) {
@@ -8343,17 +8452,20 @@ export default async function handler(req, res) {
             };
           } else {
             transcript = null;
+            transcriptFailure = transcriptResult?.error || transcriptFailure;
           }
-        } catch {}
+        } catch (error) {
+          transcriptFailure = buildTranscriptProviderFailure({
+            status: 0,
+            message: error instanceof Error ? error.message : String(error || 'Transcript extraction failed'),
+            creditsStatus: 'unknown'
+          });
+        }
       }
 
       if (!transcript) {
-        return sendError(
-          res,
-          404,
-          'TRANSCRIPT_UNAVAILABLE',
-          'No transcript is available for this video (captions unavailable or unsupported).'
-        );
+        const classified = classifyTranscriptFetchFailure(transcriptFailure);
+        return sendError(res, classified.status, classified.code, classified.message, classified.details);
       }
 
       let resolvedVideoTitle = await getPreferredVideoTitleForUser(

@@ -113,7 +113,25 @@ describe('formatApiErrorMessage', () => {
       status: 404,
       lang: 'en'
     });
-    expect(result).toContain('No transcript');
+    expect(result).toContain('does not expose');
+  });
+
+  it('returns localized message for TRANSCRIPT_PROVIDER_EXHAUSTED', () => {
+    const result = formatApiErrorMessage({
+      payload: { error: { code: 'TRANSCRIPT_PROVIDER_EXHAUSTED', message: 'provider credits exhausted' } },
+      status: 503,
+      lang: 'en'
+    });
+    expect(result).toContain('exhausted its credits');
+  });
+
+  it('returns localized message for TRANSCRIPT_PROVIDER_UNAVAILABLE', () => {
+    const result = formatApiErrorMessage({
+      payload: { error: { code: 'TRANSCRIPT_PROVIDER_UNAVAILABLE', message: 'provider unavailable' } },
+      status: 503,
+      lang: 'en'
+    });
+    expect(result).toContain('temporarily unavailable');
   });
 
   it('returns session expired for 401', () => {
