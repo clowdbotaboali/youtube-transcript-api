@@ -1,6 +1,5 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { createClient } from '@supabase/supabase-js';
 import { SEO_CONFIG, getSitemapEntries } from '../frontend/src/seo/seoCatalog.js';
 import { getInsightPaths } from '../frontend/src/content/insights.js';
 
@@ -22,33 +21,6 @@ const staticEntries = [
   { path: '/terms', changefreq: 'yearly', priority: '0.3' },
   { path: '/refund-policy', changefreq: 'yearly', priority: '0.3' }
 ];
-
-async function loadTranscriptSitemapEntries() {
-  const supabaseUrl = String(process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.VITE_SUPABASE_URL || '').trim();
-  const supabaseServiceKey = String(process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || '').trim();
-  if (!supabaseUrl || !supabaseServiceKey) return [];
-
-  try {
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    const { data, error } = await supabase
-      .from('seo_transcript_pages')
-      .select('slug, updated_at, created_at')
-      .order('updated_at', { ascending: false })
-      .limit(42000);
-    if (error) {
-      return [];
-    }
-    const rows = Array.isArray(data) ? data : [];
-    return rows.map((row) => ({
-      path: `/transcript/${String(row.slug || '').trim()}`,
-      changefreq: 'daily',
-      priority: '0.8',
-      lastmod: new Date(row.updated_at || row.created_at || Date.now()).toISOString().slice(0, 10)
-    }));
-  } catch {
-    return [];
-  }
-}
 
 function normalizePath(pathname) {
   const raw = String(pathname || '/').trim();
@@ -107,8 +79,7 @@ async function main() {
     changefreq: 'monthly',
     priority: '0.6'
   }));
-  const transcriptEntries = await loadTranscriptSitemapEntries();
-  const allEntries = uniqueEntries([...staticEntries, ...insightEntries, ...seoEntries, ...transcriptEntries]);
+  const allEntries = uniqueEntries([...staticEntries, ...insightEntries, ...seoEntries]);
 
   if (allEntries.length > MAX_URLS_PER_FILE) {
     throw new Error(

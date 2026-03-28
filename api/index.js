@@ -5338,7 +5338,7 @@ function toPublicSeoTranscriptPage(row, related = []) {
     seoTitle: truncateAtWordBoundary(row?.seo_title || buildSeoTranscriptTitle(title), 78),
     description,
     canonical,
-    robots: 'index, follow',
+    robots: 'noindex, follow',
     publishedAt: row?.created_at || new Date().toISOString(),
     updatedAt: row?.updated_at || row?.created_at || new Date().toISOString(),
     relatedPages: Array.isArray(related) ? related.slice(0, SEO_TRANSCRIPT_RELATED_LIMIT) : [],
@@ -5691,33 +5691,9 @@ async function getSeoTranscriptPageBySlug(supabase, slug) {
   return toPublicSeoTranscriptPage(row, related);
 }
 
-async function getSeoTranscriptSitemapEntries(supabase) {
-  const { data, error } = await supabase
-    .from(SEO_TRANSCRIPT_TABLE)
-    .select('slug, updated_at, created_at')
-    .order('updated_at', { ascending: false })
-    .limit(42000);
-  if (error) throw error;
-  const rows = Array.isArray(data) ? data : [];
-  return rows.map((row) => ({
-    path: buildSeoTranscriptPath(row.slug),
-    changefreq: 'daily',
-    priority: '0.8',
-    lastmod: toIsoDate(row.updated_at || row.created_at)
-  }));
-}
-
 async function buildRuntimeSitemapXml(supabase) {
   const baseEntries = [...STATIC_SITEMAP_ENTRIES, ...INSIGHT_SITEMAP_ENTRIES, ...FRONTEND_SITEMAP_ENTRIES];
-  let transcriptEntries = [];
-  try {
-    transcriptEntries = await getSeoTranscriptSitemapEntries(supabase);
-  } catch (error) {
-    if (!isMissingRelationError(error)) {
-      console.warn(`[sitemap] failed to load transcript sitemap entries: ${String(error?.message || error || 'unknown')}`);
-    }
-  }
-  return buildSitemapXml([...baseEntries, ...transcriptEntries]);
+  return buildSitemapXml(baseEntries);
 }
 
 function extractSummaryFromAiResult(processingType, aiResult) {
