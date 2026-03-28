@@ -10,6 +10,8 @@ describe('transcriptFile helpers', () => {
     expect(inferTranscriptFileKind('lecture.srt')).toBe('srt');
     expect(inferTranscriptFileKind('meeting.vtt')).toBe('vtt');
     expect(inferTranscriptFileKind('notes.txt')).toBe('txt');
+    expect(inferTranscriptFileKind('slides.pdf')).toBe('pdf');
+    expect(inferTranscriptFileKind('handout.docx')).toBe('docx');
   });
 
   it('extracts a clean title from filename', () => {
@@ -61,4 +63,3 @@ General Kenobi`,
     expect(parsed.transcript).toBe('First line\n\nSecond line');
   });
 });
-

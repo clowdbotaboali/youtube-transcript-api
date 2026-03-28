@@ -1,3 +1,5 @@
+import pdfWorkerUrl from 'pdfjs-dist/legacy/build/pdf.worker.mjs?url';
+
 function normalizeNewlines(value) {
   return String(value || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 }
@@ -76,6 +78,13 @@ export function inferTranscriptFileKind(fileName = '', fileType = '') {
 
   if (normalizedName.endsWith('.srt') || normalizedType.includes('subrip')) return 'srt';
   if (normalizedName.endsWith('.vtt') || normalizedType.includes('vtt')) return 'vtt';
+  if (normalizedName.endsWith('.pdf') || normalizedType.includes('pdf')) return 'pdf';
+  if (
+    normalizedName.endsWith('.docx') ||
+    normalizedType.includes('officedocument.wordprocessingml.document')
+  ) {
+    return 'docx';
+  }
   return 'txt';
 }
 
@@ -98,3 +107,109 @@ export function parseTranscriptUploadContent(content, { fileName = '', fileType 
   };
 }
 
+function readPdfTextItems(items = []) {
+  const lineMap = new Map();
+
+  for (const item of items) {
+    if (!item || typeof item.str !== 'string') continue;
+    const text = item.str.trim();
+    if (!text) continue;
+
+    const transform = Array.isArray(item.transform) ? item.transform : [];
+    const y = Math.round(Number(transform[5] || 0));
+    const x = Number(transform[4] || 0);
+    const bucket = lineMap.get(y) || [];
+    bucket.push({ x, text });
+    lineMap.set(y, bucket);
+  }
+
+  const lines = Array.from(lineMap.entries())
+    .sort((a, b) => b[0] - a[0])
+    .map(([, entries]) =>
+      entries
+        .sort((a, b) => a.x - b.x)
+        .map((entry) => entry.text)
+        .join(' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+    )
+    .filter(Boolean);
+
+  return collapseTranscriptSpacing(lines.join('\n'));
+}
+
+let pdfJsPromise = null;
+
+async function loadPdfJs() {
+  if (!pdfJsPromise) {
+    pdfJsPromise = import('pdfjs-dist/legacy/build/pdf.mjs').then((module) => {
+      const pdfjs = module?.default || module;
+      if (pdfjs?.GlobalWorkerOptions) {
+        pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+      }
+      return pdfjs;
+    });
+  }
+  return pdfJsPromise;
+}
+
+async function parsePdfUploadFile(file) {
+  const pdfjs = await loadPdfJs();
+  const data = await file.arrayBuffer();
+  const loadingTask = pdfjs.getDocument({
+    data,
+    useWorkerFetch: false,
+    isEvalSupported: false
+  });
+  const pdf = await loadingTask.promise;
+  const pages = [];
+
+  for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+    const page = await pdf.getPage(pageNumber);
+    const content = await page.getTextContent();
+    const pageText = readPdfTextItems(Array.isArray(content?.items) ? content.items : []);
+    if (pageText) {
+      pages.push(pageText);
+    }
+  }
+
+  return collapseTranscriptSpacing(pages.join('\n\n'));
+}
+
+async function parseDocxUploadFile(file) {
+  const mammothModule = await import('mammoth/mammoth.browser.js');
+  const mammoth = mammothModule?.default || mammothModule;
+  const result = await mammoth.extractRawText({
+    arrayBuffer: await file.arrayBuffer()
+  });
+  return collapseTranscriptSpacing(result?.value || '');
+}
+
+export async function parseTranscriptUploadFile(file) {
+  const fileName = String(file?.name || '').trim();
+  const fileType = String(file?.type || '').trim();
+  const kind = inferTranscriptFileKind(fileName, fileType);
+  const title = extractTranscriptTitleFromFilename(fileName);
+
+  if (!file) {
+    return { kind: 'txt', title: '', transcript: '' };
+  }
+
+  if (kind === 'pdf') {
+    return {
+      kind,
+      title,
+      transcript: await parsePdfUploadFile(file)
+    };
+  }
+
+  if (kind === 'docx') {
+    return {
+      kind,
+      title,
+      transcript: await parseDocxUploadFile(file)
+    };
+  }
+
+  return parseTranscriptUploadContent(await file.text(), { fileName, fileType });
+}

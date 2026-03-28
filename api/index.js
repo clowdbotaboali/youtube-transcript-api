@@ -1,6 +1,7 @@
 import { Groq } from 'groq-sdk';
 import { createClient } from '@supabase/supabase-js';
 import ytdl from '@distube/ytdl-core';
+import { YoutubeTranscript } from 'youtube-transcript';
 import crypto from 'crypto';
 import nodemailer from 'nodemailer';
 import {
@@ -24,7 +25,7 @@ const QUOTA_RESET_WINDOW_DAYS = 30;
 const USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 const YTDL_AGENT = ytdl.createAgent();
-const EXTRACTION_TIMEOUT_MS = 20000;
+const EXTRACTION_TIMEOUT_MS = 30000;
 const TRANSCRIPT_CREDIT_CACHE_TTL_MS = 5 * 60 * 1000;
 const TRANSCRIPT_CREDIT_PROBE_URL = 'https://example.com';
 const TRANSCRIPT_API_MAX_RETRIES_PER_KEY = 2;
@@ -2927,7 +2928,8 @@ function normalizeExtractMetaForSave(meta = {}, videoId, methodFallback = 'cache
 
 function isTranscriptCacheCompatible(meta = {}, activeTranscriptKeyId = '') {
   const method = String(meta.method || '').trim().toLowerCase();
-  if (method !== 'transcriptapi') return false;
+  if (!method) return false;
+  if (method !== 'transcriptapi') return true;
   const activeKeyId = String(activeTranscriptKeyId || '').trim();
   if (!activeKeyId) return true;
   const cachedKeyId = String(meta.transcriptKeyId || '').trim();
@@ -6509,17 +6511,19 @@ function getTranscriptStats(rawText = '') {
     .replace(/[^\p{L}\p{N}\s]/gu, ' ')
     .replace(/\s+/g, ' ')
     .trim();
-  const words = cleaned ? cleaned.split(/\s+/).filter(Boolean) : [];
-  const uniqueWords = new Set(words.map((w) => w.toLowerCase())).size;
+  const words = text ? text.split(/\s+/).filter(Boolean) : [];
+  const meaningfulWords = cleaned ? cleaned.split(/\s+/).filter(Boolean) : [];
+  const uniqueWords = new Set(meaningfulWords.map((w) => w.toLowerCase())).size;
   return {
     wordsCount: words.length,
+    meaningfulWordsCount: meaningfulWords.length,
     uniqueWords
   };
 }
 
 function isUsableTranscript(text = '') {
   const stats = getTranscriptStats(text);
-  return stats.wordsCount >= 3 && stats.uniqueWords >= 2;
+  return stats.meaningfulWordsCount >= 20 && stats.uniqueWords >= 10;
 }
 
 function extractTranscriptApiErrorMessage(payload, fallback = '') {
@@ -6577,66 +6581,105 @@ function resolveTranscriptCreditStatus(statusCode, availableCredits) {
 }
 
 function buildTranscriptProviderFailure({
+  provider = 'transcriptapi',
   keyId = '',
   status = 0,
   message = '',
   availableCredits = null,
-  creditsStatus = 'unknown'
+  creditsStatus = 'unknown',
+  method = '',
+  details = null
 } = {}) {
   return {
-    provider: 'transcriptapi',
+    provider: String(provider || 'transcriptapi').trim() || 'transcriptapi',
     keyId: String(keyId || '').trim() || null,
     status: Number(status || 0),
     message: String(message || '').trim(),
     availableCredits: normalizeCreditCount(availableCredits),
-    creditsStatus: String(creditsStatus || 'unknown').trim() || 'unknown'
+    creditsStatus: String(creditsStatus || 'unknown').trim() || 'unknown',
+    method: String(method || '').trim() || null,
+    details: details && typeof details === 'object' ? details : null
   };
 }
 
+function normalizeTranscriptFailureList(failure = null) {
+  if (Array.isArray(failure)) {
+    return failure.filter((entry) => entry && typeof entry === 'object');
+  }
+  return failure && typeof failure === 'object' ? [failure] : [];
+}
+
+function transcriptFailureLooksUnavailable(failure = {}) {
+  const status = Number(failure.status || 0);
+  const message = String(failure.message || '').trim().toLowerCase();
+  return (
+    status === 404 ||
+    message.includes('transcript is disabled') ||
+    message.includes('transcripts are disabled') ||
+    message.includes('caption tracks') ||
+    message.includes('captions unavailable') ||
+    message.includes('subtitle') ||
+    message.includes('subtitles') ||
+    message.includes('no transcript available') ||
+    message.includes('transcript unavailable') ||
+    message.includes('could not find automatic captions') ||
+    message.includes('no captions') ||
+    message.includes('not available in this language')
+  );
+}
+
+function transcriptFailureLooksExhausted(failure = {}) {
+  const status = Number(failure.status || 0);
+  const creditsStatus = String(failure.creditsStatus || '').trim().toLowerCase();
+  const availableCredits = normalizeCreditCount(failure.availableCredits);
+  const message = String(failure.message || '').trim().toLowerCase();
+  return (
+    status === 402 ||
+    creditsStatus === 'exhausted' ||
+    availableCredits === 0 ||
+    message.includes('insufficient credits') ||
+    message.includes('payment required') ||
+    message.includes('credits exhausted')
+  );
+}
+
 function classifyTranscriptFetchFailure(failure = null) {
-  const normalized = failure && typeof failure === 'object' ? failure : {};
+  const failures = normalizeTranscriptFailureList(failure);
+  const normalized = failures[0] || {};
   const status = Number(normalized.status || 0);
   const creditsStatus = String(normalized.creditsStatus || '').trim().toLowerCase();
   const availableCredits = normalizeCreditCount(normalized.availableCredits);
   const rawMessage = String(normalized.message || '').trim();
-  const lowerMessage = rawMessage.toLowerCase();
   const details = {
     provider: String(normalized.provider || 'transcriptapi').trim() || 'transcriptapi',
     providerStatus: status || null,
     providerMessage: rawMessage || '',
     creditsStatus: creditsStatus || 'unknown',
-    availableCredits
+    availableCredits,
+    attempts: failures.map((entry) => ({
+      provider: String(entry.provider || '').trim() || 'transcript',
+      status: Number(entry.status || 0) || null,
+      message: String(entry.message || '').trim(),
+      creditsStatus: String(entry.creditsStatus || 'unknown').trim() || 'unknown',
+      availableCredits: normalizeCreditCount(entry.availableCredits),
+      method: String(entry.method || '').trim() || null
+    }))
   };
 
-  if (
-    status === 402 ||
-    creditsStatus === 'exhausted' ||
-    availableCredits === 0 ||
-    lowerMessage.includes('insufficient credits') ||
-    lowerMessage.includes('payment required') ||
-    lowerMessage.includes('credits exhausted')
-  ) {
-    return {
-      status: 503,
-      code: 'TRANSCRIPT_PROVIDER_EXHAUSTED',
-      message: 'Transcript provider credits are exhausted right now. Please try again later.',
-      details
-    };
-  }
-
-  if (
-    lowerMessage.includes('transcript is disabled') ||
-    lowerMessage.includes('transcripts are disabled') ||
-    lowerMessage.includes('captions unavailable') ||
-    lowerMessage.includes('subtitle') ||
-    lowerMessage.includes('subtitles') ||
-    lowerMessage.includes('no transcript available') ||
-    lowerMessage.includes('transcript unavailable')
-  ) {
+  if (failures.some((entry) => transcriptFailureLooksUnavailable(entry))) {
     return {
       status: 404,
       code: 'TRANSCRIPT_UNAVAILABLE',
       message: 'No transcript is available for this video (captions unavailable or unsupported).',
+      details
+    };
+  }
+
+  if (failures.some((entry) => transcriptFailureLooksExhausted(entry))) {
+    return {
+      status: 503,
+      code: 'TRANSCRIPT_PROVIDER_EXHAUSTED',
+      message: 'Transcript provider credits are exhausted right now. Please try again later.',
       details
     };
   }
@@ -6834,6 +6877,250 @@ async function fetchWithTranscriptApi(videoUrl, supabase, transcriptConfig = nul
   }
 
   return lastFailure ? { transcript: '', keyId: null, error: lastFailure } : null;
+}
+
+function normalizeTranscriptSegments(segments = []) {
+  if (!Array.isArray(segments)) return '';
+  return normalizeTextInput(
+    segments
+      .map((segment) => String(segment?.text || '').trim())
+      .filter(Boolean)
+      .join(' ')
+  );
+}
+
+function extractTranscriptFromCaptionXml(xmlText = '') {
+  const textMatches = String(xmlText || '').matchAll(/<text\b[^>]*>([\s\S]*?)<\/text>/g);
+  const transcript = Array.from(textMatches)
+    .map((match) => decodeXmlEntities(match[1]))
+    .join(' ');
+  return normalizeTextInput(transcript);
+}
+
+function buildLowQualityTranscriptFailure(method, provider, transcript = '') {
+  const stats = getTranscriptStats(transcript);
+  return buildTranscriptProviderFailure({
+    provider,
+    status: 404,
+    method,
+    message: `Transcript was too short or repetitive to be reliable (${stats.meaningfulWordsCount} words, ${stats.uniqueWords} unique words).`,
+    creditsStatus: 'available'
+  });
+}
+
+async function fetchTranscriptWithYtdl(videoId) {
+  const method = 'ytdl-captions';
+
+  try {
+    const info = await withTimeout(
+      ytdl.getInfo(videoId, { agent: YTDL_AGENT }),
+      10000,
+      'YouTube captions metadata'
+    );
+    const captionTracks = info?.player_response?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
+
+    if (!Array.isArray(captionTracks) || captionTracks.length === 0) {
+      return {
+        transcript: '',
+        method,
+        error: buildTranscriptProviderFailure({
+          provider: 'ytdl',
+          status: 404,
+          method,
+          message: 'No caption tracks are available for this video.'
+        })
+      };
+    }
+
+    const preferredTracks = [
+      ...captionTracks.filter((track) => track.languageCode === 'ar' || track.languageCode === 'ar-SA'),
+      ...captionTracks.filter((track) => track.languageCode === 'en' || track.languageCode === 'en-US'),
+      ...captionTracks
+    ];
+    const uniqueTracks = Array.from(new Map(preferredTracks.map((track) => [track.baseUrl, track])).values());
+
+    let bestTranscript = '';
+    let bestScore = -1;
+    let lastTrackError = '';
+
+    for (const track of uniqueTracks) {
+      try {
+        const response = await fetchWithTimeout(
+          track.baseUrl,
+          {
+            dispatcher: YTDL_AGENT.dispatcher,
+            headers: {
+              'User-Agent': USER_AGENT,
+              'Accept-Language': 'en-US,en;q=0.9'
+            }
+          },
+          10000,
+          'YouTube caption track'
+        );
+        if (!response.ok) {
+          lastTrackError = `Caption track request failed with status ${response.status}`;
+          continue;
+        }
+
+        const xmlText = await response.text();
+        const transcript = extractTranscriptFromCaptionXml(xmlText);
+        if (!transcript) {
+          continue;
+        }
+
+        const stats = getTranscriptStats(transcript);
+        const score = (stats.meaningfulWordsCount * 2) + stats.uniqueWords;
+        if (score > bestScore) {
+          bestScore = score;
+          bestTranscript = transcript;
+        }
+      } catch (error) {
+        lastTrackError = error instanceof Error ? error.message : String(error || 'YouTube caption track failed');
+      }
+    }
+
+    if (bestTranscript) {
+      return {
+        transcript: bestTranscript,
+        method
+      };
+    }
+
+    return {
+      transcript: '',
+      method,
+      error: buildTranscriptProviderFailure({
+        provider: 'ytdl',
+        status: lastTrackError ? 0 : 404,
+        method,
+        message: lastTrackError || 'Caption tracks were found but no readable transcript could be extracted.'
+      })
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error || 'Failed to load YouTube captions');
+    return {
+      transcript: '',
+      method,
+      error: buildTranscriptProviderFailure({
+        provider: 'ytdl',
+        status: transcriptFailureLooksUnavailable({ message }) ? 404 : 0,
+        method,
+        message
+      })
+    };
+  }
+}
+
+async function fetchTranscriptWithYoutubeTranscript(videoId, languageCode = '') {
+  const normalizedLanguage = String(languageCode || '').trim().toLowerCase();
+  const method = normalizedLanguage ? `youtube-transcript-${normalizedLanguage}` : 'youtube-transcript-default';
+
+  try {
+    const transcriptItems = await withTimeout(
+      YoutubeTranscript.fetchTranscript(
+        videoId,
+        normalizedLanguage ? { lang: normalizedLanguage } : undefined
+      ),
+      9000,
+      `youtube-transcript ${normalizedLanguage || 'default'}`
+    );
+    const transcript = normalizeTranscriptSegments(transcriptItems);
+    if (transcript) {
+      return {
+        transcript,
+        method
+      };
+    }
+
+    return {
+      transcript: '',
+      method,
+      error: buildTranscriptProviderFailure({
+        provider: 'youtube-transcript',
+        status: 404,
+        method,
+        message: normalizedLanguage
+          ? `No transcript was available via youtube-transcript for language ${normalizedLanguage}.`
+          : 'No transcript was available via youtube-transcript for this video.'
+      })
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error || 'youtube-transcript failed');
+    return {
+      transcript: '',
+      method,
+      error: buildTranscriptProviderFailure({
+        provider: 'youtube-transcript',
+        status: transcriptFailureLooksUnavailable({ message }) ? 404 : 0,
+        method,
+        message
+      })
+    };
+  }
+}
+
+async function fetchTranscriptWithFallbacks(videoUrl, videoId, supabase, transcriptConfig = null) {
+  const failures = [];
+
+  const transcriptApiResult = await fetchWithTranscriptApi(videoUrl, supabase, transcriptConfig);
+  if (transcriptApiResult?.transcript) {
+    if (isUsableTranscript(transcriptApiResult.transcript)) {
+      return {
+        transcript: transcriptApiResult.transcript,
+        method: 'transcriptapi',
+        keyId: transcriptApiResult.keyId || null,
+        error: null
+      };
+    }
+    failures.push(buildLowQualityTranscriptFailure('transcriptapi', 'transcriptapi', transcriptApiResult.transcript));
+  } else if (transcriptApiResult?.error) {
+    failures.push(transcriptApiResult.error);
+  }
+
+  const ytdlResult = await fetchTranscriptWithYtdl(videoId);
+  if (ytdlResult?.transcript) {
+    if (isUsableTranscript(ytdlResult.transcript)) {
+      return {
+        transcript: ytdlResult.transcript,
+        method: ytdlResult.method || 'ytdl-captions',
+        keyId: null,
+        error: null
+      };
+    }
+    failures.push(buildLowQualityTranscriptFailure(ytdlResult.method || 'ytdl-captions', 'ytdl', ytdlResult.transcript));
+  } else if (ytdlResult?.error) {
+    failures.push(ytdlResult.error);
+  }
+
+  for (const languageCode of ['', 'ar', 'en']) {
+    const youtubeTranscriptResult = await fetchTranscriptWithYoutubeTranscript(videoId, languageCode);
+    if (youtubeTranscriptResult?.transcript) {
+      if (isUsableTranscript(youtubeTranscriptResult.transcript)) {
+        return {
+          transcript: youtubeTranscriptResult.transcript,
+          method: youtubeTranscriptResult.method || 'youtube-transcript-default',
+          keyId: null,
+          error: null
+        };
+      }
+      failures.push(
+        buildLowQualityTranscriptFailure(
+          youtubeTranscriptResult.method || 'youtube-transcript-default',
+          'youtube-transcript',
+          youtubeTranscriptResult.transcript
+        )
+      );
+    } else if (youtubeTranscriptResult?.error) {
+      failures.push(youtubeTranscriptResult.error);
+    }
+  }
+
+  return {
+    transcript: '',
+    method: '',
+    keyId: null,
+    error: failures
+  };
 }
 
 export default async function handler(req, res) {
@@ -7123,14 +7410,6 @@ export default async function handler(req, res) {
       audit.videoId = videoId;
       const transcriptConfig = supabase ? await loadOrBootstrapTranscriptApiConfig(supabase) : { keys: [], activeKeyId: '' };
       const activeTranscriptKeyId = getActiveTranscriptApiKeyId(transcriptConfig);
-      if (!activeTranscriptKeyId) {
-        return sendError(
-          res,
-          503,
-          'TRANSCRIPT_API_NOT_CONFIGURED',
-          'Transcript API active key is missing or disabled. Configure it in admin first.'
-        );
-      }
       let transcript = null;
       let method = 'unknown';
       let extractMeta = parseExtractMeta(null, videoId);
@@ -7164,7 +7443,12 @@ export default async function handler(req, res) {
               ...globalMeta
             };
             if (transcript) {
-              setCachedTranscriptInMemory(videoId, transcript, method, globalMeta.transcriptKeyId || activeTranscriptKeyId);
+              setCachedTranscriptInMemory(
+                videoId,
+                transcript,
+                method,
+                globalMeta.transcriptKeyId || (method === 'transcriptapi' ? activeTranscriptKeyId : null)
+              );
             }
           }
         }
@@ -7173,17 +7457,17 @@ export default async function handler(req, res) {
       if (!transcript) {
         try {
           const transcriptResult = await withTimeout(
-            fetchWithTranscriptApi(parsedVideo.canonicalUrl, supabase, transcriptConfig),
+            fetchTranscriptWithFallbacks(parsedVideo.canonicalUrl, videoId, supabase, transcriptConfig),
             EXTRACTION_TIMEOUT_MS,
-            'Guest TranscriptAPI pipeline'
+            'Guest transcript pipeline'
           );
           if (transcriptResult?.transcript && isUsableTranscript(transcriptResult.transcript)) {
             transcript = transcriptResult.transcript;
-            method = 'transcriptapi';
+            method = transcriptResult.method || 'transcriptapi';
             extractMeta = {
               ...extractMeta,
               method,
-              transcriptKeyId: transcriptResult.keyId || activeTranscriptKeyId
+              transcriptKeyId: transcriptResult.keyId || (method === 'transcriptapi' ? activeTranscriptKeyId : null)
             };
           } else {
             transcript = null;
@@ -7204,7 +7488,12 @@ export default async function handler(req, res) {
       }
 
       transcript = String(transcript || '').trim();
-      setCachedTranscriptInMemory(videoId, transcript, method, extractMeta.transcriptKeyId || activeTranscriptKeyId);
+      setCachedTranscriptInMemory(
+        videoId,
+        transcript,
+        method,
+        extractMeta.transcriptKeyId || (method === 'transcriptapi' ? activeTranscriptKeyId : null)
+      );
 
       const metadata = await fetchYouTubeVideoMetadata(videoId, extractMeta.videoTitle || videoId);
       extractMeta = {
@@ -8362,14 +8651,6 @@ export default async function handler(req, res) {
       const defaultExtractMeta = parseExtractMeta(null, videoId);
       const transcriptConfig = await loadOrBootstrapTranscriptApiConfig(supabase);
       const activeTranscriptKeyId = getActiveTranscriptApiKeyId(transcriptConfig);
-      if (!activeTranscriptKeyId) {
-        return sendError(
-          res,
-          503,
-          'TRANSCRIPT_API_NOT_CONFIGURED',
-          'Transcript API active key is missing or disabled. Configure it in admin first.'
-        );
-      }
 
       const cachedExtract = await getCachedExtractRecord(supabase, user.id, videoId);
       if (cachedExtract?.transcript) {
@@ -8462,7 +8743,12 @@ export default async function handler(req, res) {
               ...globalMeta
             };
             fetchedFromCache = true;
-            setCachedTranscriptInMemory(videoId, transcript, method, globalMeta.transcriptKeyId || activeTranscriptKeyId);
+            setCachedTranscriptInMemory(
+              videoId,
+              transcript,
+              method,
+              globalMeta.transcriptKeyId || (method === 'transcriptapi' ? activeTranscriptKeyId : null)
+            );
             console.info(`[cache] transcript db-hit video=${videoId}`);
           }
         } else {
@@ -8473,17 +8759,17 @@ export default async function handler(req, res) {
       if (!transcript) {
         try {
           const transcriptResult = await withTimeout(
-            fetchWithTranscriptApi(parsedVideo.canonicalUrl, supabase, transcriptConfig),
+            fetchTranscriptWithFallbacks(parsedVideo.canonicalUrl, videoId, supabase, transcriptConfig),
             EXTRACTION_TIMEOUT_MS,
-            'TranscriptAPI pipeline'
+            'Transcript pipeline'
           );
           if (transcriptResult?.transcript && isUsableTranscript(transcriptResult.transcript)) {
             transcript = transcriptResult.transcript;
-            method = 'transcriptapi';
+            method = transcriptResult.method || 'transcriptapi';
             extractMeta = {
               ...extractMeta,
               method,
-              transcriptKeyId: transcriptResult.keyId || activeTranscriptKeyId
+              transcriptKeyId: transcriptResult.keyId || (method === 'transcriptapi' ? activeTranscriptKeyId : null)
             };
           } else {
             transcript = null;
@@ -8574,7 +8860,12 @@ export default async function handler(req, res) {
       }
 
       await saveExtractionRecord(supabase, user.id, videoId, transcript.trim(), method, resolvedVideoTitle, extractMeta);
-      setCachedTranscriptInMemory(videoId, transcript.trim(), method, extractMeta.transcriptKeyId || activeTranscriptKeyId);
+      setCachedTranscriptInMemory(
+        videoId,
+        transcript.trim(),
+        method,
+        extractMeta.transcriptKeyId || (method === 'transcriptapi' ? activeTranscriptKeyId : null)
+      );
       const seoPage = await safeUpsertSeoTranscriptPage(supabase, {
         userId: user.id,
         videoId,

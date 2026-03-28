@@ -127,9 +127,9 @@ export function formatApiErrorMessage({
   if (code === 'TRANSCRIPT_UNAVAILABLE') {
     return localize(
       lang,
-      'هذا الفيديو نفسه لا يوفّر نصًا أو Subtitles/CC متاحة حاليًا.',
-      'This video itself does not expose an available transcript or subtitles right now.',
-      'Cette video elle-meme ne fournit pas de transcription ou de sous-titres disponibles pour le moment.'
+      'هذا الفيديو نفسه لا يوفّر نصًا أو Subtitles/CC متاحة حاليًا، لذلك المشكلة من الفيديو نفسه وليست من تعطل الموقع.',
+      'This video itself does not expose an available transcript or subtitles right now, so the issue is with the video rather than the site being broken.',
+      'Cette video elle-meme ne fournit pas de transcription ou de sous-titres disponibles pour le moment, donc le probleme vient de la video et non dune panne du site.'
     );
   }
 

@@ -5,7 +5,7 @@ import { formatApiErrorMessage, parseApiError } from '../utils/apiError';
 import { LANG, tr } from '../utils/lang';
 import { getOutputLanguageLabel, normalizeOutputLanguage, OUTPUT_LANGUAGE_OPTIONS } from '../utils/outputLanguage';
 import { createManualSourceId } from '../utils/source';
-import { parseTranscriptUploadContent } from '../utils/transcriptFile';
+import { inferTranscriptFileKind, parseTranscriptUploadFile } from '../utils/transcriptFile';
 
 const INPUT_MODES = {
   youtube: 'youtube',
@@ -85,9 +85,9 @@ function VideoInput({
     setUploadMessage(
       tr(
         lang,
-        'يمكنك الآن لصق النص مباشرة أو رفع ملف نصي للمتابعة.',
-        'You can now paste text directly or upload a text file to continue.',
-        'Vous pouvez maintenant coller le texte ou telecharger un fichier texte pour continuer.'
+        'يمكنك الآن لصق النص مباشرة أو رفع ملف نص أو مستند للمتابعة.',
+        'You can now paste text directly or upload a text/document file to continue.',
+        'Vous pouvez maintenant coller le texte ou telecharger un fichier texte ou document pour continuer.'
       )
     );
     if (openUploader) {
@@ -160,34 +160,30 @@ function VideoInput({
     setErrorCode('');
     setUploadMessage('');
 
-    const lowerName = String(file.name || '').toLowerCase();
-    const supported = lowerName.endsWith('.txt') || lowerName.endsWith('.srt') || lowerName.endsWith('.vtt');
-    if (!supported) {
+    const kind = inferTranscriptFileKind(file.name, file.type);
+    const supportedKinds = new Set(['txt', 'srt', 'vtt', 'pdf', 'docx']);
+    if (!supportedKinds.has(kind)) {
       setError(
         tr(
           lang,
-          'الملف غير مدعوم حاليًا. ارفع ملف txt أو srt أو vtt.',
-          'Unsupported file. Please upload txt, srt, or vtt.',
-          'Fichier non pris en charge. Telechargez un fichier txt, srt ou vtt.'
+          'الملف غير مدعوم حاليًا. ارفع ملف txt أو srt أو vtt أو pdf أو docx.',
+          'Unsupported file. Please upload txt, srt, vtt, pdf, or docx.',
+          'Fichier non pris en charge. Telechargez un fichier txt, srt, vtt, pdf ou docx.'
         )
       );
       return;
     }
 
     try {
-      const raw = await file.text();
-      const parsed = parseTranscriptUploadContent(raw, {
-        fileName: file.name,
-        fileType: file.type
-      });
+      const parsed = await parseTranscriptUploadFile(file);
 
       if (!parsed.transcript) {
         setError(
           tr(
             lang,
-            'تعذر استخراج نص صالح من الملف.',
-            'Could not extract usable text from the file.',
-            'Impossible dextraire un texte exploitable depuis le fichier.'
+            'تعذر استخراج نص صالح من الملف. إذا كان الملف مصورًا أو ممسوحًا ضوئيًا، جرّب لصق النص مباشرة.',
+            'Could not extract usable text from the file. If the file is scanned or image-based, try pasting the text directly.',
+            'Impossible dextraire un texte exploitable depuis le fichier. Si le fichier est scanne ou base sur une image, collez le texte directement.'
           )
         );
         return;
@@ -209,9 +205,9 @@ function VideoInput({
       setError(
         tr(
           lang,
-          'تعذر قراءة الملف. جرّب ملفًا نصيًا آخر.',
-          'Failed to read the file. Try another text file.',
-          'Impossible de lire le fichier. Essayez un autre fichier texte.'
+          'تعذر قراءة الملف. جرّب ملفًا آخر أو الصق النص مباشرة.',
+          'Failed to read the file. Try another file or paste the text directly.',
+          'Impossible de lire le fichier. Essayez un autre fichier ou collez le texte directement.'
         )
       );
     }
@@ -457,7 +453,7 @@ function VideoInput({
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept=".txt,.srt,.vtt,text/plain,text/vtt,application/x-subrip"
+                    accept=".txt,.srt,.vtt,.pdf,.docx,text/plain,text/vtt,application/x-subrip,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                     className="hidden"
                     onChange={handleFileChange}
                   />
@@ -468,10 +464,10 @@ function VideoInput({
                     className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:bg-slate-100 disabled:text-slate-400"
                   >
                     <FaUpload />
-                    <span>{tr(lang, 'رفع ملف نصي', 'Upload text file', 'Telecharger un fichier texte')}</span>
+                    <span>{tr(lang, 'رفع ملف نص أو مستند', 'Upload text or document', 'Telecharger un texte ou un document')}</span>
                   </button>
                   <span className="text-xs text-slate-500">
-                    {tr(lang, 'يدعم txt / srt / vtt', 'Supports txt / srt / vtt', 'Prend en charge txt / srt / vtt')}
+                    {tr(lang, 'يدعم txt / srt / vtt / pdf / docx', 'Supports txt / srt / vtt / pdf / docx', 'Prend en charge txt / srt / vtt / pdf / docx')}
                   </span>
                 </div>
               </div>
@@ -503,6 +499,16 @@ function VideoInput({
         {error ? (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
             <p className="font-semibold">{String(error)}</p>
+            {errorCode === 'TRANSCRIPT_UNAVAILABLE' ? (
+              <p className="mt-2 text-sm text-red-700/90">
+                {tr(
+                  lang,
+                  'إذا كنت تريد هذا الفيديو نفسه، فالغالب أن الفيديو لا يوفّر CC حاليًا. هذا لا يعني أن الموقع متعطل، ويمكنك المتابعة بإضافة النص يدويًا أو رفع ملف.',
+                  'If you need this exact video, it most likely does not expose captions right now. That does not mean the site is broken, and you can continue by pasting text or uploading a file.',
+                  'Si vous avez besoin de cette video precise, elle ne semble probablement pas exposer de sous-titres pour le moment. Cela ne signifie pas que le site est en panne, et vous pouvez continuer en collant le texte ou en telechargeant un fichier.'
+                )}
+              </p>
+            ) : null}
             {shouldSuggestWrittenText ? (
               <div className="mt-3 flex items-center gap-2 flex-wrap">
                 <button
@@ -526,7 +532,7 @@ function VideoInput({
                   className="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm font-medium text-red-700 border border-red-200 hover:bg-red-100"
                 >
                   <FaUpload />
-                  <span>{tr(lang, 'رفع ملف نصي', 'Upload text file', 'Telecharger un fichier texte')}</span>
+                  <span>{tr(lang, 'رفع ملف نص أو مستند', 'Upload text or document', 'Telecharger un texte ou un document')}</span>
                 </button>
               </div>
             ) : null}
