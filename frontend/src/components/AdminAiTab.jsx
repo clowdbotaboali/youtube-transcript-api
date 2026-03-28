@@ -1,4 +1,4 @@
-import { FaKey, FaRobot, FaTrashAlt } from 'react-icons/fa';
+import { FaKey, FaRobot, FaStar, FaTrashAlt } from 'react-icons/fa';
 import { cleanText, tr } from '../utils/lang';
 
 export default function AdminAiTab({
@@ -245,7 +245,20 @@ export default function AdminAiTab({
 
         <div className="rounded-lg border border-slate-200 p-3 mb-4 text-sm text-slate-700 space-y-1">
           <p><span className="font-bold">{tr(lang, 'عدد المفاتيح:', 'Keys count:')}</span> {transcriptApiMeta.keysCount}</p>
-          <p><span className="font-bold">{tr(lang, 'المفتاح الفعّال:', 'Active key:')}</span> {cleanText(transcriptApiMeta.activeKeyId) || '-'}</p>
+          <p className="flex flex-wrap items-center gap-2">
+            <span className="font-bold">{tr(lang, 'المفتاح الفعّال:', 'Active key:')}</span>
+            {cleanText(transcriptApiMeta.activeKeyId) ? (
+              <>
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-700">
+                  <FaStar className="text-[10px]" />
+                  <span>{tr(lang, 'المفتاح العامل', 'Working key')}</span>
+                </span>
+                <span>{cleanText(transcriptApiMeta.activeKeyId)}</span>
+              </>
+            ) : (
+              <span>-</span>
+            )}
+          </p>
           <p className="text-xs text-slate-500">{tr(lang, 'آخر تحديث:', 'Last update:')} {transcriptApiMeta.updatedAt ? formatDate(transcriptApiMeta.updatedAt, lang) : '-'}</p>
           <p className="text-xs text-slate-500">
             {tr(lang, 'ملاحظة: عند رجوع النتائج من الكاش لن يتم استدعاء المفتاح ولن يتغير مؤشر الاستخدام.', 'Note: cache-hit results do not call provider keys, so usage indicators may stay unchanged.')}
@@ -283,7 +296,9 @@ export default function AdminAiTab({
               <div
                 key={key.id}
                 className={`rounded-lg border p-3 ${
-                  key.runtimeStatus === 'success'
+                  key.isActive
+                    ? 'border-amber-300 bg-amber-50'
+                    : key.runtimeStatus === 'success'
                     ? 'border-emerald-300 bg-emerald-50'
                     : key.runtimeStatus === 'failure'
                       ? 'border-red-200 bg-red-50'
@@ -292,7 +307,10 @@ export default function AdminAiTab({
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
-                    <p className="font-bold text-slate-900">{cleanText(key.label) || key.id}</p>
+                    <p className="flex flex-wrap items-center gap-2 font-bold text-slate-900">
+                      {key.isActive ? <FaStar className="text-amber-500" aria-hidden="true" /> : null}
+                      <span>{cleanText(key.label) || key.id}</span>
+                    </p>
                     <p className="text-xs text-slate-500">{key.maskedKey || '-'}</p>
                   </div>
                   <div className="flex flex-wrap items-center gap-1">
