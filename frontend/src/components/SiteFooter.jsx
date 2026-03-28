@@ -9,9 +9,9 @@ function SiteFooter({ lang = LANG.ar, theme = 'light' }) {
           (c) {new Date().getFullYear()} Transcripta AI.{' '}
           {tr(
             lang,
-            'محرك استخراج المعرفة والتنفيذ من الفيديوهات الطويلة',
-            'Knowledge extraction and execution engine for long videos',
-            'Moteur dextraction de connaissance et dexecution pour longues videos'
+            'منصة لاستخراج المعرفة وتحويلها إلى خطوات قابلة للتطبيق من الفيديوهات الطويلة',
+            'Knowledge extraction and implementation platform for long videos',
+            'Plateforme dextraction de connaissance et dimplementation pour videos longues'
           )}
         </p>
         <nav className="flex flex-wrap gap-3 text-xs sm:text-sm">
@@ -31,10 +31,10 @@ function SiteFooter({ lang = LANG.ar, theme = 'light' }) {
             {tr(lang, 'الأسعار', 'Pricing', 'Tarification')}
           </a>
           <a href="/about" className={isDark ? 'text-slate-300 hover:text-cyan-300 hover:underline' : 'text-slate-700 hover:text-cyan-700 hover:underline'}>
-            {tr(lang, 'Ù…Ù† Ù†Ø­Ù†', 'About', 'A propos')}
+            {tr(lang, 'من نحن', 'About', 'A propos')}
           </a>
           <a href="/insights" className={isDark ? 'text-slate-300 hover:text-cyan-300 hover:underline' : 'text-slate-700 hover:text-cyan-700 hover:underline'}>
-            {tr(lang, 'Ù…ÙƒØªØ¨Ø© Ø§Ù„Ù…Ø¹Ø±ÙØ©', 'Insights', 'Insights')}
+            {tr(lang, 'مكتبة المعرفة', 'Insights', 'Insights')}
           </a>
         </nav>
       </div>

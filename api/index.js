@@ -8,6 +8,7 @@ import {
   getSeoRouteInfo as getFrontendSeoRouteInfo,
   SEO_CONFIG as FRONTEND_SEO_CONFIG
 } from '../frontend/src/seo/seoCatalog.js';
+import { getInsightBySlug, getInsightPaths, mapInsightForLang } from '../frontend/src/content/insights.js';
 
 let groqClient = null;
 
@@ -164,12 +165,21 @@ const SEO_TRANSCRIPT_SUMMARY_CHAR_LIMIT = 320;
 const FRONTEND_SITEMAP_ENTRIES = Object.freeze(
   Array.isArray(getFrontendSitemapEntries?.()) ? getFrontendSitemapEntries() : []
 );
+const INSIGHT_SITEMAP_ENTRIES = Object.freeze(
+  (Array.isArray(getInsightPaths?.()) ? getInsightPaths() : []).map((path) => ({
+    path,
+    changefreq: 'monthly',
+    priority: '0.6'
+  }))
+);
 const STATIC_SITEMAP_ENTRIES = Object.freeze([
   { path: '/', changefreq: 'weekly', priority: '1.0' },
   { path: '/en', changefreq: 'weekly', priority: '0.9' },
   { path: '/ar', changefreq: 'weekly', priority: '0.9' },
   { path: '/fr', changefreq: 'weekly', priority: '0.9' },
   { path: '/tool', changefreq: 'weekly', priority: '0.95' },
+  { path: '/about', changefreq: 'monthly', priority: '0.6' },
+  { path: '/insights', changefreq: 'weekly', priority: '0.7' },
   { path: '/pricing', changefreq: 'monthly', priority: '0.7' },
   { path: '/contact', changefreq: 'monthly', priority: '0.5' },
   { path: '/privacy-policy', changefreq: 'yearly', priority: '0.3' },
@@ -4316,9 +4326,45 @@ function renderFrontendSeoHtml(page) {
 function getStaticMarketingPage(pathname) {
   const path = normalizeSitePath(pathname);
   const pages = {
+    '/about': {
+      title: 'About | Transcripta AI',
+      description: 'About Transcripta AI, our mission, team focus, and how the platform helps users turn long videos into actionable knowledge.',
+      h1: 'About Transcripta AI',
+      sections: [
+        {
+          title: 'Mission',
+          paragraphs: [
+            'Transcripta AI exists to reduce the time people lose while rewatching long videos just to recover one useful idea.',
+            'The goal is simple: convert long-form video into searchable text, structured notes, and practical next steps that can be reused.'
+          ]
+        },
+        {
+          title: 'What The Product Provides',
+          paragraphs: [
+            'The service extracts transcripts from public YouTube links and helps organize the result into summaries, notes, highlights, and implementation plans.',
+            'This workflow is useful for learning, research, team knowledge capture, and content reuse.'
+          ]
+        },
+        {
+          title: 'Team Focus',
+          paragraphs: [
+            'Transcripta AI is maintained by a focused small team working across transcript quality, product clarity, customer support, and practical AI workflows.',
+            'The product is reviewed continuously so the public pages, pricing, support information, and policies stay clear and reliable.'
+          ]
+        },
+        {
+          title: 'Support And Contact',
+          bullets: [
+            'General support: hello@transcripta.tech',
+            'Operations support: support@transcripta.tech',
+            'Country of operation: Egypt'
+          ]
+        }
+      ]
+    },
     '/pricing': {
       title: 'Pricing | Transcripta AI',
-      description: 'Pricing for extracting transcripts, summaries, notes, and execution-ready outputs from long YouTube videos.',
+      description: 'Pricing for extracting transcripts, summaries, notes, and actionable outputs from long YouTube videos.',
       h1: 'Pricing',
       sections: [
         {
@@ -4333,7 +4379,7 @@ function getStaticMarketingPage(pathname) {
           title: 'Paid Video Pack',
           bullets: [
             'Core pack: 200 videos.',
-            'Designed for repeated extraction, summaries, and execution outputs.',
+            'Designed for repeated extraction, summaries, and actionable outputs.',
             'Bonus volume uplift on larger multi-pack purchases.'
           ]
         },
@@ -4375,7 +4421,7 @@ function getStaticMarketingPage(pathname) {
     },
     '/privacy-policy': {
       title: 'Privacy Policy | Transcripta AI',
-      description: 'How Transcripta AI collects, uses, stores, and protects account and transcript-related information.',
+      description: 'How Transcripta AI collects, uses, stores, and protects account information, cookies, and Google AdSense-related disclosures.',
       h1: 'Privacy Policy',
       sections: [
         {
@@ -4396,6 +4442,20 @@ function getStaticMarketingPage(pathname) {
           paragraphs: [
             'Records are retained only as long as needed for account operation, compliance, and dispute handling.',
             'Administrative and infrastructure controls are used to protect stored data.'
+          ]
+        },
+        {
+          title: 'Cookies And Similar Technologies',
+          paragraphs: [
+            'The service may use cookies, local storage, or similar technologies to keep users signed in, remember preferences, improve reliability, and reduce abuse.',
+            'Users can manage cookies through browser settings, but disabling some of them may affect login or saved preferences.'
+          ]
+        },
+        {
+          title: 'Advertising And Google AdSense',
+          paragraphs: [
+            'When ads are enabled, Google AdSense and its partners may use cookies or similar identifiers to serve ads, measure performance, and improve relevance.',
+            'The ads.txt file on this site is used only to declare authorized advertising sellers and does not contain personal data.'
           ]
         }
       ]
@@ -4511,6 +4571,148 @@ function renderStaticMarketingHtml(page, pathname) {
     bodyHtml,
     structuredData
   });
+}
+
+function formatPublishedDateForInsights(iso) {
+  const date = new Date(iso || Date.now());
+  if (!Number.isFinite(date.getTime())) return '';
+  return new Intl.DateTimeFormat('en-US', { day: 'numeric', month: 'long', year: 'numeric' }).format(date);
+}
+
+function getInsightRoutePage(pathname) {
+  const path = normalizeSitePath(pathname);
+  if (path === '/insights') {
+    return {
+      type: 'index',
+      title: 'Insights | Transcripta AI',
+      description: 'Practical articles on transcript workflows, learning systems, and turning long videos into useful outputs.',
+      articles: (Array.isArray(getInsightPaths?.()) ? getInsightPaths() : [])
+        .map((entryPath) => {
+          const slug = String(entryPath || '').replace(/^\/insights\//, '').trim();
+          const base = slug ? getInsightBySlug(slug) : null;
+          const article = base ? mapInsightForLang(base, 'en') : null;
+          if (!article) return null;
+          return {
+            slug: article.slug,
+            title: article.title,
+            summary: article.summary,
+            publishedAt: article.publishedAt
+          };
+        })
+        .filter(Boolean)
+    };
+  }
+
+  const match = path.match(/^\/insights\/([a-z0-9-]+)$/i);
+  if (!match) return null;
+  const slug = String(match[1] || '').trim().toLowerCase();
+  const base = getInsightBySlug(slug);
+  if (!base) return { type: 'not_found', slug };
+  const article = mapInsightForLang(base, 'en');
+  return {
+    type: 'article',
+    article
+  };
+}
+
+function renderInsightRouteHtml(page) {
+  if (!page) return '';
+  if (page.type === 'index') {
+    const bodyHtml = `
+      <main class="wrap">
+        <section class="card hero">
+          <p class="eyebrow">Insights</p>
+          <h1>Practical transcript and learning workflows</h1>
+          <p class="muted">Articles about summarizing long videos, building notes, creating reusable knowledge, and turning transcripts into practical outputs.</p>
+          <p><a class="cta" href="/tool">Open The Main Tool</a></p>
+        </section>
+        ${page.articles.map((article) => `
+          <article class="card">
+            <p class="small muted">${escapeHtml(formatPublishedDateForInsights(article?.publishedAt))}</p>
+            <h2>${escapeHtml(article?.title || '')}</h2>
+            <p>${escapeHtml(article?.summary || '')}</p>
+            <p><a href="/insights/${escapeHtml(article?.slug || '')}">Read article</a></p>
+          </article>
+        `).join('')}
+      </main>`;
+
+    return renderHtmlDocument({
+      title: page.title,
+      description: page.description,
+      canonicalPath: '/insights',
+      lang: 'en',
+      dir: 'ltr',
+      robots: 'index, follow',
+      structuredData: [
+        {
+          '@context': 'https://schema.org',
+          '@type': 'CollectionPage',
+          name: page.title,
+          description: page.description,
+          url: `${SITE_ORIGIN}/insights`
+        }
+      ],
+      bodyHtml
+    });
+  }
+
+  if (page.type === 'article') {
+    const article = page.article;
+    const bodyHtml = `
+      <main class="wrap">
+        <section class="card hero">
+          <p class="eyebrow">Insight article</p>
+          <h1>${escapeHtml(article?.title || 'Insight')}</h1>
+          <p class="muted">${escapeHtml(article?.summary || '')}</p>
+          <p class="small">Published ${escapeHtml(formatPublishedDateForInsights(article?.publishedAt))}</p>
+        </section>
+        ${(Array.isArray(article?.sections) ? article.sections : []).map((section) => `
+          <section class="card">
+            <h2>${escapeHtml(section?.title || 'Section')}</h2>
+            ${renderParagraphBlock(section?.paragraphs)}
+          </section>
+        `).join('')}
+        <section class="card">
+          <h2>More resources</h2>
+          <ul>
+            <li><a href="/insights">Back to insights</a></li>
+            <li><a href="/tool">Open the transcript tool</a></li>
+          </ul>
+        </section>
+      </main>`;
+
+    return renderHtmlDocument({
+      title: `${article?.title || 'Insight'} | Transcripta AI`,
+      description: article?.summary || 'Insight article',
+      canonicalPath: `/insights/${article?.slug || ''}`,
+      lang: 'en',
+      dir: 'ltr',
+      robots: 'index, follow',
+      ogType: 'article',
+      publishedTime: article?.publishedAt || '',
+      structuredData: [
+        {
+          '@context': 'https://schema.org',
+          '@type': 'Article',
+          headline: article?.title || 'Insight',
+          description: article?.summary || '',
+          datePublished: article?.publishedAt || '',
+          author: {
+            '@type': 'Organization',
+            name: 'Transcripta AI'
+          },
+          publisher: {
+            '@type': 'Organization',
+            name: 'Transcripta AI'
+          },
+          mainEntityOfPage: `${SITE_ORIGIN}/insights/${article?.slug || ''}`
+        }
+      ],
+      bodyHtml
+    });
+  }
+
+  return '';
 }
 
 function escapeXmlValue(value) {
@@ -5468,7 +5670,7 @@ async function getSeoTranscriptSitemapEntries(supabase) {
 }
 
 async function buildRuntimeSitemapXml(supabase) {
-  const baseEntries = [...STATIC_SITEMAP_ENTRIES, ...FRONTEND_SITEMAP_ENTRIES];
+  const baseEntries = [...STATIC_SITEMAP_ENTRIES, ...INSIGHT_SITEMAP_ENTRIES, ...FRONTEND_SITEMAP_ENTRIES];
   let transcriptEntries = [];
   try {
     transcriptEntries = await getSeoTranscriptSitemapEntries(supabase);
@@ -6625,6 +6827,34 @@ export default async function handler(req, res) {
       applyIndexableHtmlHeaders(res, normalizeRobotsContent(frontendSeoPage.robots || 'index, follow'));
       if (req.method === 'HEAD') return res.status(200).end();
       return res.status(200).send(renderFrontendSeoHtml(frontendSeoPage));
+    }
+
+    const insightPage = getInsightRoutePage(pathname);
+    if (insightPage && (req.method === 'GET' || req.method === 'HEAD')) {
+      if (insightPage.type === 'not_found') {
+        applyIndexableHtmlHeaders(res, normalizeRobotsContent('noindex, nofollow'));
+        if (req.method === 'HEAD') return res.status(404).end();
+        return res.status(404).send(renderHtmlDocument({
+          title: 'Insight Not Found | Transcripta AI',
+          description: 'The requested insight article is not available.',
+          canonicalPath: '/insights',
+          lang: 'en',
+          dir: 'ltr',
+          robots: 'noindex, nofollow',
+          bodyHtml: `
+            <main class="wrap">
+              <section class="card hero">
+                <p class="eyebrow">Insights</p>
+                <h1>Insight article not found</h1>
+                <p class="muted">The requested insight page is not available.</p>
+                <p><a class="cta" href="/insights">Back to insights</a></p>
+              </section>
+            </main>`
+        }));
+      }
+      applyIndexableHtmlHeaders(res, normalizeRobotsContent('index, follow'));
+      if (req.method === 'HEAD') return res.status(200).end();
+      return res.status(200).send(renderInsightRouteHtml(insightPage));
     }
 
     const staticMarketingPage = getStaticMarketingPage(pathname);

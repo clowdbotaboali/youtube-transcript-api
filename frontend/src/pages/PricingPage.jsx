@@ -1,4 +1,4 @@
-﻿import SeoMeta from '../components/SeoMeta';
+import SeoMeta from '../components/SeoMeta';
 import { LANG, tr } from '../utils/lang';
 import { SEO_CONFIG } from '../seo/seoCatalog';
 
@@ -8,7 +8,7 @@ function PricingPage({ lang = LANG.ar, theme = 'light' }) {
     '@type': 'WebPage',
     name: 'Pricing | Transcripta AI',
     url: `${SEO_CONFIG.SITE_ORIGIN}/pricing`,
-    description: 'Pricing for transcript extraction, summaries, notes, and execution-ready outputs.'
+    description: 'Pricing for transcript extraction, summaries, notes, and actionable outputs.'
   };
   const isDark = theme === 'dark';
 
@@ -18,9 +18,9 @@ function PricingPage({ lang = LANG.ar, theme = 'light' }) {
         title={tr(lang, 'الأسعار | Transcripta AI', 'Pricing | Transcripta AI', 'Tarification | Transcripta AI')}
         description={tr(
           lang,
-          'خطط Transcripta AI لتحويل الفيديوهات الطويلة إلى مخرجات معرفة وخطط تنفيذ.',
-          'Pricing for turning long videos into structured knowledge and execution outputs.',
-          'Tarification pour transformer les longues videos en connaissance structuree et plans d execution.'
+          'خطط Transcripta AI لتحويل الفيديوهات الطويلة إلى معرفة منظمة ومخرجات قابلة للتطبيق.',
+          'Pricing for turning long videos into structured knowledge and actionable outputs.',
+          'Tarification pour transformer les longues videos en connaissance structuree et sorties exploitables.'
         )}
         path="/pricing"
         canonicalOrigin={SEO_CONFIG.SITE_ORIGIN}
@@ -42,9 +42,9 @@ function PricingPage({ lang = LANG.ar, theme = 'light' }) {
             <p className={`${isDark ? 'text-slate-300' : 'text-slate-600'} mt-2`}>
               {tr(
                 lang,
-                'Transcripta AI محرك لاستخراج المعرفة والتنفيذ من الفيديوهات الطويلة. التسعير مبني على عدد الفيديوهات بوضوح.',
-                'Transcripta AI is a knowledge extraction and execution engine for long videos. Pricing is clearly video-based.',
-                'Transcripta AI est un moteur dextraction de connaissance et dexecution pour longues videos. La tarification est clairement basee sur les videos.'
+                'Transcripta AI منصة لاستخراج المعرفة وتحويلها إلى خطوات قابلة للتطبيق من الفيديوهات الطويلة. التسعير مبني على عدد الفيديوهات بوضوح.',
+                'Transcripta AI is a knowledge extraction and implementation platform for long videos. Pricing is clearly video-based.',
+                'Transcripta AI est une plateforme dextraction de connaissance et dimplementation pour longues videos. La tarification est clairement basee sur les videos.'
               )}
             </p>
           </header>
@@ -67,7 +67,7 @@ function PricingPage({ lang = LANG.ar, theme = 'light' }) {
               </p>
               <ul className={`text-sm space-y-2 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
                 <li>{tr(lang, '- استخراج النص الكامل من الفيديو', '- Full transcript extraction', '- Extraction complete du transcript')}</li>
-                <li>{tr(lang, '- تلخيص + ملاحظات + خطة تنفيذ', '- Summary + notes + execution plan', '- Resume + notes + plan dexecution')}</li>
+                <li>{tr(lang, '- تلخيص + ملاحظات + خطة تطبيق', '- Summary + notes + implementation plan', '- Resume + notes + plan dimplementation')}</li>
                 <li>{tr(lang, '- شات على نفس الفيديو بدون خصم إضافي', '- Chat on same video with no extra usage', '- Chat sur la meme video sans cout supplementaire')}</li>
                 <li>{tr(lang, '- كل رابط فيديو جديد = 1 فيديو من الرصيد', '- Each new video link uses 1 video from balance', '- Chaque nouveau lien video consomme 1 video du solde')}</li>
               </ul>

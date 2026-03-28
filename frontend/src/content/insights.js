@@ -1,16 +1,17 @@
 import { LANG } from '../utils/lang.js';
+import extraInsights from './extraInsights.js';
 
 const INSIGHTS = [
   {
     slug: 'youtube-transcript-workflow-for-teams',
     publishedAt: '2026-03-10',
     title: {
-      ar: 'نظام تفريغ يوتيوب للفرق: من الرابط إلى نتائج قابلة للتنفيذ',
-      en: 'YouTube transcript workflow for teams: from link to executable output'
+      ar: 'نظام تفريغ يوتيوب للفرق: من الرابط إلى نتائج قابلة للتطبيق',
+      en: 'YouTube transcript workflow for teams: from link to actionable output'
     },
     summary: {
-      ar: 'خارطة عملية لبناء سير عمل واضح لاستخراج التفريغ وتحويله لملخص ومهام قابلة للتنفيذ داخل الفريق.',
-      en: 'A practical workflow to extract transcripts and turn them into summaries and executable tasks.'
+      ar: 'خارطة عملية لبناء سير عمل واضح لاستخراج التفريغ وتحويله لملخص ومهام قابلة للتطبيق داخل الفريق.',
+      en: 'A practical workflow to extract transcripts and turn them into summaries and actionable tasks.'
     },
     sections: [
       {
@@ -20,11 +21,11 @@ const INSIGHTS = [
         },
         paragraphs: {
           ar: [
-            'أغلب الفرق تتعامل مع الفيديو كمرجع طويل وصعب الرجوع له، فتضيع القرارات والمهام داخل دقائق غير موثقة. النتيجة: معرفة مشتتة وتأخر في التنفيذ.',
+            'أغلب الفرق تتعامل مع الفيديو كمرجع طويل وصعب الرجوع له، فتضيع القرارات والمهام داخل دقائق غير موثقة. النتيجة: معرفة مشتتة وتأخر في التطبيق.',
             'سير العمل الصحيح يبدأ بتحويل الفيديو إلى نص قابل للبحث، ثم تلخيصه، ثم ربطه بمهام واضحة ومواعيد ومسؤوليات.'
           ],
           en: [
-            'Teams often rely on long videos that are hard to search and reference. Decisions and action items get lost, which slows execution.',
+            'Teams often rely on long videos that are hard to search and reference. Decisions and action items get lost, which slows implementation.',
             'A healthy workflow turns the video into searchable text, then a summary, then concrete tasks with owners and timelines.'
           ]
         }
@@ -76,7 +77,7 @@ const INSIGHTS = [
         },
         paragraphs: {
           ar: [
-            'بهذا الأسلوب يتحول الفيديو من محتوى طويل إلى نظام معرفة مختصر، مع مهام قابلة للتنفيذ وسهلة القياس.',
+            'بهذا الأسلوب يتحول الفيديو من محتوى طويل إلى نظام معرفة مختصر، مع مهام قابلة للتطبيق وسهلة القياس.',
             'الفرق التي تتبع هذا النموذج تقلل وقت المتابعة وتزيد وضوح المسؤوليات، وهو ما ينعكس على سرعة الإنجاز.'
           ],
           en: [
@@ -252,7 +253,8 @@ const INSIGHTS = [
         }
       }
     ]
-  }
+  },
+  ...extraInsights
 ];
 
 const INSIGHTS_BY_SLUG = new Map(INSIGHTS.map((item) => [item.slug, item]));

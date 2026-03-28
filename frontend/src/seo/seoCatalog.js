@@ -689,7 +689,7 @@ function buildMetaDescription(lang, routeType, topic, keyword, blogDef = null) {
 
   if (routeType === 'cluster') {
     return fitLength(
-      `${topicLabel(lang, topic)} hub with deep guides, practical workflows, and internal links to landing pages, related articles, and the main transcript tool for fast execution.`,
+      `${topicLabel(lang, topic)} hub with deep guides, practical workflows, and internal links to landing pages, related articles, and the main transcript tool for faster implementation.`,
       140,
       160,
       lang
@@ -715,7 +715,7 @@ function fillTokens(template, values) {
 
 const EXPANSION_TEMPLATES = Object.freeze({
   en: [
-    'When teams optimize {keyword}, they remove rewatch loops and move faster from raw video to searchable text. This improves execution speed, reduces context switching, and creates a reusable knowledge layer for recurring tasks.',
+    'When teams optimize {keyword}, they remove rewatch loops and move faster from raw video to searchable text. This improves implementation speed, reduces context switching, and creates a reusable knowledge layer for recurring tasks.',
     'A strong {topic} workflow starts with predictable structure: source URL, extraction pass, cleanup rules, and final output blocks. That structure makes quality measurable and keeps results consistent across different editors and projects.',
     'For practical adoption, map each transcript section to one operational action. Use short headings, owner notes, and expected outcomes so {keyword} does not stay informational only and becomes directly executable.',
     'In production, {topic} performs best when your team standardizes naming conventions and publishing templates. Consistent formatting helps search engines understand hierarchy and helps users scan content in seconds.',
@@ -725,7 +725,7 @@ const EXPANSION_TEMPLATES = Object.freeze({
     'As page depth grows, maintain clean navigation between landing pages, cluster hubs, and blog guides. This internal graph helps crawlers discover pages efficiently and helps visitors continue along the right intent path.'
   ],
   ar: [
-    'عند تحسين مسار {keyword}، تتوقف دوامة إعادة مشاهدة الفيديو ويتحول العمل مباشرة إلى نص قابل للبحث. هذا يرفع سرعة التنفيذ ويقلل التشتت ويحوّل المعرفة إلى أصل قابل لإعادة الاستخدام.',
+    'عند تحسين مسار {keyword}، تتوقف دوامة إعادة مشاهدة الفيديو ويتحول العمل مباشرة إلى نص قابل للبحث. هذا يرفع سرعة التطبيق ويقلل التشتت ويحوّل المعرفة إلى أصل قابل لإعادة الاستخدام.',
     'أفضل تطبيق لـ {topic} يبدأ ببنية واضحة: رابط المصدر، خطوة الاستخراج، قواعد التنظيف، ثم إخراج منظم. هذه البنية تجعل الجودة قابلة للقياس وتحافظ على ثبات النتائج عبر الفريق.',
     'لتحويل المحتوى إلى نتيجة عملية، اربط كل فقرة مستخرجة بإجراء واضح ومسؤول وتاريخ تنفيذ. بهذه الطريقة لا يبقى {keyword} مجرد معلومات، بل يصبح خطة قابلة للتطبيق.',
     'في بيئة الإنتاج، ينجح {topic} أكثر عند توحيد أسماء الملفات وقوالب النشر. التنسيق الثابت يساعد محركات البحث على فهم البنية، ويساعد المستخدم على الوصول للمعلومة بسرعة.',
@@ -735,9 +735,9 @@ const EXPANSION_TEMPLATES = Object.freeze({
     'كلما زاد عمق الصفحات، احرص على روابط داخلية منظمة بين صفحات الهبوط والكلاستر والمقالات. هذا يساعد الأرشفة، ويرفع جودة التنقل، ويقود المستخدم للمسار المناسب.'
   ],
   fr: [
-    'En optimisant {keyword}, vous eliminez les relectures video repetitives et passez plus vite du media brut au texte searchable. Ce gain accelere l execution et cree une base de connaissance reutilisable.',
+    'En optimisant {keyword}, vous eliminez les relectures video repetitives et passez plus vite du media brut au texte searchable. Ce gain accelere la mise en application et cree une base de connaissance reutilisable.',
     'Un workflow {topic} solide commence par une structure stable: URL source, extraction, nettoyage, puis blocs de sortie. Cette logique rend la qualite mesurable et maintient la coherence entre projets.',
-    'Pour un usage operationnel, reliez chaque section de transcript a une action concrete avec responsable et resultat attendu. Ainsi, {keyword} devient un moteur d execution et pas seulement un contenu passif.',
+    'Pour un usage operationnel, reliez chaque section de transcript a une action concrete avec responsable et resultat attendu. Ainsi, {keyword} devient un moteur dimplementation et pas seulement un contenu passif.',
     'En production, {topic} fonctionne mieux avec des conventions de nommage et des templates editoriaux clairs. Cette regularite facilite la lecture utilisateur et la comprehension algorithmique des pages.',
     'Pour le SEO, combinez {topic} avec des titres bases sur l intention et une FAQ concise. Ce schema augmente la couverture semantique tout en gardant une experience lisible.',
     'Un flux fiable de {keyword} doit inclure des controles rapides: suppression des doublons, verification des titres, et nettoyage des paragraphes. Ces controles augmentent la confiance avant diffusion.',
@@ -750,7 +750,7 @@ function introParagraphs(lang, topicName, keyword, routeType) {
   const base = {
     en: [
       '{topic} helps you execute {keyword} quickly, turning long videos into clean text that can be searched, quoted, and reused across multiple workflows.',
-      'This page follows an intent-first structure built for both users and Google, so every section explains exactly how to move from video URL to execution-ready output.',
+      'This page follows an intent-first structure built for both users and Google, so every section explains exactly how to move from video URL to an actionable output.',
       routeType === 'cluster'
         ? 'As a cluster hub, this page connects core landing pages and related guides to strengthen topical authority and improve crawl depth for {keyword}.'
         : 'You will find practical steps, use cases, and internal links to related resources that make {keyword} easier to implement in production.'
@@ -814,7 +814,7 @@ function howParagraphs(lang, topicName, keyword, angleName) {
     ],
     fr: [
       'Commencez par lURL video, lancez lextraction, puis convertissez les sections en blocs exploitables pour notes, resumes et publication.',
-      'Avec {topic}, chaque bloc de sortie correspond a un objectif concret afin que {keyword} reste oriente execution.',
+      'Avec {topic}, chaque bloc de sortie correspond a un objectif concret afin que {keyword} reste oriente action.',
       'Vous pouvez ajuster ton et profondeur pour le scenario {angle} tout en conservant le meme backbone dextraction.'
     ]
   };
@@ -933,7 +933,7 @@ function scenarioItems(lang) {
     'Creators: repurpose videos into publish-ready text assets.',
     'SEO teams: build intent-aligned articles from transcript blocks.',
     'Marketing teams: generate campaign messaging from one source video.',
-    'Operations teams: document knowledge and turn it into execution steps.'
+    'Operations teams: document knowledge and turn it into actionable steps.'
   ];
 }
 

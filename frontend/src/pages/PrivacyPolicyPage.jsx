@@ -9,7 +9,7 @@ function PrivacyPolicyPage({ lang = LANG.ar, theme = 'light' }) {
     '@type': 'WebPage',
     name: 'Privacy Policy | Transcripta AI',
     url: `${SEO_CONFIG.SITE_ORIGIN}/privacy-policy`,
-    description: 'Privacy policy for Transcripta AI digital transcript generation service.'
+    description: 'Privacy Policy for Transcripta AI, including data handling, cookies, and Google AdSense disclosure.'
   };
   return (
     <>
@@ -17,8 +17,8 @@ function PrivacyPolicyPage({ lang = LANG.ar, theme = 'light' }) {
         title={tr(lang, 'سياسة الخصوصية | Transcripta AI', 'Privacy Policy | Transcripta AI')}
         description={tr(
           lang,
-          'سياسة الخصوصية لخدمة Transcripta AI الرقمية لاستخراج النصوص.',
-          'Privacy Policy for Transcripta AI digital transcript generation service.'
+          'سياسة الخصوصية لخدمة Transcripta AI، وتشمل البيانات، ملفات تعريف الارتباط، وإفصاحات Google AdSense.',
+          'Privacy Policy for Transcripta AI, including data handling, cookies, and Google AdSense disclosure.'
         )}
         path="/privacy-policy"
         canonicalOrigin={SEO_CONFIG.SITE_ORIGIN}
@@ -31,8 +31,8 @@ function PrivacyPolicyPage({ lang = LANG.ar, theme = 'light' }) {
         title={tr(lang, 'سياسة الخصوصية', 'Privacy Policy')}
         subtitle={tr(
           lang,
-          'كيف يجمع Transcripta AI المعلومات ويستخدمها ويحميها ضمن خدمة استخراج النصوص الرقمية.',
-          'How Transcripta AI collects, uses, and protects information for its digital transcript generation service.'
+          'كيف يجمع Transcripta AI المعلومات ويستخدمها ويحميها، وما يتعلق بملفات تعريف الارتباط وإعلانات Google AdSense.',
+          'How Transcripta AI collects, uses, and protects information, including cookies and Google AdSense-related disclosures.'
         )}
       >
         <CompliancePageLayout.Section title={tr(lang, '1. المعلومات التي نجمعها', '1. Information We Collect')}>
@@ -95,25 +95,48 @@ function PrivacyPolicyPage({ lang = LANG.ar, theme = 'light' }) {
           )}</p>
         </CompliancePageLayout.Section>
 
-        <CompliancePageLayout.Section title={tr(lang, '7. الإعلانات وملفات تعريف الارتباط', '7. Advertising and Cookies')}>
+        <CompliancePageLayout.Section title={tr(lang, '6. ملفات تعريف الارتباط وتقنيات القياس', '6. Cookies and Similar Technologies')}>
           <p>{tr(
             lang,
-            'قد نعرض إعلانات من أطراف ثالثة مثل Google AdSense. هذه الخدمات قد تستخدم ملفات تعريف الارتباط (Cookies) أو معرفات مشابهة لعرض إعلانات أكثر ملاءمة.',
-            'We may show ads from third parties such as Google AdSense. These services may use cookies or similar identifiers to display more relevant ads.'
+            'قد نستخدم ملفات تعريف الارتباط أو التخزين المحلي أو تقنيات مشابهة للحفاظ على تسجيل الدخول، وتذكر التفضيلات، وقياس أداء الصفحات، ومنع إساءة الاستخدام.',
+            'We may use cookies, local storage, or similar technologies to keep users signed in, remember preferences, measure page performance, and reduce abuse.'
           )}</p>
           <p>{tr(
             lang,
-            'يمكنك إدارة ملفات تعريف الارتباط من خلال إعدادات المتصفح. ولمزيد من المعلومات عن تفضيلات إعلانات Google، يمكنك مراجعة Google Ads Settings.',
-            'You can manage cookies through your browser settings. For Google ad preferences, visit Google Ads Settings.'
+            'يمكن للمستخدم إدارة ملفات تعريف الارتباط من إعدادات المتصفح، لكن تعطيل بعضها قد يؤثر على أجزاء من الخدمة مثل تسجيل الدخول أو تذكر اللغة والإعدادات.',
+            'Users can manage cookies through browser settings, but disabling some cookies may affect parts of the service such as login state, language, or saved preferences.'
           )}</p>
         </CompliancePageLayout.Section>
 
-        <CompliancePageLayout.Section title={tr(lang, '6. حقوقك ووسيلة التواصل', '6. Your Rights and Contact')}>
+        <CompliancePageLayout.Section title={tr(lang, '7. إفصاح الإعلانات و Google AdSense', '7. Advertising and Google AdSense Disclosure')}>
+          <p>{tr(
+            lang,
+            'قد نعرض إعلانات من جهات خارجية مثل Google AdSense. قد تستخدم Google وشركاؤها ملفات تعريف الارتباط أو معرفات مشابهة لعرض إعلانات وقياس الأداء وتحسين مدى ملاءمة الإعلانات.',
+            'We may display ads from third parties such as Google AdSense. Google and its partners may use cookies or similar identifiers to serve ads, measure performance, and improve relevance.'
+          )}</p>
+          <p>{tr(
+            lang,
+            'يمكن للمستخدمين مراجعة إعدادات الإعلانات من Google والتحكم في ملفات تعريف الارتباط من خلال المتصفح. وجود ملف ads.txt في الموقع يستخدم فقط لتوضيح البائعين الإعلانيين المصرح لهم ولا يحتوي على بيانات شخصية.',
+            'Users can review Google ad settings and control cookies through their browser. The ads.txt file on the site is used only to declare authorized advertising sellers and does not contain personal data.'
+          )}</p>
+          <p>{tr(
+            lang,
+            'إذا فُعّلت الإعلانات المخصصة أو غير المخصصة عبر Google، فسيتم التعامل معها وفقًا لسياسات Google المعمول بها ومتطلبات الامتثال المحلية ذات الصلة.',
+            'If personalized or non-personalized ads are enabled through Google, they are handled subject to Google policies and any applicable local compliance requirements.'
+          )}</p>
+        </CompliancePageLayout.Section>
+
+        <CompliancePageLayout.Section title={tr(lang, '8. حقوقك ووسيلة التواصل', '8. Your Rights and Contact')}>
           <p>{tr(
             lang,
             'للاستفسارات المتعلقة بالخصوصية أو طلبات التصحيح أو الحذف، تواصل عبر:',
             'For privacy inquiries, correction requests, or deletion requests, contact:'
           )} <strong>hello@transcripta.tech</strong>.</p>
+          <p>{tr(
+            lang,
+            'كما يمكن التواصل معنا عبر support@transcripta.tech إذا كان الطلب متعلقًا بمشكلة تشغيلية أو بخطأ في استخدام الخدمة.',
+            'You may also contact support@transcripta.tech if the request is related to an operational issue or a service error.'
+          )}</p>
         </CompliancePageLayout.Section>
       </CompliancePageLayout>
     </>

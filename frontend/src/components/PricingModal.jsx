@@ -133,9 +133,9 @@ function PricingModal({
             <p className={isDark ? 'text-slate-300' : 'text-gray-600'}>
               {tr(
                 lang,
-                'ترانسكريبتا محرك استخراج معرفة وتنفيذ. التسعير مبني على عدد الفيديوهات بوضوح.',
-                'Transcripta is a knowledge extraction and execution engine. Pricing is clear and video-based.',
-                'Transcripta est un moteur dextraction et dexecution. La tarification est claire et basee sur les videos.'
+                'ترانسكريبتا منصة لاستخراج المعرفة وتحويلها إلى خطوات قابلة للتطبيق. التسعير مبني بوضوح على عدد الفيديوهات.',
+                'Transcripta is a knowledge extraction and implementation platform. Pricing is clear and video-based.',
+                'Transcripta est une plateforme dextraction de connaissance et dimplementation. La tarification est claire et basee sur les videos.'
               )}
             </p>
           </div>

@@ -3,8 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Transcripta AI &ndash; Fast YouTube Transcript Generator</title>
-    <meta name="description" content="Extract YouTube transcripts instantly with AI." />
+    <title>Transcripta AI - YouTube Transcript, Summaries, Notes, and Actionable Outputs</title>
+    <meta
+      name="description"
+      content="Transcripta AI helps you turn long YouTube videos into searchable transcripts, structured summaries, notes, and actionable implementation plans."
+    />
 
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png" />
@@ -12,7 +15,7 @@
     <link rel="manifest" href="/site.webmanifest" />
 
     <meta property="og:title" content="Transcripta AI" />
-    <meta property="og:description" content="Turn YouTube videos into searchable knowledge instantly" />
+    <meta property="og:description" content="Turn long YouTube videos into transcripts, summaries, notes, and actionable outputs." />
     <meta property="og:image" content="/preview-image.png" />
     <meta property="og:image:secure_url" content="https://www.transcripta.tech/preview-image.png" />
     <meta property="og:image:width" content="1200" />
@@ -24,9 +27,105 @@
 
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Transcripta AI" />
-    <meta name="twitter:description" content="Turn YouTube videos into searchable knowledge instantly" />
+    <meta name="twitter:description" content="Turn long YouTube videos into transcripts, summaries, notes, and actionable outputs." />
     <meta name="twitter:image" content="/preview-image.png" />
     <meta name="twitter:image:alt" content="Transcripta AI social preview" />
+
+    <style>
+      :root {
+        color-scheme: light;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: "Segoe UI", Arial, sans-serif;
+        background: linear-gradient(180deg, #f8fbff 0%, #eef2ff 55%, #ecfeff 100%);
+        color: #0f172a;
+      }
+      .boot-shell {
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: 32px 18px 56px;
+      }
+      .boot-card {
+        background: rgba(255, 255, 255, 0.94);
+        border: 1px solid #dbeafe;
+        border-radius: 20px;
+        padding: 24px;
+        margin-bottom: 18px;
+        box-shadow: 0 14px 40px rgba(15, 23, 42, 0.06);
+      }
+      .boot-hero {
+        background: linear-gradient(135deg, #0f172a 0%, #164e63 100%);
+        color: #fff;
+        border-color: transparent;
+      }
+      .boot-badge {
+        display: inline-block;
+        margin-bottom: 12px;
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: rgba(103, 232, 249, 0.15);
+        color: #a5f3fc;
+        font-size: 0.8rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+      h1,
+      h2 {
+        line-height: 1.2;
+        margin: 0 0 12px;
+      }
+      h1 {
+        font-size: clamp(2rem, 4vw, 3.4rem);
+      }
+      h2 {
+        font-size: clamp(1.2rem, 2vw, 1.8rem);
+      }
+      p,
+      li {
+        line-height: 1.7;
+      }
+      ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+      .boot-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 16px;
+      }
+      .boot-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 18px;
+      }
+      .boot-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 12px 16px;
+        border-radius: 12px;
+        font-weight: 700;
+        text-decoration: none;
+      }
+      .boot-link.primary {
+        background: #06b6d4;
+        color: #fff;
+      }
+      .boot-link.secondary {
+        background: #fff;
+        color: #0f172a;
+        border: 1px solid #cbd5e1;
+      }
+      .boot-muted {
+        color: #475569;
+      }
+    </style>
 
     <script
       async
@@ -35,7 +134,59 @@
     ></script>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <main class="boot-shell">
+        <section class="boot-card boot-hero">
+          <span class="boot-badge">Transcripta AI</span>
+          <h1>Turn long YouTube videos into transcripts, summaries, notes, and actionable outputs.</h1>
+          <p>
+            Transcripta AI helps learners, researchers, and teams convert long-form video content into searchable text, structured
+            summaries, practical notes, and implementation-ready next steps.
+          </p>
+          <div class="boot-actions">
+            <a class="boot-link primary" href="/tool">Open the transcript tool</a>
+            <a class="boot-link secondary" href="/pricing">View pricing</a>
+            <a class="boot-link secondary" href="/insights">Read insights</a>
+          </div>
+        </section>
+
+        <section class="boot-grid">
+          <article class="boot-card">
+            <h2>What the product does</h2>
+            <p class="boot-muted">
+              Extract transcripts from public YouTube links, then organize the output into summaries, notes, reusable highlights, and
+              implementation plans.
+            </p>
+          </article>
+          <article class="boot-card">
+            <h2>Who it helps</h2>
+            <p class="boot-muted">
+              Built for course learners, solo researchers, content teams, and operators who want to stop rewatching long videos to find
+              the important parts.
+            </p>
+          </article>
+          <article class="boot-card">
+            <h2>Why it matters</h2>
+            <p class="boot-muted">
+              Instead of leaving knowledge trapped in long recordings, you get text you can search, quote, review, and turn into useful
+              actions.
+            </p>
+          </article>
+        </section>
+
+        <section class="boot-card">
+          <h2>Useful public pages</h2>
+          <ul>
+            <li><a href="/about">About Transcripta AI</a></li>
+            <li><a href="/privacy-policy">Privacy Policy</a></li>
+            <li><a href="/terms">Terms of Service</a></li>
+            <li><a href="/refund-policy">Refund Policy</a></li>
+            <li><a href="/contact">Contact and support</a></li>
+            <li><a href="/insights">Insights and learning articles</a></li>
+          </ul>
+        </section>
+      </main>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

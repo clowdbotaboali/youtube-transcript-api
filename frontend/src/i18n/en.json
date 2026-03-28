@@ -1,7 +1,7 @@
 ﻿{
   "brand": {
     "name": "TRANSCRIPTA AI",
-    "tagline": "Knowledge Extraction & Execution Engine for long videos"
+    "tagline": "Knowledge Extraction & Implementation Platform for long videos"
   },
   "nav": {
     "pricing": "Pricing",
@@ -11,8 +11,8 @@
     "language": "Language"
   },
   "hero": {
-    "kicker": "Knowledge Extraction & Execution Engine",
-    "headline": "Turn every long video into an execution-ready output.",
+    "kicker": "Knowledge Extraction & Implementation Platform",
+    "headline": "Turn every long video into an actionable output.",
     "subheadline": "Extract the core ideas from courses and long-form videos, then convert them into clear steps and implementation prompts.",
     "inputLabel": "Paste a YouTube URL",
     "inputPlaceholder": "https://www.youtube.com/watch?v=...",
@@ -20,7 +20,7 @@
     "secondaryCta": "Start Free",
     "trustLine": "No credit card required • 5 free videos monthly",
     "helper": "Your first extraction works without signup. Create a free account after preview to continue.",
-    "loadingHint": "Extracting transcript and building your execution preview...",
+    "loadingHint": "Extracting transcript and building your actionable preview...",
     "errors": {
       "empty": "Please paste a YouTube URL first.",
       "invalid": "This does not look like a valid YouTube URL."
@@ -44,7 +44,7 @@
     ],
     "afterPoints": [
       "Concise structured summary of the lesson flow.",
-      "Execution plan with milestones, assumptions, and risks.",
+      "Implementation plan with milestones, assumptions, and risks.",
       "Copy-ready prompt for human developer and AI coding assistant."
     ]
   },
@@ -55,7 +55,7 @@
     "transcriptPreview": "Transcript preview",
     "summaryPreview": "Quick summary",
     "wordCount": "Word count",
-    "signupPrompt": "Your first result is unlocked. Create a free account to continue extracting and generating execution-ready outputs.",
+    "signupPrompt": "Your first result is unlocked. Create a free account to continue extracting and generating actionable outputs.",
     "quotaReached": "Your free guest extraction is already used. Create a free account to continue.",
     "failed": "Transcript extraction failed. Please try another video.",
     "createAccount": "Create Free Account",
@@ -63,14 +63,14 @@
   },
   "whatYouGet": {
     "title": "Outcome-focused output",
-    "subtitle": "You get decisions and execution clarity, not raw text.",
+    "subtitle": "You get decisions and implementation clarity, not raw text.",
     "items": [
       {
         "title": "Cognitive compression",
         "text": "Condense long videos into the core ideas that actually matter."
       },
       {
-        "title": "Execution acceleration",
+        "title": "Implementation acceleration",
         "text": "Convert extracted knowledge into ordered implementation steps."
       },
       {
@@ -87,12 +87,12 @@
     "title": "Why teams use Transcripta",
     "items": [
       {
-        "title": "Less watching, more execution",
-        "text": "Stop replaying long videos to extract actionable decisions."
+        "title": "Less watching, more action",
+        "text": "Stop replaying long videos to extract useful decisions."
       },
       {
         "title": "Structured output by default",
-        "text": "Summaries, execution plans, and implementation prompts are ready to use."
+        "text": "Summaries, implementation plans, and prompts are ready to use."
       },
       {
         "title": "Built for serious learners",
@@ -151,7 +151,7 @@
         "role": "Course Creator"
       },
       {
-        "quote": "We turn long explainers into execution checklists for the team.",
+        "quote": "We turn long explainers into actionable checklists for the team.",
         "role": "Startup Team Lead"
       }
     ]
@@ -165,7 +165,7 @@
       "features": [
         "Full transcript extraction",
         "Structured summaries and key insights",
-        "Execution plan and implementation prompt",
+        "Implementation plan and practical prompt",
         "AI chat on the same extracted video"
       ],
       "button": "Start Free"
@@ -175,11 +175,11 @@
       "popularBadge": "Most Popular",
       "limit": "200 full videos per pack",
       "price": "$19 / 200 videos",
-      "valueSummary": "For serious learners and execution-focused teams",
+      "valueSummary": "For serious learners and action-focused teams",
       "features": [
         "Everything in Free included",
         "Video-based balance (1 new video = 1 video)",
-        "Execution-ready output for each video",
+        "Actionable output for each video",
         "Payment request tracking and billing status"
       ],
       "button": "Buy 200-video pack",
@@ -212,7 +212,7 @@
     ]
   },
   "finalCta": {
-    "headline": "Stop consuming long videos passively. Execute faster.",
+    "headline": "Stop consuming long videos passively. Apply them faster.",
     "button": "Create Free Account"
   }
 }

@@ -95,15 +95,15 @@
     },
     {
       "source": "/about",
-      "destination": "/"
+      "destination": "/api/index.js"
     },
     {
       "source": "/insights",
-      "destination": "/"
+      "destination": "/api/index.js"
     },
     {
       "source": "/insights/:slug",
-      "destination": "/"
+      "destination": "/api/index.js"
     },
     {
       "source": "/pricing",

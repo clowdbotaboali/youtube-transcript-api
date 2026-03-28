@@ -19,7 +19,7 @@ function InsightsIndexPage({ lang = LANG.ar, theme = 'light' }) {
         title={tr(lang, 'مكتبة المعرفة | Transcripta AI', 'Insights | Transcripta AI')}
         description={tr(
           lang,
-          'مقالات عملية لفهم التفريغ النصي وتحويل الفيديو إلى معرفة قابلة للتنفيذ.',
+          'مقالات عملية لفهم التفريغ النصي وتحويل الفيديو إلى معرفة قابلة للتطبيق.',
           'Practical articles on transcript workflows and turning video into actionable knowledge.'
         )}
         path="/insights"

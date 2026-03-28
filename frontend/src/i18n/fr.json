@@ -1,7 +1,7 @@
 ﻿{
   "brand": {
     "name": "TRANSCRIPTA AI",
-    "tagline": "Moteur d'extraction de connaissance et d'execution pour videos longues"
+    "tagline": "Plateforme d'extraction de connaissance et d'implementation pour videos longues"
   },
   "nav": {
     "pricing": "Tarification",
@@ -11,8 +11,8 @@
     "language": "Langue"
   },
   "hero": {
-    "kicker": "Knowledge Extraction & Execution Engine",
-    "headline": "Transformez chaque video longue en sortie prete a executer.",
+    "kicker": "Knowledge Extraction & Implementation Platform",
+    "headline": "Transformez chaque video longue en sortie exploitable.",
     "subheadline": "Extrayez les idees essentielles des cours et videos longues, puis convertissez-les en etapes claires et prompts d'implementation.",
     "inputLabel": "Collez une URL YouTube",
     "inputPlaceholder": "https://www.youtube.com/watch?v=...",
@@ -20,14 +20,14 @@
     "secondaryCta": "Commencer gratuitement",
     "trustLine": "Sans carte bancaire • 5 videos gratuites par mois",
     "helper": "La premiere extraction fonctionne sans inscription. Creez un compte gratuit apres l'apercu pour continuer.",
-    "loadingHint": "Extraction de la transcription et preparation de l'apercu d'execution...",
+    "loadingHint": "Extraction de la transcription et preparation de l'apercu exploitable...",
     "errors": {
       "empty": "Collez d'abord une URL YouTube.",
       "invalid": "Ce lien ne ressemble pas a une URL YouTube valide."
     },
     "quickPoints": [
       "Concu pour cours longs, formations et contenu educatif profond.",
-      "Passez du visionnage passif a l'execution en quelques minutes.",
+      "Passez du visionnage passif a la mise en application en quelques minutes.",
       "Fait pour apprenants, entrepreneurs et equipes orientees action."
     ]
   },
@@ -44,7 +44,7 @@
     ],
     "afterPoints": [
       "Resume structure du flux pedagogique reel.",
-      "Plan d'execution avec jalons, hypotheses et risques.",
+      "Plan d'implementation avec jalons, hypotheses et risques.",
       "Prompt pret a copier pour developpeur humain et assistant IA."
     ]
   },
@@ -55,7 +55,7 @@
     "transcriptPreview": "Apercu de la transcription",
     "summaryPreview": "Resume rapide",
     "wordCount": "Nombre de mots",
-    "signupPrompt": "Votre premier resultat est debloque. Creez un compte gratuit pour continuer et produire des sorties pretes a executer.",
+    "signupPrompt": "Votre premier resultat est debloque. Creez un compte gratuit pour continuer et produire des sorties exploitables.",
     "quotaReached": "Votre extraction invite gratuite est deja utilisee. Creez un compte gratuit pour continuer.",
     "failed": "Echec de l'extraction. Essayez une autre video.",
     "createAccount": "Creer un compte gratuit",
@@ -63,14 +63,14 @@
   },
   "whatYouGet": {
     "title": "Sortie orientee resultat",
-    "subtitle": "Vous obtenez clarte de decision et execution, pas seulement du texte brut.",
+    "subtitle": "Vous obtenez clarte de decision et dimplementation, pas seulement du texte brut.",
     "items": [
       {
         "title": "Compression cognitive",
         "text": "Condensez les longues videos en idees essentielles vraiment utiles."
       },
       {
-        "title": "Acceleration d'execution",
+        "title": "Acceleration de mise en application",
         "text": "Transformez la connaissance extraite en etapes d'implementation ordonnees."
       },
       {
@@ -87,12 +87,12 @@
     "title": "Pourquoi les equipes utilisent Transcripta",
     "items": [
       {
-        "title": "Moins de visionnage, plus d'execution",
+        "title": "Moins de visionnage, plus d'action",
         "text": "Arretez de revoir des videos longues pour trouver les actions utiles."
       },
       {
         "title": "Sortie structuree par defaut",
-        "text": "Resume, plan d'execution et prompt d'implementation prets a l'emploi."
+        "text": "Resume, plan d'implementation et prompt pratique prets a l'emploi."
       },
       {
         "title": "Concu pour l'apprentissage profond",
@@ -151,7 +151,7 @@
         "role": "Createur de formation"
       },
       {
-        "quote": "On transforme les longues explications en checklists d'execution d'equipe.",
+        "quote": "On transforme les longues explications en checklists d'action d'equipe.",
         "role": "Lead startup"
       }
     ]
@@ -165,7 +165,7 @@
       "features": [
         "Extraction complete de la transcription",
         "Resume structure et idees cles",
-        "Plan d'execution + prompt d'implementation",
+        "Plan d'implementation + prompt pratique",
         "Chat IA sur la meme video"
       ],
       "button": "Demarrer gratuitement"
@@ -175,7 +175,7 @@
       "popularBadge": "Le plus choisi",
       "limit": "200 videos completes par pack",
       "price": "$19 / 200 videos",
-      "valueSummary": "Pour apprenants serieux et equipes orientees execution",
+      "valueSummary": "Pour apprenants serieux et equipes orientees action",
       "features": [
         "Tout le plan Free inclus",
         "Solde base videos (1 nouvelle video = 1 video)",
@@ -212,7 +212,7 @@
     ]
   },
   "finalCta": {
-    "headline": "Arretez la consommation passive des videos longues. Executez plus vite.",
+    "headline": "Arretez la consommation passive des videos longues. Passez a l'action plus vite.",
     "button": "Creer un compte gratuit"
   }
 }

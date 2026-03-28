@@ -1059,8 +1059,8 @@ function App() {
     return (
       <div className={`min-h-screen flex flex-col ${theme === THEME.dark ? 'bg-slate-950 text-slate-100' : ''}`}>
         <SeoMeta
-          title="Transcripta AI | Knowledge Extraction & Execution Engine"
-          description="Transform long YouTube videos into structured knowledge, execution plans, and implementation-ready outputs."
+          title="Transcripta AI | Knowledge Extraction & Implementation Platform"
+          description="Transform long YouTube videos into structured knowledge, implementation plans, and actionable outputs."
           path={schemaPath}
           alternates={rootAlternates}
           canonicalOrigin={SEO_CONFIG.SITE_ORIGIN}
@@ -1101,7 +1101,7 @@ function App() {
     >
       <SeoMeta
         title="Client Workspace | Transcripta AI"
-        description="Authenticated workspace for knowledge extraction, AI processing, and execution-ready outputs from long videos."
+        description="Authenticated workspace for knowledge extraction, AI processing, and actionable outputs from long videos."
         path={schemaPath}
         alternates={rootAlternates}
         canonicalOrigin={SEO_CONFIG.SITE_ORIGIN}
