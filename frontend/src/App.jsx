@@ -68,6 +68,12 @@ const getLangFromPath = (pathValue) => {
   return LANG.en;
 };
 
+const normalizeUiLang = (value) => {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (normalized === LANG.ar || normalized === LANG.fr) return normalized;
+  return LANG.en;
+};
+
 const getTranscriptSlugFromPath = (pathValue) => {
   const match = normalizePathname(pathValue).match(/^\/transcript\/([a-z0-9-]+)$/i);
   if (!match) return '';
@@ -112,7 +118,7 @@ function App() {
   const [clientPage, setClientPage] = useState(CLIENT_PAGES.dashboard);
   const [lang, setLang] = useState(() => {
     if (!hasWindow) return LANG.en;
-    return getLangFromPath(window.location.pathname) || localStorage.getItem('appLang') || LANG.en;
+    return normalizeUiLang(getLangFromPath(window.location.pathname) || localStorage.getItem('appLang') || LANG.en);
   });
   const [theme, setTheme] = useState(() => (hasWindow ? localStorage.getItem('appTheme') || THEME.light : THEME.light));
   const [outputLang, setOutputLang] = useState(() =>

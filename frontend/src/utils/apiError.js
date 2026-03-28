@@ -1,8 +1,14 @@
 import { cleanText, LANG } from './lang';
 
+function normalizeUiLang(lang) {
+  if (lang === LANG.ar || lang === LANG.fr) return lang;
+  return LANG.en;
+}
+
 function localize(lang, ar, en, fr) {
-  if (lang === LANG.en) return cleanText(en);
-  if (lang === LANG.fr) return cleanText(fr || en);
+  const normalizedLang = normalizeUiLang(lang);
+  if (normalizedLang === LANG.en) return cleanText(en);
+  if (normalizedLang === LANG.fr) return cleanText(fr || en);
   return cleanText(ar);
 }
 
@@ -37,7 +43,7 @@ export function parseApiError(payload) {
 export function formatApiErrorMessage({
   payload,
   status,
-  lang = LANG.ar,
+  lang = LANG.en,
   fallbackAr = 'حدث خطأ غير متوقع.',
   fallbackEn = 'Unexpected error.',
   fallbackFr = 'Erreur inattendue.'
