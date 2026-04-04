@@ -110,6 +110,7 @@ const RATE_LIMIT_OWNER_CACHE_TTL_MS = 5 * 60 * 1000;
 const RATE_LIMIT_STORAGE_MODE = String(process.env.RATE_LIMIT_STORAGE || '').trim().toLowerCase();
 const RATE_LIMIT_FORCE_DURABLE = RATE_LIMIT_STORAGE_MODE === 'durable';
 const RATE_LIMIT_FORCE_MEMORY = RATE_LIMIT_STORAGE_MODE === 'memory';
+const SUCCESSFUL_PAYMENT_STATUSES = Object.freeze(['approved', 'completed', 'paid']);
 const DEFAULT_OUTPUT_LANG = 'ar';
 const OUTPUT_LANG_CONFIG = {
   ar: { label: 'Arabic', instruction: 'Write the final output in clear Modern Standard Arabic with natural phrasing (not literal translation).' },
@@ -976,7 +977,7 @@ async function hasApprovedPayments(supabase, userId) {
     .from('payments')
     .select('id', { count: 'exact', head: true })
     .eq('user_id', userId)
-    .eq('status', 'approved');
+    .in('status', SUCCESSFUL_PAYMENT_STATUSES);
 
   if (error) {
     const rawMessage = `${error.message || ''} ${error.details || ''}`.toLowerCase();
@@ -989,6 +990,29 @@ async function hasApprovedPayments(supabase, userId) {
   }
 
   return Number(count || 0) > 0;
+}
+
+async function getLatestSuccessfulPayment(supabase, userId) {
+  const { data, error } = await supabase
+    .from('payments')
+    .select('id, created_at, status')
+    .eq('user_id', userId)
+    .in('status', SUCCESSFUL_PAYMENT_STATUSES)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    const rawMessage = `${error.message || ''} ${error.details || ''}`.toLowerCase();
+    const tableMissing =
+      rawMessage.includes("relation 'payments' does not exist") ||
+      rawMessage.includes('relation "payments" does not exist') ||
+      rawMessage.includes('could not find the table');
+    if (tableMissing) return null;
+    throw new Error('Failed to load latest successful payment');
+  }
+
+  return data || null;
 }
 
 async function ensureUserAccountRow(supabase, authUser) {
@@ -1008,14 +1032,32 @@ async function ensureUserAccountRow(supabase, authUser) {
   }
 
   const data = await loadUserRow(supabase, authUser.id);
-  const tier = normalizeTier(data.subscription_tier);
+  let tier = normalizeTier(data.subscription_tier);
+  let subscriptionExpiresAt = data.subscription_expires_at || null;
   let credits = Number(data.credits || 0);
+  const latestSuccessfulPayment = tier === 'free' ? await getLatestSuccessfulPayment(supabase, authUser.id) : null;
+  const rescuedProExpiry =
+    tier === 'free' ? resolveSuccessfulPaymentSubscriptionExpiry(latestSuccessfulPayment?.created_at) : null;
+
+  if (tier === 'free' && rescuedProExpiry) {
+    const { error: upgradeError } = await supabase
+      .from('users')
+      .update({
+        subscription_tier: 'pro',
+        subscription_expires_at: rescuedProExpiry
+      })
+      .eq('id', authUser.id);
+    if (upgradeError && !isMissingRelationError(upgradeError)) {
+      throw new Error('Failed to restore paid subscription');
+    }
+    tier = 'pro';
+    subscriptionExpiresAt = rescuedProExpiry;
+  }
 
   // Backward-compatibility fix:
   // Keep paid users untouched, but normalize legacy free accounts to current free quota.
   if (tier === 'free' && credits > FREE_PLAN_CREDITS) {
-    const paidBefore = await hasApprovedPayments(supabase, authUser.id);
-    if (!paidBefore) {
+    if (!latestSuccessfulPayment) {
       const normalizedCredits = FREE_PLAN_CREDITS;
       const { error: normalizeError } = await supabase
         .from('users')
@@ -1032,7 +1074,7 @@ async function ensureUserAccountRow(supabase, authUser) {
     ...data,
     credits,
     subscription_tier: tier,
-    subscription_expires_at: data.subscription_expires_at || null
+    subscription_expires_at: subscriptionExpiresAt
   };
 }
 
@@ -1221,6 +1263,29 @@ function normalizeTier(value) {
   const tier = String(value || '').trim().toLowerCase();
   if (tier === 'admin' || tier === 'pro') return tier;
   return 'free';
+}
+
+function normalizePaymentStatus(value) {
+  const raw = String(value || '').trim().toLowerCase();
+  if (!raw || raw === 'pending') return 'pending';
+  if (SUCCESSFUL_PAYMENT_STATUSES.includes(raw)) return 'approved';
+  if (raw === 'failed' || raw === 'rejected') return 'rejected';
+  if (raw === 'cancelled') return 'cancelled';
+  return raw;
+}
+
+function resolveSuccessfulPaymentSubscriptionExpiry(paymentCreatedAt = null) {
+  const paymentTime = new Date(paymentCreatedAt || '').getTime();
+  if (!Number.isFinite(paymentTime)) return null;
+  const expiresAtMs = paymentTime + PRO_SUBSCRIPTION_DAYS * 24 * 60 * 60 * 1000;
+  if (expiresAtMs <= Date.now()) return null;
+  return new Date(expiresAtMs).toISOString();
+}
+
+function resolveNextProSubscriptionExpiry(currentExpiresAt = null) {
+  const currentExpiryMs = new Date(currentExpiresAt || '').getTime();
+  const baseMs = Number.isFinite(currentExpiryMs) && currentExpiryMs > Date.now() ? currentExpiryMs : Date.now();
+  return new Date(baseMs + PRO_SUBSCRIPTION_DAYS * 24 * 60 * 60 * 1000).toISOString();
 }
 
 function startOfUtcDay(date = new Date()) {
@@ -2375,9 +2440,12 @@ async function enrichPaymentForResponse(supabase, payment, { includeAudit = fals
   const notes = parsePaymentNotes(payment?.notes);
   const proofPath = notes?.proof?.path || null;
   const proofUrl = proofPath ? await createSignedProofUrl(supabase, proofPath, 60 * 60 * 6) : null;
+  const normalizedStatus = normalizePaymentStatus(payment?.status);
 
   return {
     ...payment,
+    status: normalizedStatus,
+    status_raw: payment?.status || null,
     proof_url: proofUrl,
     note_meta: {
       userNote: notes.userNote || '',
@@ -3386,6 +3454,29 @@ async function addCreditsToUser(supabase, userId, creditsToAdd) {
   return nextCredits;
 }
 
+async function grantPaidUserEntitlements(supabase, payment) {
+  const userCreditsAfter = await addCreditsToUser(supabase, payment.user_id, payment.credits_added);
+  const userRow = await loadUserRow(supabase, payment.user_id).catch(() => null);
+  const currentTier = normalizeTier(userRow?.subscription_tier);
+  let subscriptionExpiresAt = userRow?.subscription_expires_at || null;
+
+  if (currentTier !== 'admin') {
+    subscriptionExpiresAt = resolveNextProSubscriptionExpiry(userRow?.subscription_expires_at);
+    const { error: subscriptionError } = await supabase
+      .from('users')
+      .update({
+        subscription_tier: 'pro',
+        subscription_expires_at: subscriptionExpiresAt
+      })
+      .eq('id', payment.user_id);
+    if (subscriptionError && !isMissingRelationError(subscriptionError)) {
+      throw new Error('Failed to update paid subscription');
+    }
+  }
+
+  return { userCreditsAfter, subscriptionExpiresAt };
+}
+
 async function listAdminUsersWithStats(supabase, { limit, offset }) {
   const from = offset;
   const to = offset + limit - 1;
@@ -3445,11 +3536,12 @@ async function listAdminUsersWithStats(supabase, { limit, offset }) {
     if (!stats.lastPaymentAt || new Date(row.created_at).getTime() > new Date(stats.lastPaymentAt).getTime()) {
       stats.lastPaymentAt = row.created_at;
     }
-    if (row.status === 'approved') {
+    const normalizedStatus = normalizePaymentStatus(row.status);
+    if (normalizedStatus === 'approved') {
       stats.approvedPayments += 1;
       stats.paidCredits += toInteger(row.credits_added, 0);
       stats.paidAmountCents += toInteger(row.amount_cents, 0);
-    } else if (row.status === 'rejected') {
+    } else if (normalizedStatus === 'rejected' || normalizedStatus === 'cancelled') {
       stats.rejectedPayments += 1;
     } else {
       stats.pendingPayments += 1;
@@ -5338,7 +5430,7 @@ function toPublicSeoTranscriptPage(row, related = []) {
     seoTitle: truncateAtWordBoundary(row?.seo_title || buildSeoTranscriptTitle(title), 78),
     description,
     canonical,
-    robots: 'noindex, follow',
+    robots: 'index, follow',
     publishedAt: row?.created_at || new Date().toISOString(),
     updatedAt: row?.updated_at || row?.created_at || new Date().toISOString(),
     relatedPages: Array.isArray(related) ? related.slice(0, SEO_TRANSCRIPT_RELATED_LIMIT) : [],
@@ -7872,11 +7964,12 @@ export default async function handler(req, res) {
       };
       for (const row of payments || []) {
         paymentsStats.total += 1;
-        if (row.status === 'approved') {
+        const normalizedStatus = normalizePaymentStatus(row.status);
+        if (normalizedStatus === 'approved') {
           paymentsStats.approved += 1;
           paymentsStats.approvedAmountCents += toInteger(row.amount_cents, 0);
           paymentsStats.approvedCredits += toInteger(row.credits_added, 0);
-        } else if (row.status === 'rejected') {
+        } else if (normalizedStatus === 'rejected' || normalizedStatus === 'cancelled') {
           paymentsStats.rejected += 1;
         } else {
           paymentsStats.pending += 1;
@@ -8030,23 +8123,16 @@ export default async function handler(req, res) {
         return res.status(404).json({ success: false, error: 'Payment request not found' });
       }
 
-      if (payment.status === 'approved' && decision !== 'approved') {
+      const currentPaymentStatus = normalizePaymentStatus(payment.status);
+      if (currentPaymentStatus === 'approved' && decision !== 'approved') {
         return res.status(400).json({ success: false, error: 'Approved payments cannot be downgraded' });
       }
 
       let userCreditsAfter = null;
       let subscriptionExpiresAt = null;
-      const changedToApproved = payment.status !== 'approved' && decision === 'approved';
+      const changedToApproved = currentPaymentStatus !== 'approved' && decision === 'approved';
       if (changedToApproved) {
-        userCreditsAfter = await addCreditsToUser(supabase, payment.user_id, payment.credits_added);
-        subscriptionExpiresAt = new Date(Date.now() + PRO_SUBSCRIPTION_DAYS * 24 * 60 * 60 * 1000).toISOString();
-        await supabase
-          .from('users')
-          .update({
-            subscription_tier: 'pro',
-            subscription_expires_at: subscriptionExpiresAt
-          })
-          .eq('id', payment.user_id);
+        ({ userCreditsAfter, subscriptionExpiresAt } = await grantPaidUserEntitlements(supabase, payment));
       }
 
       const mergedNotes = appendPaymentAudit(payment.notes, {
@@ -9560,28 +9646,37 @@ export default async function handler(req, res) {
         const merchantOrderId = obj.order?.merchant_order_id;
         
         if (merchantOrderId && obj.success === true) {
-          const supabaseAdmin = createClient(
-            String(process.env.SUPABASE_URL || '').trim(),
-            String(process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim()
-          );
+          const supabaseAdmin = getSupabase();
           
           const { data: payment } = await supabaseAdmin.from('payments').select('*').eq('id', merchantOrderId).single();
-          if (payment && payment.status === 'pending') {
-            const { error: updateError } = await supabaseAdmin.from('payments')
-              .update({ status: 'completed', transfer_reference: String(obj.id) }).eq('id', payment.id);
-            if (!updateError) {
-               const { data: userRaw } = await supabaseAdmin.from('users').select('credits').eq('id', payment.user_id).single();
-               if (userRaw) {
-                 await supabaseAdmin.from('users').update({ credits: (userRaw.credits || 0) + payment.credits_added }).eq('id', payment.user_id);
-               }
+          if (payment && normalizePaymentStatus(payment.status) === 'pending') {
+            const mergedNotes = appendPaymentAudit(payment.notes, {
+              event: 'paymob_webhook_approved',
+              reference: String(obj.id),
+              providerStatus: 'approved'
+            });
+            const { data: updatedPayment, error: updateError } = await supabaseAdmin
+              .from('payments')
+              .update({
+                status: 'approved',
+                transfer_reference: String(obj.id),
+                notes: mergedNotes
+              })
+              .eq('id', payment.id)
+              .eq('status', payment.status)
+              .select('*')
+              .single();
+            if (!updateError && updatedPayment) {
+              await grantPaidUserEntitlements(supabaseAdmin, updatedPayment);
             }
           }
         } else if (merchantOrderId && obj.success === false) {
-           const supabaseAdmin = createClient(
-            String(process.env.SUPABASE_URL || '').trim(),
-            String(process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim()
-          );
-          await supabaseAdmin.from('payments').update({ status: 'failed', transfer_reference: String(obj.id) }).eq('id', merchantOrderId).eq('status', 'pending');
+          const supabaseAdmin = getSupabase();
+          await supabaseAdmin
+            .from('payments')
+            .update({ status: 'rejected', transfer_reference: String(obj.id) })
+            .eq('id', merchantOrderId)
+            .eq('status', 'pending');
         }
       }
       return res.json({ success: true });

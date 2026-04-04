@@ -3,7 +3,7 @@ import { LANG, tr } from '../utils/lang';
 
 function isLocalPaymentMethod(method) {
   const normalized = String(method || '').trim().toLowerCase();
-  return normalized === 'instapay' || normalized === 'vodafone_cash';
+  return normalized === 'instapay' || normalized === 'vodafone_cash' || normalized === 'paymob_card';
 }
 
 function formatPaymentAmount(amountCents, method, lang) {

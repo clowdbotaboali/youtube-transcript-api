@@ -103,21 +103,28 @@ async function main() {
   }
 
   let submittedCount = 0;
+  let failedSubmissions = 0;
   const chunks = splitIntoChunks(newUrls, MAX_URLS_PER_REQUEST);
   for (const chunk of chunks) {
     const result = await submitChunk(indexNowKey, chunk);
     console.log(`[seo:indexnow] status=${result.status} ok=${result.ok} body="${result.body}"`);
     if (!result.ok) {
-      throw new Error(`IndexNow request failed with status ${result.status}`);
+      failedSubmissions += 1;
+      console.warn(`[seo:indexnow] submission failed for ${chunk.length} URL(s). They will be retried on the next run.`);
+      continue;
     }
     submittedCount += chunk.length;
   }
 
-  await writeFile(
-    STATE_PATH,
-    JSON.stringify({ updatedAt: new Date().toISOString(), urls: currentUrls }, null, 2),
-    'utf8'
-  );
+  if (failedSubmissions === 0) {
+    await writeFile(
+      STATE_PATH,
+      JSON.stringify({ updatedAt: new Date().toISOString(), urls: currentUrls }, null, 2),
+      'utf8'
+    );
+  } else {
+    console.warn('[seo:indexnow] state file was not updated because some submissions failed.');
+  }
 
   await printFinalReport(submittedCount);
 }

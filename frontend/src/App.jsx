@@ -1247,6 +1247,7 @@ function App() {
           isOpen={isPricingModalOpen}
           onClose={() => setIsPricingModalOpen(false)}
           user={user}
+          apiUrl={apiUrl}
           lang={lang}
           theme={theme}
           onNotify={notify}

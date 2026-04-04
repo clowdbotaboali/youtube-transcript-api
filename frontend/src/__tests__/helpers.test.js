@@ -8,6 +8,8 @@ import {
   isLikelyEnglish,
   parseInstructionLines,
   buildFallbackVideoBrief,
+  formatPaymentAmount,
+  normalizePaymentStatus,
   paymentRequestStatusLabel,
   paymentRequestStatusClass
 } from '../helpers';
@@ -171,8 +173,14 @@ describe('paymentRequestStatusLabel', () => {
   it('returns Approved for approved status in English', () => {
     expect(paymentRequestStatusLabel('approved', 'en')).toBe('Approved');
   });
+  it('treats completed as approved', () => {
+    expect(paymentRequestStatusLabel('completed', 'en')).toBe('Approved');
+  });
   it('returns Rejected for rejected status', () => {
     expect(paymentRequestStatusLabel('rejected', 'en')).toBe('Rejected');
+  });
+  it('treats failed as rejected', () => {
+    expect(paymentRequestStatusLabel('failed', 'en')).toBe('Rejected');
   });
   it('returns Pending review for unknown status', () => {
     expect(paymentRequestStatusLabel('unknown', 'en')).toBe('Pending review');
@@ -187,13 +195,37 @@ describe('paymentRequestStatusClass', () => {
   it('returns green classes for approved', () => {
     expect(paymentRequestStatusClass('approved')).toContain('emerald');
   });
+  it('returns green classes for completed', () => {
+    expect(paymentRequestStatusClass('completed')).toContain('emerald');
+  });
   it('returns red classes for rejected', () => {
     expect(paymentRequestStatusClass('rejected')).toContain('red');
+  });
+  it('returns red classes for failed', () => {
+    expect(paymentRequestStatusClass('failed')).toContain('red');
   });
   it('returns amber classes for pending/unknown', () => {
     expect(paymentRequestStatusClass('pending')).toContain('amber');
   });
   it('returns slate classes for cancelled', () => {
     expect(paymentRequestStatusClass('cancelled')).toContain('slate');
+  });
+});
+
+describe('normalizePaymentStatus', () => {
+  it('maps completed to approved', () => {
+    expect(normalizePaymentStatus('completed')).toBe('approved');
+  });
+  it('maps failed to rejected', () => {
+    expect(normalizePaymentStatus('failed')).toBe('rejected');
+  });
+});
+
+describe('formatPaymentAmount', () => {
+  it('formats paymob card payments in EGP', () => {
+    expect(formatPaymentAmount(89000, 'paymob_card', 'en')).toBe('890.00 EGP');
+  });
+  it('formats non-EGP methods in USD', () => {
+    expect(formatPaymentAmount(1900, 'stripe_card', 'en')).toBe('$19.00');
   });
 });

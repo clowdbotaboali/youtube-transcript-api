@@ -159,19 +159,39 @@ export const buildFallbackVideoBrief = (titleValue, langCode) => {
   return `Quick brief: ${compact}`;
 };
 
+const EGP_PAYMENT_METHODS = new Set(['instapay', 'vodafone_cash', 'paymob_card']);
+
+export const normalizePaymentStatus = (status) => {
+  const normalized = String(status || '').trim().toLowerCase();
+  if (!normalized || normalized === 'pending') return 'pending';
+  if (normalized === 'approved' || normalized === 'completed' || normalized === 'paid') return 'approved';
+  if (normalized === 'rejected' || normalized === 'failed') return 'rejected';
+  if (normalized === 'cancelled') return 'cancelled';
+  return normalized;
+};
+
+export const isEgpPaymentMethod = (method) => EGP_PAYMENT_METHODS.has(String(method || '').trim().toLowerCase());
+
+export const formatPaymentAmount = (amountCents, method, lang) => {
+  const value = Number(amountCents || 0) / 100;
+  if (isEgpPaymentMethod(method)) {
+    return `${value.toFixed(2)} ${tr(lang, '\u062c.\u0645', 'EGP', 'EGP')}`;
+  }
+  return `$${value.toFixed(2)}`;
+};
+
 // ── Payment request labels ──────────────────────────────────────────
 export const paymentRequestStatusLabel = (status, lang) => {
-  const normalized = String(status || '').trim().toLowerCase();
+  const normalized = normalizePaymentStatus(status);
   if (normalized === 'approved') return tr(lang, '\u0645\u0642\u0628\u0648\u0644', 'Approved', 'Approuve');
   if (normalized === 'rejected') return tr(lang, '\u0645\u0631\u0641\u0648\u0636', 'Rejected', 'Rejete');
   if (normalized === 'cancelled') return tr(lang, '\u0645\u0644\u063a\u064a', 'Cancelled', 'Annule');
-  if (normalized === 'paid') return tr(lang, '\u0645\u062f\u0641\u0648\u0639', 'Paid', 'Paye');
   return tr(lang, '\u0642\u064a\u062f \u0627\u0644\u0645\u0631\u0627\u062c\u0639\u0629', 'Pending review', 'En attente');
 };
 
 export const paymentRequestStatusClass = (status) => {
-  const normalized = String(status || '').trim().toLowerCase();
-  if (normalized === 'approved' || normalized === 'paid') return 'bg-emerald-100 text-emerald-800 border border-emerald-200';
+  const normalized = normalizePaymentStatus(status);
+  if (normalized === 'approved') return 'bg-emerald-100 text-emerald-800 border border-emerald-200';
   if (normalized === 'rejected') return 'bg-red-100 text-red-700 border border-red-200';
   if (normalized === 'cancelled') return 'bg-slate-100 text-slate-700 border border-slate-200';
   return 'bg-amber-100 text-amber-800 border border-amber-200';

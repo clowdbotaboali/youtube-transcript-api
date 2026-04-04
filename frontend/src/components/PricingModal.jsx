@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
 import { FaBolt, FaCheck, FaCrown, FaLeaf, FaCreditCard } from 'react-icons/fa';
+import defaultApiUrl from '../config';
+import { getAuthHeaders } from '../utils/authHeaders';
 import { cleanText, LANG, tr } from '../utils/lang';
 
 const PRICE_PER_PACK_USD = 19;
@@ -42,6 +44,7 @@ function PricingModal({
   onClose,
   user,
   requireLogin,
+  apiUrl = defaultApiUrl,
   lang = LANG.ar,
   theme = 'light',
   onNotify,
@@ -50,6 +53,7 @@ function PricingModal({
   const [packCount, setPackCount] = useState(1);
   const [isProcessingPaymob, setIsProcessingPaymob] = useState(false);
   const quote = useMemo(() => calculateQuote(packCount), [packCount]);
+  const paymentApiBase = useMemo(() => String(apiUrl || defaultApiUrl || '').trim().replace(/\/+$/, ''), [apiUrl]);
   const isDark = theme === 'dark';
 
   const notify = (type, message) => {
@@ -89,9 +93,14 @@ function PricingModal({
 
     try {
       setIsProcessingPaymob(true);
-      const res = await fetch('/api/paymob/create-checkout', {
+      const authHeaders = await getAuthHeaders();
+      const res = await fetch(`${paymentApiBase}/api/paymob/create-checkout`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...authHeaders
+        },
+        credentials: 'include',
         body: JSON.stringify({ packCount: quote.packs })
       });
       const data = await res.json();

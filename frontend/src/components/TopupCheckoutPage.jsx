@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState } from 'react';
 import { FaArrowRight, FaBolt, FaUpload } from 'react-icons/fa';
 import defaultApiUrl from '../config';
+import { paymentRequestStatusClass, paymentRequestStatusLabel } from '../helpers';
 import { getAuthHeaders } from '../utils/authHeaders';
 import { formatApiErrorMessage } from '../utils/apiError';
 import { cleanText, LANG, tr } from '../utils/lang';
@@ -13,10 +14,7 @@ const METHODS = [
 const MAX_PROOF_SIZE = 3 * 1024 * 1024;
 
 function statusBadge(status, lang) {
-  const value = String(status || '').toLowerCase();
-  if (value === 'approved') return tr(lang, 'مقبول', 'Approved', 'Approuve');
-  if (value === 'rejected') return tr(lang, 'مرفوض', 'Rejected', 'Rejete');
-  return tr(lang, 'معلّق', 'Pending', 'En attente');
+  return paymentRequestStatusLabel(status, lang);
 }
 
 function formatUsdAmount(amountCents) {
@@ -35,7 +33,7 @@ function renderEgpAmountEnDigits(amountCents, lang) {
 
 function isLocalPaymentMethod(method) {
   const normalized = String(method || '').trim().toLowerCase();
-  return normalized === 'instapay' || normalized === 'vodafone_cash';
+  return normalized === 'instapay' || normalized === 'vodafone_cash' || normalized === 'paymob_card';
 }
 
 function TopupCheckoutPage({
@@ -406,13 +404,7 @@ function TopupCheckoutPage({
                       : formatUsdAmount(item.amount_cents)} / {item.credits_added} {tr(lang, 'فيديو', 'videos', 'videos')}
                   </span>
                   <span
-                    className={`text-xs rounded-full px-2 py-1 ${
-                      item.status === 'approved'
-                        ? 'bg-emerald-100 text-emerald-700'
-                        : item.status === 'rejected'
-                          ? 'bg-red-100 text-red-700'
-                          : 'bg-amber-100 text-amber-700'
-                    }`}
+                    className={`text-xs rounded-full px-2 py-1 ${paymentRequestStatusClass(item.status)}`}
                   >
                     {statusBadge(item.status, lang)}
                   </span>
